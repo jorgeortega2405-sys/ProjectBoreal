@@ -1,0 +1,151 @@
+<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="settings-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="settings-scrollable">
+    <div class="settings-layout" data-ref="settings-layout">
+      
+      <div class="settings-header" data-ref="settings-header">
+        <h1 class="settings-title" data-ref="settings-title" data-i18n="settings.title"></h1>
+        <p class="settings-subtitle" data-ref="settings-subtitle" data-i18n="settings.subtitle"></p>
+      </div>
+
+      <div class="settings-group" data-ref="group-general-preferences">
+        
+        <div class="settings-item settings-item--stacked" data-ref="item-settings-theme">
+          <div class="settings-item__content" data-ref="item-settings-theme-content">
+            <div class="settings-item__text" data-ref="item-settings-theme-text">
+              <h2 class="settings-item__title" data-ref="item-settings-theme-title" data-i18n="settings.theme_title"></h2>
+              <p class="settings-item__desc" data-ref="item-settings-theme-desc" data-i18n="settings.theme_desc"></p>
+            </div>
+          </div>
+          <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-settings-theme">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-settings-theme" data-i18n-aria="settings.theme_trigger_aria">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="settings-theme-selected-icon" aria-hidden="true"><use href="/icons.svg#brightness_auto"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="settings-theme-selected-text"></span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-settings-theme">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-settings-theme">
+                <div class="menu-panel__drag-zone" data-ref="drag-zone-settings-theme" aria-hidden="true">
+                  <div class="menu-panel__drag-handle"></div>
+                </div>
+                <div class="menu-panel__list" data-ref="list-settings-themes">
+                  <button type="button" class="menu-item is-active" data-ref="option-theme-system" data-theme-value="system">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#brightness_auto"></use></svg>
+                    <span class="menu-item__text" data-i18n="settings.theme_system"></span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-theme-light" data-theme-value="light">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#light_mode"></use></svg>
+                    <span class="menu-item__text" data-i18n="settings.theme_light"></span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-theme-dark" data-theme-value="dark">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dark_mode"></use></svg>
+                    <span class="menu-item__text" data-i18n="settings.theme_dark"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <div class="settings-item settings-item--stacked" data-ref="item-settings-language">
+          <div class="settings-item__content" data-ref="item-settings-language-content">
+            <div class="settings-item__text" data-ref="item-settings-language-text">
+              <h2 class="settings-item__title" data-ref="item-settings-language-title" data-i18n="settings.language_title"></h2>
+              <p class="settings-item__desc" data-ref="item-settings-language-desc" data-i18n="settings.language_desc"></p>
+            </div>
+          </div>
+          <div class="settings-dropdown-wrapper" data-ref="dropdown-wrapper-settings-language">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-settings-language" data-i18n-aria="settings.language_trigger_aria">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#language"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="settings-language-selected-text"></span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-settings-language">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-settings-language">
+                <div class="menu-panel__drag-zone" data-ref="drag-zone-settings-language" aria-hidden="true">
+                  <div class="menu-panel__drag-handle"></div>
+                </div>
+                <div class="menu-panel__list" data-ref="list-settings-languages">
+                  <button type="button" class="menu-item is-active" data-ref="option-lang-es" data-lang-value="es-419">
+                    <span class="menu-item__text" data-i18n="languages.es_419"></span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-lang-en" data-lang-value="en-US">
+                    <span class="menu-item__text" data-i18n="languages.en_US"></span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-lang-pt" data-lang-value="pt-BR">
+                    <span class="menu-item__text" data-i18n="languages.pt_BR"></span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="option-lang-fr" data-lang-value="fr-FR">
+                    <span class="menu-item__text" data-i18n="languages.fr_FR"></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="settings-group" data-ref="group-accessibility-preferences">
+        
+        <div class="settings-item" data-ref="item-settings-reduce-motion">
+          <div class="settings-item__content" data-ref="item-settings-reduce-motion-content">
+            <div class="settings-item__text" data-ref="item-settings-reduce-motion-text">
+              <h2 class="settings-item__title" data-ref="item-settings-reduce-motion-title" data-i18n="settings.reduce_motion_title"></h2>
+              <p class="settings-item__desc" data-ref="item-settings-reduce-motion-desc" data-i18n="settings.reduce_motion_desc"></p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-settings-reduce-motion-actions">
+            <label class="toggle-switch" data-ref="label-toggle-settings-reduce-motion">
+              <input class="toggle-switch__input" data-ref="toggle-settings-reduce-motion" type="checkbox" />
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <div class="settings-item" data-ref="item-settings-extended-toasts">
+          <div class="settings-item__content" data-ref="item-settings-extended-toasts-content">
+            <div class="settings-item__text" data-ref="item-settings-extended-toasts-text">
+              <h2 class="settings-item__title" data-ref="item-settings-extended-toasts-title" data-i18n="settings.extended_toasts_title"></h2>
+              <p class="settings-item__desc" data-ref="item-settings-extended-toasts-desc" data-i18n="settings.extended_toasts_desc"></p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-settings-extended-toasts-actions">
+            <label class="toggle-switch" data-ref="label-toggle-settings-extended-toasts">
+              <input class="toggle-switch__input" data-ref="toggle-settings-extended-toasts" type="checkbox" />
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <hr class="settings-divider" />
+
+        <div class="settings-item" data-ref="item-settings-high-contrast">
+          <div class="settings-item__content" data-ref="item-settings-high-contrast-content">
+            <div class="settings-item__text" data-ref="item-settings-high-contrast-text">
+              <h2 class="settings-item__title" data-ref="item-settings-high-contrast-title" data-i18n="settings.high_contrast_title"></h2>
+              <p class="settings-item__desc" data-ref="item-settings-high-contrast-desc" data-i18n="settings.high_contrast_desc"></p>
+            </div>
+          </div>
+          <div class="settings-item__actions" data-ref="item-settings-high-contrast-actions">
+            <label class="toggle-switch" data-ref="label-toggle-settings-high-contrast">
+              <input class="toggle-switch__input" data-ref="toggle-settings-high-contrast" type="checkbox" />
+              <span class="toggle-switch__slider"></span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,60 @@
+<div class="layout-nav" data-ref="sidebar">
+  <div class="layout-rail" data-ref="layout-rail">
+    <div class="layout-rail__top" data-ref="rail-top">
+      <div class="rail-top-default" data-ref="rail-top-default">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--toggle" data-ref="btn-toggle-drawer" data-tooltip="Contraer / expandir" aria-label="Contraer / expandir">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#dock_to_right"></use></svg>
+        </button>
+      </div>
+    </div>
+
+    <hr class="rail-divider" data-ref="rail-divider" />
+
+    <div class="layout-rail__center" data-ref="rail-center">
+      <div class="rail-center-default" data-ref="rail-center-default">
+        <div class="rail-nav-item is-active" data-ref="rail-item-dashboard">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn is-active" data-ref="btn-rail-dashboard" data-tooltip="Dashboard" aria-label="Dashboard">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-dashboard">Dashboard</span>
+        </div>
+
+        <div class="rail-nav-item" data-ref="rail-item-orders">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-orders" data-tooltip="Órdenes y Pagos" aria-label="Órdenes y Pagos">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-orders">Órdenes y Pagos</span>
+        </div>
+
+        <div class="rail-nav-item" data-ref="rail-item-giveaways">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-giveaways" data-tooltip="Gestionar Sorteos" aria-label="Gestionar Sorteos">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#inventory_2"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-giveaways">Gestionar Sorteos</span>
+        </div>
+
+        <div class="rail-nav-item" data-ref="rail-item-bank-accounts">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-bank-accounts" data-tooltip="Cuentas Bancarias" aria-label="Cuentas Bancarias">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-bank-accounts">Cuentas Bancarias</span>
+        </div>
+
+        <div class="rail-nav-item" data-ref="rail-item-audit">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-audit" data-tooltip="Registro de Auditoría" aria-label="Registro de Auditoría">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-audit">Auditoría</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout-rail__bottom" data-ref="rail-bottom">
+      <div class="rail-item-container" data-ref="logout-container">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--logout" data-ref="btn-rail-logout" data-tooltip="Cerrar sesión" aria-label="Cerrar sesión">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,39 @@
+<div class="layout-nav" data-ref="sidebar">
+  <div class="layout-rail" data-ref="layout-rail">
+    <div class="layout-rail__top" data-ref="rail-top">
+      <div class="rail-top-default" data-ref="rail-top-default">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--toggle" data-ref="btn-toggle-drawer" data-i18n-tooltip="nav.toggle_drawer" data-i18n-aria="nav.toggle_drawer">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#dock_to_right"></use></svg>
+        </button>
+      </div>
+    </div>
+
+    <hr class="rail-divider" data-ref="rail-divider" />
+
+    <div class="layout-rail__center" data-ref="rail-center">
+      <div class="rail-center-default" data-ref="rail-center-default">
+        <div class="rail-nav-item is-active" data-ref="rail-item-home">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn is-active" data-ref="btn-rail-home" data-i18n-tooltip="nav.home" data-i18n-aria="nav.home">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-home" data-i18n="nav.home"></span>
+        </div>
+
+        <div class="rail-nav-item" data-ref="rail-item-validate-payment">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-validate-payment" data-i18n-tooltip="nav.validate_payment" data-i18n-aria="nav.validate_payment">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-validate-payment" data-i18n="nav.validate_payment"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout-rail__bottom" data-ref="rail-bottom">
+      <div class="rail-item-container" data-ref="settings-container">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--settings" data-ref="btn-rail-settings" data-i18n-tooltip="nav.settings" data-i18n-aria="nav.settings">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

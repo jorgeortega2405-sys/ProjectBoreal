@@ -1,0 +1,162 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="giveaway-detail-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="giveaway-detail-scrollable">
+    <div class="view-body" data-ref="giveaway-detail-body">
+      <div class="view-backdrop" data-ref="giveaway-detail-backdrop"></div>
+
+      <div class="giveaway-detail-container" data-ref="giveaway-container">
+        <!-- Layout 2 Columnas -->
+        <div class="giveaway-detail__layout" data-ref="giveaway-layout">
+          <!-- Columna Izquierda: Galería -->
+          <div class="giveaway-gallery" data-ref="giveaway-gallery">
+            <div class="giveaway-gallery__main" data-ref="gallery-main-card">
+              <img class="giveaway-gallery__main-img" data-ref="gallery-main-image" src="" alt="" />
+            </div>
+            <div class="giveaway-gallery__thumbs" data-ref="gallery-thumbs"></div>
+          </div>
+
+          <!-- Columna Derecha: Información y Compra -->
+          <div class="giveaway-info" data-ref="giveaway-info">
+            <div class="giveaway-info__badges" data-ref="giveaway-badges">
+              <span class="giveaway-badge giveaway-badge--active" data-ref="giveaway-status-badge">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified"></use></svg>
+                <span data-i18n="home.active_badge"></span>
+              </span>
+              <span class="giveaway-badge" data-ref="giveaway-draw-date-badge">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#calendar_today"></use></svg>
+                <span class="giveaway-badge__text" data-ref="giveaway-draw-date-text"></span>
+              </span>
+              <span class="giveaway-badge" data-ref="giveaway-timer-badge">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+                <span class="giveaway-badge__text" data-ref="giveaway-timer-text"></span>
+              </span>
+            </div>
+
+            <h1 class="giveaway-info__title" data-ref="giveaway-title"></h1>
+
+            <!-- Banner Ganador Oficial (si el sorteo concluyó) -->
+            <div class="banner banner--success" data-ref="banner-giveaway-winner" style="display: none; margin-bottom: 16px; padding: 14px 18px; border-radius: 12px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(245, 158, 11, 0.15)); border: 1px solid rgba(245, 158, 11, 0.4);">
+              <div class="banner-title" style="font-size: 15px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">
+                🏆 <span data-i18n="giveaway.winner_congrats_title"></span>
+              </div>
+              <div class="banner-desc" style="font-size: 13px; color: var(--text-primary);">
+                <span data-i18n="giveaway.winner_label"></span> <strong class="banner-highlight" data-ref="winner-name-display"></strong>
+                • <span data-i18n="giveaway.winner_ticket_label"></span> <strong class="banner-highlight" data-ref="winner-ticket-display"></strong>
+              </div>
+            </div>
+
+            <!-- Progreso de boletos -->
+            <div class="giveaway-info__progress-section" data-ref="giveaway-progress-box">
+              <div class="giveaway-info__progress-labels">
+                <span class="giveaway-info__progress-text" data-ref="giveaway-progress-text"></span>
+                <span class="giveaway-info__progress-pct" data-ref="giveaway-progress-pct"></span>
+              </div>
+              <div class="giveaway-info__progress-track">
+                <div class="giveaway-info__progress-fill" data-ref="giveaway-progress-bar"></div>
+              </div>
+              <div class="giveaway-info__threshold-hint" data-ref="giveaway-threshold-hint" style="display: none; font-size: 12px; color: var(--text-secondary); margin-top: 6px;"></div>
+            </div>
+
+            <!-- Precio por boleto -->
+            <div class="giveaway-info__price-box" data-ref="giveaway-price-box">
+              <div>
+                <div class="giveaway-info__price-value" data-ref="giveaway-price-value"></div>
+                <div class="giveaway-info__price-sub" data-i18n="giveaway.per_ticket"></div>
+              </div>
+              <div class="giveaway-info__quick-quantities" data-ref="giveaway-quick-quantities">
+                <button type="button" class="giveaway-qty-btn" data-ref="btn-qty-1" data-qty="1">1</button>
+                <button type="button" class="giveaway-qty-btn" data-ref="btn-qty-3" data-qty="3">3</button>
+                <button type="button" class="giveaway-qty-btn" data-ref="btn-qty-5" data-qty="5">5</button>
+                <button type="button" class="giveaway-qty-btn" data-ref="btn-qty-10" data-qty="10">10</button>
+              </div>
+            </div>
+
+            <!-- Resumen de selección en columna lateral -->
+            <div class="giveaway-info__summary-box" data-ref="tickets-summary">
+              <div class="giveaway-tickets__summary-info">
+                <div class="giveaway-tickets__summary-count" data-ref="summary-selected-count">0 boletos seleccionados</div>
+                <div class="giveaway-tickets__summary-subtotal" data-ref="summary-subtotal-price">Total: $0.00 USD</div>
+              </div>
+            </div>
+
+            <!-- Botón de compra / acción -->
+            <div class="giveaway-info__actions" data-ref="giveaway-actions">
+              <button type="button" class="component-button component-button--black component-button--h55 component-button--w-full" data-ref="btn-buy-giveaway">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shopping_cart"></use></svg>
+                <span data-i18n="giveaway.buy_now"></span>
+              </button>
+            </div>
+
+            <!-- Alerta Venta Cerrada (si falta menos de 1 hora) -->
+            <div class="banner banner--danger" data-ref="banner-sales-closed" style="display: none; margin-top: 12px; margin-bottom: 16px; padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 500;">
+              <span data-i18n="giveaway.sales_closed_alert"></span>
+            </div>
+
+            <!-- Descripción -->
+            <div class="giveaway-info__desc-box" data-ref="giveaway-desc-box">
+              <p class="giveaway-info__desc-text" data-ref="giveaway-description"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sección Inferior: Selector de Boletos -->
+        <section class="giveaway-tickets" data-ref="giveaway-tickets-section">
+          <div class="giveaway-tickets__header">
+            <h2 class="giveaway-tickets__title" data-i18n="giveaway.select_tickets_title"></h2>
+            <p class="giveaway-tickets__subtitle" data-i18n="giveaway.select_tickets_subtitle"></p>
+          </div>
+
+          <div class="giveaway-tickets__toolbar">
+            <div class="giveaway-tickets__search">
+              <svg class="component-icon giveaway-tickets__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="giveaway-tickets__search-input" data-ref="input-ticket-search" type="text" placeholder=" " autocomplete="off" data-i18n-placeholder="giveaway.search_ticket_placeholder" />
+            </div>
+
+            <div class="giveaway-tickets__legend">
+              <span class="giveaway-legend-item">
+                <span class="giveaway-legend-dot giveaway-legend-dot--available"></span>
+                <span data-i18n="giveaway.ticket_status_available"></span>
+              </span>
+              <span class="giveaway-legend-item">
+                <span class="giveaway-legend-dot giveaway-legend-dot--selected"></span>
+                <span data-i18n="giveaway.ticket_status_selected"></span>
+              </span>
+              <span class="giveaway-legend-item">
+                <span class="giveaway-legend-dot giveaway-legend-dot--taken"></span>
+                <span data-i18n="giveaway.ticket_status_taken"></span>
+              </span>
+            </div>
+
+            <div class="giveaway-tickets__actions">
+              <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-lucky-pick">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
+                <span data-i18n="giveaway.lucky_pick"></span>
+              </button>
+              <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-clear-selection">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#restart_alt"></use></svg>
+                <span data-i18n="giveaway.clear_selection"></span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Grilla de boletos -->
+          <div class="giveaway-tickets__grid" data-ref="tickets-grid"></div>
+
+          <!-- Paginación de boletos -->
+          <div class="giveaway-pagination" data-ref="tickets-pagination">
+            <button type="button" class="giveaway-pagination__btn" data-ref="btn-page-prev" aria-label="Página anterior">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            </button>
+            <div class="giveaway-pagination__controls" data-ref="pagination-pages-list"></div>
+            <button type="button" class="giveaway-pagination__btn" data-ref="btn-page-next" aria-label="Página siguiente">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+            </button>
+            <div class="giveaway-pagination__jump">
+              <span class="giveaway-pagination__jump-label" data-i18n="giveaway.jump_to_ticket">Ir al boleto:</span>
+              <input class="giveaway-pagination__jump-input" data-ref="input-jump-ticket" type="number" min="1" placeholder="#..." />
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>

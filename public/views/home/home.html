@@ -1,0 +1,24 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="home-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="home-scrollable">
+    <div class="view-body" data-ref="home-container">
+      <div class="view-backdrop" data-ref="home-gradient-backdrop"></div>
+
+      <div class="view-hero" data-ref="home-hero">
+        <div class="view-hero__content">
+          <h1 class="view-hero__title" data-ref="hero-title" data-i18n="home.hero_title"></h1>
+          <div class="view-search-pill" data-ref="hero-search-box">
+            <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="view-search-pill__input" data-ref="hero-search-input" type="text" placeholder=" " autocomplete="off" data-i18n-placeholder="home.search_placeholder" data-i18n-aria="home.search_aria" />
+            <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-hero-clear-search" style="display: none;" data-i18n-tooltip="home.clear_search" data-i18n-aria="home.clear_search">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section class="canvas-section" data-ref="giveaways-section">
+        <div class="canvas-grid" data-ref="giveaways-grid"></div>
+      </section>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+{
+  "name": "project-boreal-admin",
+  "version": "1.0.0",
+  "description": "Panel de Administración de ProjectBoreal",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "dev:client": "vite",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "tsc -p tsconfig.server.json",
+    "build:client": "vite build",
+    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
+    "start": "node dist/index.js"
+  }
+}

@@ -1,0 +1,127 @@
+<div class="component-wrapper component-wrapper--full dashboard-wrapper view-wrapper" data-ref="dashboard-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="dashboard-scrollable">
+    <div class="view-body" data-ref="dashboard-body">
+      <div class="view-backdrop" data-ref="dashboard-gradient-backdrop"></div>
+
+      <div class="view-header" data-ref="dashboard-header">
+        <div class="view-header__left" data-ref="dashboard-header-left">
+          <h1 class="view-header__title" data-ref="dashboard-title">
+            <span class="view-header__title-name">Panel de Control & Rendimiento</span>
+          </h1>
+        </div>
+
+        <div class="view-header__right" data-ref="dashboard-header-right">
+          <div class="view-header__actions" data-ref="dashboard-actions">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-dashboard" data-tooltip="Actualizar métricas" aria-label="Actualizar métricas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-view-content" data-ref="dashboard-content">
+        <div class="dashboard-kpis-grid" data-ref="dashboard-kpis-grid">
+        <div class="dashboard-kpi-card" data-ref="kpi-revenue">
+          <div class="dashboard-kpi-card__header">
+            <span class="dashboard-kpi-card__title">Total Recaudado</span>
+            <div class="dashboard-kpi-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
+            </div>
+          </div>
+          <div class="dashboard-kpi-card__value" data-ref="kpi-val-revenue">$0.00 MXN</div>
+          <div class="dashboard-kpi-card__sub" data-ref="kpi-sub-revenue">$0.00 USD</div>
+        </div>
+
+        <div class="dashboard-kpi-card" data-ref="kpi-tickets">
+          <div class="dashboard-kpi-card__header">
+            <span class="dashboard-kpi-card__title">Boletos Vendidos</span>
+            <div class="dashboard-kpi-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified"></use></svg>
+            </div>
+          </div>
+          <div class="dashboard-kpi-card__value" data-ref="kpi-val-tickets">0</div>
+          <div class="dashboard-kpi-card__sub" data-ref="kpi-sub-tickets">Boletos pagados confirmados</div>
+        </div>
+
+        <div class="dashboard-kpi-card" data-ref="kpi-giveaways">
+          <div class="dashboard-kpi-card__header">
+            <span class="dashboard-kpi-card__title">Sorteos Activos</span>
+            <div class="dashboard-kpi-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#inventory_2"></use></svg>
+            </div>
+          </div>
+          <div class="dashboard-kpi-card__value" data-ref="kpi-val-giveaways">0</div>
+          <div class="dashboard-kpi-card__sub" data-ref="kpi-sub-giveaways">Disponibles al público</div>
+        </div>
+
+        <div class="dashboard-kpi-card dashboard-kpi-card--actionable" data-ref="kpi-reviews">
+          <div class="dashboard-kpi-card__header">
+            <span class="dashboard-kpi-card__title">Pagos por Revisar</span>
+            <div class="dashboard-kpi-card__icon-box dashboard-kpi-card__icon-box--warning">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+            </div>
+          </div>
+          <div class="dashboard-kpi-card__value" data-ref="kpi-val-reviews">0</div>
+          <div class="dashboard-kpi-card__sub" data-ref="kpi-sub-reviews">Comprobantes en espera de validación</div>
+        </div>
+      </div>
+
+      <div class="dashboard-alerts-section" data-ref="dashboard-alerts-section" style="display: none;">
+        <div class="dashboard-section-header" data-ref="alerts-section-header">
+          <h2 class="dashboard-section-title">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#notifications"></use></svg>
+            <span>Alertas y Umbrales Activos</span>
+          </h2>
+        </div>
+        <div class="dashboard-alerts-list" data-ref="dashboard-alerts-list"></div>
+      </div>
+
+      <div class="dashboard-recent-section" data-ref="dashboard-recent-section">
+        <div class="dashboard-section-header" data-ref="recent-section-header">
+          <div class="dashboard-section-header__titles">
+            <h2 class="dashboard-section-title">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+              <span>Órdenes Recientes</span>
+            </h2>
+            <span class="dashboard-section-subtitle">Últimas solicitudes y comprobantes subidos</span>
+          </div>
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-view-all-orders">
+            <span>Ver todas las órdenes</span>
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+          </button>
+        </div>
+
+        <div class="orders-skeleton" data-ref="dashboard-skeleton">
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+        </div>
+
+        <div class="dashboard-recent-table-wrapper" data-ref="dashboard-recent-table-wrapper" style="display: none;">
+          <table class="orders-table" data-ref="dashboard-recent-table">
+            <thead>
+              <tr>
+                <th>Referencia</th>
+                <th>Cliente</th>
+                <th>Sorteo</th>
+                <th>Boletos</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th class="orders-col-actions">Acción</th>
+              </tr>
+            </thead>
+            <tbody data-ref="dashboard-recent-body"></tbody>
+          </table>
+        </div>
+
+        <div class="orders-empty" data-ref="dashboard-recent-empty" style="display: none;">
+          <svg class="component-icon orders-empty__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          <p class="orders-empty__title">No hay órdenes registradas</p>
+          <p class="orders-empty__subtitle">Las nuevas órdenes y pagos apartados aparecerán listados aquí.</p>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>

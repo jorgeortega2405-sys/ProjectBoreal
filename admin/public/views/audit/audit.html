@@ -1,0 +1,143 @@
+<div class="component-wrapper component-wrapper--full audit-wrapper view-wrapper" data-ref="audit-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="audit-scrollable">
+    <div class="view-body" data-ref="audit-body">
+      <div class="view-backdrop" data-ref="audit-gradient-backdrop"></div>
+
+      <div class="view-header" data-ref="audit-header">
+        <div class="view-header__left" data-ref="audit-header-left">
+          <h1 class="view-header__title" data-ref="audit-title">
+            <span class="view-header__title-name">Registro de Auditoría e Historial</span>
+          </h1>
+        </div>
+
+        <div class="view-header__right" data-ref="audit-header-right">
+          <div class="view-header__actions" data-ref="audit-actions">
+            <div class="view-header__search" data-ref="audit-search-pill">
+              <svg class="component-icon view-header__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="view-header__search-input" data-ref="audit-search-input" type="text" placeholder="Buscar por IP, orden o acción..." autocomplete="off" />
+            </div>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-audit" data-tooltip="Actualizar auditoría" aria-label="Actualizar auditoría">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-view-content" data-ref="audit-view-content">
+        <div class="orders-tabs-bar" data-ref="audit-tabs-bar">
+        <div class="orders-tabs" data-ref="audit-actor-tabs">
+          <button type="button" class="orders-tab is-active" data-ref="tab-actor-all" data-actor="all">
+            <span>Todos los Actores</span>
+          </button>
+          <button type="button" class="orders-tab" data-ref="tab-actor-admin" data-actor="admin">
+            <span>Administrador</span>
+          </button>
+          <button type="button" class="orders-tab" data-ref="tab-actor-customer" data-actor="customer">
+            <span>Clientes</span>
+          </button>
+          <button type="button" class="orders-tab" data-ref="tab-actor-system" data-actor="system">
+            <span>Sistema</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="audit-content" data-ref="audit-content">
+        <div class="orders-skeleton" data-ref="audit-skeleton">
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+        </div>
+
+        <div class="orders-empty" data-ref="audit-empty" style="display: none;">
+          <svg class="component-icon orders-empty__icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+          <p class="orders-empty__title">No hay registros de auditoría</p>
+          <p class="orders-empty__subtitle">No se encontraron eventos con los filtros seleccionados.</p>
+        </div>
+
+        <div class="orders-table-wrapper" data-ref="audit-table-wrapper" style="display: none;">
+          <table class="orders-table" data-ref="audit-table">
+            <thead>
+              <tr>
+                <th>Fecha / Hora</th>
+                <th>Acción</th>
+                <th>Actor</th>
+                <th>Orden Vinculada</th>
+                <th>Cliente</th>
+                <th>IP / Dispositivo</th>
+                <th>Transición de Estado</th>
+                <th>Monto</th>
+                <th class="orders-col-actions">Detalle</th>
+              </tr>
+            </thead>
+            <tbody data-ref="audit-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="orders-pagination" data-ref="audit-pagination" style="display: none;">
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-audit-prev" disabled>
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            <span>Anterior</span>
+          </button>
+          <span class="orders-pagination__info" data-ref="audit-pagination-info">Página 1 de 1</span>
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-audit-next" disabled>
+            <span>Siguiente</span>
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+          </button>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-ref="modal-audit-detail" style="display: none;">
+    <div class="modal-container modal-container--audit" data-ref="modal-audit-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-audit-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+
+      <div class="modal-card modal-card--audit" data-ref="modal-audit-card">
+        <div class="modal-audit__header" data-ref="modal-audit-header">
+          <div class="modal-audit__titles">
+            <h2 class="modal-audit__title" data-ref="audit-modal-title">Inspección de Registro Forense</h2>
+            <span class="modal-audit__ref" data-ref="audit-modal-uuid">UUID: -</span>
+          </div>
+          <span class="order-badge" data-ref="audit-modal-action-badge">ACCIÓN</span>
+        </div>
+
+        <div class="modal-audit__meta-grid">
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Fecha y Hora Exacta:</span>
+            <span class="receipt-detail-value" data-ref="audit-detail-timestamp">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Tipo de Actor:</span>
+            <span class="receipt-detail-value" data-ref="audit-detail-actor">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Dirección IP:</span>
+            <span class="receipt-detail-value account-data-value--mono" data-ref="audit-detail-ip">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Agente de Usuario:</span>
+            <span class="receipt-detail-value" data-ref="audit-detail-useragent">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Orden / Folio:</span>
+            <span class="receipt-detail-value account-data-value--mono" data-ref="audit-detail-order">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Cliente / Teléfono:</span>
+            <span class="receipt-detail-value" data-ref="audit-detail-customer">-</span>
+          </div>
+        </div>
+
+        <div class="modal-audit__payload-box">
+          <span class="modal-audit__payload-title">Detalles y Carga Útil (JSON):</span>
+          <pre class="audit-json-viewer" data-ref="audit-json-viewer">{}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

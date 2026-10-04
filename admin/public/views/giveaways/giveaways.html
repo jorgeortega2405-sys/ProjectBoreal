@@ -1,0 +1,40 @@
+<div class="component-wrapper component-wrapper--full home-wrapper view-wrapper" data-ref="giveaways-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="giveaways-scrollable">
+    <div class="view-body" data-ref="giveaways-container">
+      <div class="view-backdrop" data-ref="giveaways-gradient-backdrop"></div>
+
+      <div class="view-header" data-ref="giveaways-floating-top">
+        <div class="view-header__left" data-ref="giveaways-floating-left">
+          <h1 class="view-header__title" data-ref="giveaways-title">
+            <span class="view-header__title-name">Gestionar Sorteos</span>
+          </h1>
+        </div>
+
+        <div class="view-header__right" data-ref="giveaways-floating-right">
+          <div class="view-header__actions" data-ref="giveaways-actions">
+            <div class="view-header__search" data-ref="giveaways-search-box">
+              <svg class="component-icon view-header__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="view-header__search-input" data-ref="giveaways-search-input" type="text" placeholder="Buscar sorteos..." autocomplete="off" aria-label="Buscar sorteos" />
+              <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear" data-ref="btn-clear-search" style="display: none;" aria-label="Limpiar búsqueda">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+            </div>
+
+            <button type="button" class="component-button component-button--h40 view-header__btn" data-ref="btn-edit-selected" style="display: none; width: auto; padding: 0 14px; gap: 6px;" aria-label="Editar sorteo seleccionado">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+              <span>Editar</span>
+            </button>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-create-giveaway" data-tooltip="Crear sorteo" aria-label="Crear sorteo">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-view-content" data-ref="giveaways-section">
+        <div class="canvas-grid" data-ref="giveaways-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>

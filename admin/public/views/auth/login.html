@@ -1,0 +1,31 @@
+<div class="layout-content" data-ref="login-view">
+  <div class="login-container" data-ref="login-wrapper">
+    <div class="card card--w-400" data-ref="login-card">
+      <div class="card__header" data-ref="login-header">
+        <h1 class="card__title" data-ref="login-title">Administración</h1>
+        <p class="card__subtitle" data-ref="login-subtitle">Inicia sesión con tu cuenta de administrador</p>
+      </div>
+
+      <form class="card__body" data-ref="login-form">
+        <label class="field" data-ref="field-login-email">
+          <input class="field__input" data-ref="login-email" type="email" maxlength="254" placeholder=" " autocomplete="email" required />
+          <span class="field__label" data-ref="label-login-email">Correo electrónico</span>
+        </label>
+
+        <label class="field" data-ref="field-login-password">
+          <input class="field__input field__input--has-action" data-ref="login-password" type="password" maxlength="128" placeholder=" " autocomplete="current-password" required />
+          <span class="field__label" data-ref="label-login-password">Contraseña</span>
+          <button type="button" class="field__action" data-ref="toggle-login-password" aria-label="Mostrar u ocultar contraseña">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+          </button>
+        </label>
+
+        <button type="button" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-login">
+          Iniciar sesión
+        </button>
+
+        <div class="banner banner--danger" data-ref="login-error" style="display: none;"></div>
+      </form>
+    </div>
+  </div>
+</div>

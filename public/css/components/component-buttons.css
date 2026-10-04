@@ -1,0 +1,975 @@
+.component-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--sl-font-sans);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+  padding: 0 14px;
+  transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast), transform var(--sl-transition-x-fast), box-shadow var(--sl-transition-fast), color var(--sl-transition-fast);
+  box-sizing: border-box;
+  white-space: nowrap;
+  outline: none;
+}
+
+.component-button:hover {
+  border-color: var(--border-color-focus);
+}
+
+.component-button:active {
+  border-color: var(--border-color-focus);
+  transform: scale(0.98);
+}
+
+.component-button.is-active {
+  background-color: var(--bg-selected);
+  border-color: var(--border-color-focus);
+}
+
+.component-button:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--sl-focus-ring-color);
+}
+
+.component-button:disabled,
+.component-button.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.component-button--w-full,
+.component-button--full-width {
+  width: 100%;
+}
+
+.component-button--h28 {
+  height: 28px;
+  min-height: 28px;
+  padding: 0 8px;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.component-button--h30 {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.component-button--h32 {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 12px;
+  gap: 6px;
+}
+
+.component-button--h34 {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  gap: 6px;
+}
+
+.component-button--h36 {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.component-button--h38 {
+  height: 38px;
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.component-button--h40 {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 18px;
+  font-size: 15px;
+  gap: 8px;
+}
+
+.component-button--h44 {
+  height: 44px;
+  min-height: 44px;
+  padding: 0 20px;
+  font-size: 14.5px;
+  gap: 8px;
+  border-radius: 12px;
+}
+
+.component-button--h55 {
+  height: 55px;
+  min-height: 55px;
+  padding: 0 24px;
+  font-size: 15px;
+  gap: 10px;
+  border-radius: 16px;
+}
+
+.component-button--round,
+.component-button--pill {
+  border-radius: var(--sl-border-radius-pill, 9999px) !important;
+}
+
+.component-button--icon,
+.component-button--icon-only {
+  padding: 0;
+  width: auto;
+}
+
+.component-button--icon.component-button--h32,
+.component-button--icon-only.component-button--h32 {
+  width: 32px;
+  min-width: 32px;
+}
+
+.component-button--icon.component-button--h34,
+.component-button--icon-only.component-button--h34 {
+  width: 34px;
+  min-width: 34px;
+}
+
+.component-button--icon.component-button--h36,
+.component-button--icon-only.component-button--h36 {
+  width: 36px;
+  min-width: 36px;
+}
+
+.component-button--icon.component-button--h38,
+.component-button--icon-only.component-button--h38 {
+  width: 38px;
+  min-width: 38px;
+}
+
+.component-button--icon.component-button--h40,
+.component-button--icon-only.component-button--h40 {
+  width: 40px;
+  min-width: 40px;
+}
+
+.component-button--brand,
+.component-button--blue {
+  background-color: var(--color-brand-blue, #2563eb);
+  color: #ffffff;
+  border-color: var(--color-brand-blue, #2563eb);
+}
+
+.component-button--brand:hover,
+.component-button--blue:hover {
+  background-color: var(--color-brand-blue-hover, #1d4ed8);
+  border-color: var(--color-brand-blue-hover, #1d4ed8);
+  color: #ffffff;
+}
+
+.component-button--brand:active,
+.component-button--blue:active {
+  background-color: var(--color-brand-blue-active, #1e40af);
+  border-color: var(--color-brand-blue-active, #1e40af);
+  color: #ffffff;
+}
+
+.component-button--brand:focus-visible,
+.component-button--blue:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--color-brand-blue, #2563eb);
+}
+
+.component-button--black,
+.component-button--primary {
+  background-color: var(--action-primary);
+  color: var(--action-primary-text);
+  border-color: var(--action-primary);
+}
+
+.component-button--black:hover,
+.component-button--primary:hover {
+  background-color: var(--action-primary-hover);
+  border-color: var(--action-primary-hover);
+}
+
+.component-button--black:active,
+.component-button--primary:active {
+  background-color: var(--action-primary-active);
+}
+
+.component-button--black:focus-visible,
+.component-button--primary:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--action-primary);
+}
+
+.component-button--secondary {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.component-button--secondary:hover {
+  background-color: var(--bg-active);
+  border-color: var(--border-color-hover);
+}
+
+.component-button--outline {
+  background-color: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.component-button--outline:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
+}
+
+.component-button--white {
+  background-color: #ffffff;
+  color: #000000;
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.component-button--white:hover {
+  background-color: #f3f4f6;
+}
+
+.component-button--dark {
+  background-color: var(--bg-surface-raised);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.component-button--danger {
+  background-color: var(--bg-surface);
+  color: var(--action-danger);
+  border-color: var(--color-error-border);
+}
+
+.component-button--danger:hover {
+  background-color: var(--action-danger-bg);
+  color: var(--action-danger-hover);
+  border-color: var(--action-danger);
+}
+
+.component-button--danger:active {
+  background-color: var(--action-danger-hover-bg);
+}
+
+.component-button--danger:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--color-error-border);
+}
+
+.component-button--ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--text-primary);
+}
+
+.component-button--ghost:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: transparent;
+}
+
+.component-button--avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--bg-surface);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  position: relative;
+  outline: none;
+}
+
+.component-button--avatar:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
+
+.component-button--avatar:active {
+  transform: scale(0.97);
+}
+
+.component-button--avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.component-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  stroke: none;
+  vertical-align: middle;
+  flex-shrink: 0;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.component-button .component-icon,
+.component-button .material-symbols-rounded {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  user-select: none;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.component-button--h40 .component-icon,
+.component-button--h40 .material-symbols-rounded {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+}
+
+/* ==========================================================================
+   SISTEMA DE COMPONENTES PARA BADGES (.component-badge / .verify-badge)
+   ========================================================================== */
+
+.component-badge,
+.verify-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--sl-border-radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid #00000020;
+  background-color: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast), color var(--sl-transition-fast), transform var(--sl-transition-x-fast);
+  user-select: none;
+  box-sizing: border-box;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+html[data-theme="dark"] .component-badge,
+html[data-theme="dark"] .verify-badge,
+html.dark-theme .component-badge,
+html.dark-theme .verify-badge {
+  border-color: #ffffff20;
+}
+
+.component-badge:hover,
+.verify-badge:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
+}
+
+.component-badge--interactive:hover {
+  background-color: var(--bg-hover) !important;
+  border-color: var(--border-color-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+.component-badge--interactive:hover .component-badge__icon,
+.component-badge--interactive:hover .component-icon {
+  color: var(--text-primary) !important;
+  fill: currentColor !important;
+}
+
+.component-badge:active,
+.verify-badge:active {
+  transform: scale(0.98);
+}
+
+.verify-badge.is-active {
+  background-color: var(--action-primary);
+  color: var(--action-primary-text);
+  border-color: var(--action-primary);
+}
+
+.component-badge.is-active,
+.component-badge--active {
+  background-color: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color-hover, var(--border-color)) !important;
+  box-shadow: none !important;
+  font-weight: 600;
+}
+
+.component-badge__icon,
+.verify-badge__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.component-badge__icon svg,
+.verify-badge__icon svg {
+  display: block;
+}
+
+.verify-badge.is-active .verify-badge__icon--text,
+.verify-badge.is-active .component-badge__icon {
+  color: var(--action-primary-text);
+}
+
+.component-badge.is-active .component-badge__icon,
+.component-badge.is-active .component-icon,
+.component-badge--active .component-badge__icon,
+.component-badge--active .component-icon {
+  color: var(--accent-pink) !important;
+  fill: currentColor !important;
+}
+
+html[data-theme="dark"] .component-badge--interactive:hover,
+html.dark-theme .component-badge--interactive:hover {
+  background-color: var(--accent-pink-subtle) !important;
+  border-color: var(--accent-pink-border) !important;
+  color: var(--accent-pink) !important;
+}
+
+html[data-theme="dark"] .component-badge--interactive:hover .component-badge__icon,
+html[data-theme="dark"] .component-badge--interactive:hover .component-icon,
+html.dark-theme .component-badge--interactive:hover .component-badge__icon,
+html.dark-theme .component-badge--interactive:hover .component-icon {
+  color: var(--accent-pink) !important;
+  fill: currentColor !important;
+}
+
+html[data-theme="dark"] .component-badge.is-active,
+html[data-theme="dark"] .component-badge--active,
+html.dark-theme .component-badge.is-active,
+html.dark-theme .component-badge--active {
+  background-color: var(--accent-pink-subtle) !important;
+  color: var(--accent-pink) !important;
+  border: 1px solid var(--accent-pink) !important;
+  box-shadow: 0 0 0 1.5px var(--accent-pink-border) !important;
+}
+
+html[data-theme="dark"] .component-badge.is-active .component-badge__icon,
+html[data-theme="dark"] .component-badge.is-active .component-icon,
+html[data-theme="dark"] .component-badge--active .component-badge__icon,
+html[data-theme="dark"] .component-badge--active .component-icon,
+html.dark-theme .component-badge.is-active .component-badge__icon,
+html.dark-theme .component-badge.is-active .component-icon,
+html.dark-theme .component-badge--active .component-badge__icon,
+html.dark-theme .component-badge--active .component-icon {
+  color: var(--accent-pink) !important;
+  fill: currentColor !important;
+}
+
+.component-badge .component-badge__icon--colored,
+.component-badge.is-active .component-badge__icon--colored,
+.component-badge--active .component-badge__icon--colored,
+.component-badge--interactive:hover .component-badge__icon--colored,
+html[data-theme="dark"] .component-badge .component-badge__icon--colored,
+html[data-theme="dark"] .component-badge.is-active .component-badge__icon--colored,
+html[data-theme="dark"] .component-badge--active .component-badge__icon--colored,
+html[data-theme="dark"] .component-badge--interactive:hover .component-badge__icon--colored,
+html.dark-theme .component-badge .component-badge__icon--colored,
+html.dark-theme .component-badge.is-active .component-badge__icon--colored,
+html.dark-theme .component-badge--active .component-badge__icon--colored,
+html.dark-theme .component-badge--interactive:hover .component-badge__icon--colored {
+  color: unset !important;
+  fill: none !important;
+}
+
+.component-badge__text {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Modificadores de tamaño */
+.component-badge--sm,
+.verify-badge--sm {
+  padding: 4px 12px;
+  font-size: 11px;
+  gap: 6px;
+}
+
+.component-badge--md,
+.verify-badge--md {
+  padding: 8px 14px;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.component-badge--lg,
+.verify-badge--lg {
+  padding: 10px 18px;
+  font-size: 14px;
+  gap: 8px;
+}
+
+/* Modificadores de forma y ancho */
+.component-badge--rounded {
+  border-radius: 12px;
+}
+
+.component-badge--w-full,
+.component-badge--full-width,
+.verify-badge--w-full {
+  width: 100%;
+}
+
+/* Modificadores de estado y color para Badges */
+.component-badge--success {
+  background-color: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success);
+}
+
+.component-badge--warning {
+  background-color: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning);
+}
+
+.component-badge--danger,
+.component-badge--error {
+  background-color: var(--color-error-bg);
+  border-color: var(--color-error-border);
+  color: var(--color-error);
+}
+
+.component-badge--neutral {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+/* Contenedor de opciones de verificación */
+.verify-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 0;
+  width: 100%;
+}
+
+/* Alertas / Banners Genéricos */
+.banner,
+.form-error {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.banner--danger,
+.form-error {
+  background-color: var(--color-error-bg);
+  border: 1px solid var(--color-error-border);
+  color: var(--color-error);
+}
+
+.banner--success {
+  background-color: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  color: var(--color-success);
+}
+
+.banner--info {
+  background-color: var(--color-surface-card, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.banner--info .banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.banner--info .banner__text strong {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.banner--info .banner__text span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.banner.is-hidden,
+.banner:empty,
+.form-error.is-hidden,
+.form-error:empty {
+  display: none !important;
+}
+
+.text-highlight {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card__body,
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Campo con Floating Label Asociado Nativamente */
+.field,
+.form-field {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.field__input,
+.form-input {
+  width: 100%;
+  height: 55px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 22px 16px 6px 16px;
+  font-family: var(--sl-font-sans);
+  font-size: 14px;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast), background-color var(--sl-transition-fast);
+  margin: 0;
+}
+
+.field__input:focus,
+.form-input:focus {
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 1px var(--border-color-focus);
+  background-color: var(--bg-input-focus);
+}
+
+.field__input--has-action,
+.form-input--with-action {
+  padding-right: 48px;
+}
+
+.field__input--code {
+  letter-spacing: 6px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: left;
+}
+
+/* Label flotante */
+.field__label,
+.form-label {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--sl-font-sans);
+  font-size: 14px;
+  color: var(--text-secondary);
+  pointer-events: none;
+  transition: all var(--sl-transition-fast);
+  transform-origin: left top;
+}
+
+.field__input:focus ~ .field__label,
+.field__input:not(:placeholder-shown) ~ .field__label,
+.field__select ~ .field__label,
+.field:has(.field__select) .field__label,
+.form-input:focus ~ .form-label,
+.form-input:not(:placeholder-shown) ~ .form-label {
+  top: 15px;
+  transform: translateY(-50%) scale(0.78);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.field--sm {
+  width: 100%;
+}
+
+.field--sm .field__input {
+  height: 42px;
+  border-radius: var(--radius-md, 10px);
+  padding: 16px 12px 4px 12px;
+  font-size: 13px;
+}
+
+.field--sm .field__label {
+  left: 12px;
+  font-size: 13px;
+}
+
+.field--sm .field__input:focus ~ .field__label,
+.field--sm .field__input:not(:placeholder-shown) ~ .field__label,
+.field--sm .field__select ~ .field__label,
+.field--sm:has(.field__select) .field__label {
+  top: 11px;
+  transform: translateY(-50%) scale(0.75);
+}
+
+/* Botón de acción dentro del input (toggle de contraseña) */
+.field__action,
+.form-input-action {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.field__action:hover,
+.form-input-action:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.field__action .component-icon,
+.field__action .material-symbols-rounded,
+.form-input-action .component-icon,
+.form-input-action .material-symbols-rounded {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Enlaces y filas de enlaces */
+.link-row,
+.form-link-row {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.link,
+.form-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--sl-font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--sl-transition-fast);
+}
+
+.link:hover,
+.form-link:hover {
+  color: var(--text-primary);
+  text-decoration: underline;
+}
+
+.link--primary,
+.form-link-primary {
+  color: var(--color-brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link--primary:hover,
+.form-link-primary:hover {
+  text-decoration: underline;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.footer-note,
+.form-footer-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* ==========================================================================
+   7. SISTEMA DE TOOLTIPS CON POPPER Y ARROW DINÁMICA
+   ========================================================================== */
+
+.tooltip {
+  position: absolute;
+  z-index: 10000;
+  background-color: var(--text-primary);
+  color: var(--text-inverse);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-family: var(--sl-font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  box-shadow: var(--shadow-dropdown);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--sl-transition-fast), visibility var(--sl-transition-fast);
+  white-space: nowrap;
+}
+
+.tooltip.is-visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip__content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Arrow dinámica gestionada por Popper */
+.tooltip__arrow,
+.tooltip__arrow::before {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+}
+
+.tooltip__arrow {
+  visibility: hidden;
+}
+
+.tooltip__arrow::before {
+  visibility: visible;
+  content: '';
+  transform: rotate(45deg);
+  background-color: var(--text-primary);
+}
+
+/* Orientación dinámica de la arrow según el data-popper-placement */
+.tooltip[data-popper-placement^='top'] > .tooltip__arrow {
+  bottom: -4px;
+}
+
+.tooltip[data-popper-placement^='bottom'] > .tooltip__arrow {
+  top: -4px;
+}
+
+.tooltip[data-popper-placement^='left'] > .tooltip__arrow {
+  right: -4px;
+}
+
+.tooltip[data-popper-placement^='right'] > .tooltip__arrow {
+  left: -4px;
+}
+
+
+/* ==========================================================================
+   17. COMPONENTE TOGGLE SWITCH (.toggle-switch)
+   ========================================================================== */
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.toggle-switch__input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-switch__slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-color-hover);
+  border-radius: 24px;
+  transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast);
+  border: 1px solid var(--border-color);
+}
+
+.toggle-switch__slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--sl-color-neutral-0);
+  border-radius: 50%;
+  transition: transform var(--sl-transition-fast), background-color var(--sl-transition-fast);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch__input:checked + .toggle-switch__slider {
+  background-color: var(--action-primary);
+  border-color: var(--action-primary);
+}
+
+.toggle-switch__input:checked + .toggle-switch__slider::before {
+  transform: translateX(20px);
+  background-color: var(--action-primary-text);
+}
