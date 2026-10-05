@@ -34,7 +34,7 @@ function computeTimerInfo(item: Giveaway): { isEnded: boolean; text: string } {
       : t('home.completed_badge');
     return {
       isEnded: true,
-      text: `🏆 ${winnerText}`,
+      text: winnerText,
     };
   }
 
@@ -79,6 +79,11 @@ function computeTimerInfo(item: Giveaway): { isEnded: boolean; text: string } {
 export class HomeController {
   private abortController: AbortController | null = null;
   private activeCategory = 'all';
+  private cardHoverImages: string[] = [];
+  private cardHoverIndex = 0;
+  private cardHoverInterval: ReturnType<typeof setInterval> | null = null;
+  private cardHoverTargetImg: HTMLImageElement | null = null;
+  private cardImagesMap: Map<string, string[]> = new Map();
   private container: HTMLElement;
   private filteredGiveaways: Giveaway[] = [];
   private giveaways: Giveaway[] = [];
@@ -129,12 +134,13 @@ export class HomeController {
     });
 
     let isDown = false;
+    let hasMoved = false;
     let startX = 0;
     let scrollLeft = 0;
 
     badgesContainer.addEventListener('mousedown', (e) => {
       isDown = true;
-      badgesContainer.classList.add('is-dragging');
+      hasMoved = false;
       startX = e.pageX - badgesContainer.offsetLeft;
       scrollLeft = badgesContainer.scrollLeft;
     });
@@ -147,13 +153,22 @@ export class HomeController {
 
     badgesContainer.addEventListener('mousemove', (e) => {
       if (!isDown) return;
-      e.preventDefault();
       const x = e.pageX - badgesContainer.offsetLeft;
-      const walk = (x - startX) * 1.5;
-      badgesContainer.scrollLeft = scrollLeft - walk;
+      const diff = Math.abs(x - startX);
+      if (diff > 5) {
+        hasMoved = true;
+        badgesContainer.classList.add('is-dragging');
+        e.preventDefault();
+        const walk = (x - startX) * 1.5;
+        badgesContainer.scrollLeft = scrollLeft - walk;
+      }
     });
 
     badgesContainer.addEventListener('click', (e) => {
+      if (hasMoved) {
+        hasMoved = false;
+        return;
+      }
       const badgeBtn = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>('.component-badge');
       if (!badgeBtn) return;
       const categoryId = badgeBtn.getAttribute('data-category');
@@ -184,7 +199,26 @@ export class HomeController {
 
   private async loadData(): Promise<void> {
     this.giveaways = await fetchActiveGiveaways();
+    this.populateCardImagesMap();
     this.filterGiveaways();
+  }
+
+  private populateCardImagesMap(): void {
+    this.cardImagesMap.clear();
+    for (const item of this.giveaways) {
+      const list: string[] = [];
+      if (item.primary_image_url) {
+        list.push(item.primary_image_url);
+      }
+      if (Array.isArray(item.image_urls)) {
+        for (const url of item.image_urls) {
+          if (url && !list.includes(url)) {
+            list.push(url);
+          }
+        }
+      }
+      this.cardImagesMap.set(item.uuid, list);
+    }
   }
 
   private startCountdownLoop(): void {
@@ -242,6 +276,7 @@ export class HomeController {
   }
 
   private renderGiveaways(list: Giveaway[]): void {
+    this.stopCardHover();
     const grid = this.container.querySelector<HTMLElement>('[data-ref="giveaways-grid"]');
     if (!grid) return;
 
@@ -272,7 +307,7 @@ export class HomeController {
         return `
           <div class="canvas-card" data-ref="card-giveaway-${item.uuid}" data-uuid="${item.uuid}">
             <div class="canvas-card__thumbnail">
-              <img class="canvas-card__image" src="${escapeHtml(item.primary_image_url)}" alt="${escapeHtml(item.title)}" loading="lazy" />
+              <img class="canvas-card__image" data-ref="card-img-${item.uuid}" src="${escapeHtml(item.primary_image_url)}" alt="${escapeHtml(item.title)}" loading="lazy" />
               ${thresholdBadgeHtml}
               <span class="canvas-card__btn-sync">${escapeHtml(actionLabel)}</span>
               <div class="giveaway-card__timer-badge" data-ref="card-timer-${item.uuid}">
@@ -292,6 +327,77 @@ export class HomeController {
         `;
       })
       .join('');
+
+    this.bindCardHoverEvents();
+  }
+
+  private bindCardHoverEvents(): void {
+    const cards = this.container.querySelectorAll<HTMLElement>('.canvas-card');
+    cards.forEach((card) => {
+      const uuid = card.getAttribute('data-uuid');
+      if (!uuid) return;
+      const images = this.cardImagesMap.get(uuid) || [];
+      if (images.length <= 1) return;
+
+      const img = card.querySelector<HTMLImageElement>('[data-ref^="card-img-"]');
+      if (!img) return;
+
+      card.addEventListener(
+        'mouseenter',
+        () => {
+          this.startCardHover(img, images);
+        },
+        { signal: this.abortController?.signal }
+      );
+
+      card.addEventListener(
+        'mouseleave',
+        () => {
+          this.stopCardHover(img, images);
+        },
+        { signal: this.abortController?.signal }
+      );
+    });
+  }
+
+  private startCardHover(img: HTMLImageElement, images: string[]): void {
+    this.stopCardHover();
+    for (let i = 1; i < images.length; i++) {
+      const preload = new Image();
+      preload.src = images[i];
+    }
+    this.cardHoverImages = images;
+    this.cardHoverIndex = 0;
+    this.cardHoverTargetImg = img;
+
+    this.cardHoverInterval = setInterval(() => {
+      if (!this.cardHoverTargetImg) return;
+      this.cardHoverIndex = (this.cardHoverIndex + 1) % this.cardHoverImages.length;
+      const nextUrl = this.cardHoverImages[this.cardHoverIndex];
+      this.cardHoverTargetImg.style.opacity = '0.4';
+      setTimeout(() => {
+        if (this.cardHoverTargetImg && this.cardHoverImages.length > 0) {
+          this.cardHoverTargetImg.src = nextUrl;
+          this.cardHoverTargetImg.style.opacity = '1';
+        }
+      }, 100);
+    }, 1000);
+  }
+
+  private stopCardHover(img?: HTMLImageElement, images?: string[]): void {
+    if (this.cardHoverInterval) {
+      clearInterval(this.cardHoverInterval);
+      this.cardHoverInterval = null;
+    }
+    const targetImg = img || this.cardHoverTargetImg;
+    const targetImages = images || this.cardHoverImages;
+    if (targetImg && targetImages[0] && targetImg.src !== targetImages[0]) {
+      targetImg.src = targetImages[0];
+      targetImg.style.opacity = '1';
+    }
+    this.cardHoverImages = [];
+    this.cardHoverIndex = 0;
+    this.cardHoverTargetImg = null;
   }
 
   private bindEvents(view: HTMLElement): void {
@@ -367,6 +473,7 @@ export class HomeController {
   }
 
   destroy(): void {
+    this.stopCardHover();
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;

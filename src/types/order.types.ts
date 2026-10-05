@@ -15,6 +15,7 @@ export interface Order {
   giveaway_uuid?: string;
   customer_name: string;
   customer_phone: string;
+  customer_state?: string | null;
   ticket_count: number;
   ticket_numbers: number[];
   total_amount: number;

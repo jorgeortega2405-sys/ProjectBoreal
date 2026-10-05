@@ -16,7 +16,7 @@ export interface ModalOptions {
   onConfirm?: (() => boolean | Promise<boolean> | void) | null;
   showCancel?: boolean;
   showConfirm?: boolean;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'split';
   title?: string;
 }
 

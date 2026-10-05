@@ -8,6 +8,7 @@ import { showToast } from '../services/toast.service.js';
 import { onWebSocketEvent } from '../services/websocket.service.js';
 import { Giveaway } from '../types/giveaway.types.js';
 import { BankAccount, Order } from '../types/order.types.js';
+import { formatMexicanPhone, normalizeMexicanPhone } from '../utils/phone.util.js';
 
 function escapeHtml(str: string | null | undefined): string {
   if (!str) return '';
@@ -19,19 +20,78 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/'/g, '&#39;');
 }
 
+const COUNTRY_LADAS = [
+  { code: '+52', flag: '🇲🇽', name: 'México' },
+  { code: '+1', flag: '🇺🇸', name: 'EE.UU. / Canadá' },
+  { code: '+57', flag: '🇨🇴', name: 'Colombia' },
+  { code: '+54', flag: '🇦🇷', name: 'Argentina' },
+  { code: '+56', flag: '🇨🇱', name: 'Chile' },
+  { code: '+51', flag: '🇵🇪', name: 'Perú' },
+  { code: '+502', flag: '🇬🇹', name: 'Guatemala' },
+  { code: '+503', flag: '🇸🇻', name: 'El Salvador' },
+  { code: '+504', flag: '🇭🇳', name: 'Honduras' },
+  { code: '+505', flag: '🇳🇮', name: 'Nicaragua' },
+  { code: '+506', flag: '🇨🇷', name: 'Costa Rica' },
+  { code: '+507', flag: '🇵🇦', name: 'Panamá' },
+  { code: '+593', flag: '🇪🇨', name: 'Ecuador' },
+  { code: '+591', flag: '🇧🇴', name: 'Bolivia' },
+  { code: '+595', flag: '🇵🇾', name: 'Paraguay' },
+  { code: '+598', flag: '🇺🇾', name: 'Uruguay' },
+  { code: '+34', flag: '🇪🇸', name: 'España' },
+];
+
+const MEXICAN_STATES = [
+  'Aguascalientes',
+  'Baja California',
+  'Baja California Sur',
+  'Campeche',
+  'Chiapas',
+  'Chihuahua',
+  'Ciudad de México',
+  'Coahuila',
+  'Colima',
+  'Durango',
+  'Estado de México',
+  'Guanajuato',
+  'Guerrero',
+  'Hidalgo',
+  'Jalisco',
+  'Michoacán',
+  'Morelos',
+  'Nayarit',
+  'Nuevo León',
+  'Oaxaca',
+  'Puebla',
+  'Querétaro',
+  'Quintana Roo',
+  'San Luis Potosí',
+  'Sinaloa',
+  'Sonora',
+  'Tabasco',
+  'Tamaulipas',
+  'Tlaxcala',
+  'Veracruz',
+  'Yucatán',
+  'Zacatecas',
+];
+
 export class GiveawayDetailController {
   private abortController: AbortController | null = null;
   private activeImageUrl: string = '';
+  private activePendingOrder: { bankAccounts: BankAccount[]; order: Order } | null = null;
   private allImages: string[] = [];
   private container: HTMLElement;
   private countdownTimer: ReturnType<typeof setInterval> | null = null;
   private currentPage: number = 1;
   private giveaway: Giveaway | null = null;
+  private isGalleryHovered: boolean = false;
   private pageSize: number = 100;
   private paidSet: Set<number> = new Set();
+  private pendingOrderTimer: ReturnType<typeof setInterval> | null = null;
   private reservedSet: Set<number> = new Set();
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private selectedTickets: Set<number> = new Set();
+  private slideshowInterval: ReturnType<typeof setInterval> | null = null;
   private ticketSearchQuery: string = '';
   private unsubscribeWs: (() => void)[] = [];
   private uuid: string;
@@ -60,9 +120,12 @@ export class GiveawayDetailController {
     this.renderGallery();
     this.renderTickets();
     this.renderPagination();
+    this.renderQuantitiesDropdown();
     this.updateSummary();
     this.updateCountdownDisplay();
+    this.checkPendingOrderStorage();
     this.startCountdown();
+    this.startGallerySlideshow();
     this.subscribeWebSocket();
     this.bindDynamicEvents();
   }
@@ -82,6 +145,11 @@ export class GiveawayDetailController {
     }
     this.allImages = list;
     this.activeImageUrl = list[0] || '';
+
+    for (let i = 1; i < list.length; i++) {
+      const preload = new Image();
+      preload.src = list[i];
+    }
   }
 
   private isSalesClosed(): boolean {
@@ -321,17 +389,22 @@ export class GiveawayDetailController {
     const priceEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-price-value"]');
     if (priceEl) priceEl.textContent = `$${g.ticket_price.toFixed(2)} ${g.currency || 'MXN'}`;
 
+    const drawBadgeEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-draw-date-badge"]');
     const dateTextEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-draw-date-text"]');
-    if (dateTextEl && g.draw_date) {
+    if (drawBadgeEl && dateTextEl) {
       if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
+        drawBadgeEl.style.display = 'inline-flex';
         dateTextEl.textContent = t('home.threshold_target', { target: g.min_threshold_pct });
-      } else {
+      } else if (g.draw_date) {
+        drawBadgeEl.style.display = 'inline-flex';
         const formattedDate = new Date(g.draw_date).toLocaleDateString('es-ES', {
           day: 'numeric',
           month: 'short',
           year: 'numeric',
         });
         dateTextEl.textContent = t('giveaway.draw_date', { date: formattedDate });
+      } else {
+        drawBadgeEl.style.display = 'none';
       }
     }
 
@@ -379,6 +452,23 @@ export class GiveawayDetailController {
       mainImg.alt = this.giveaway?.title || '';
     }
 
+    const dotsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-dots"]');
+    if (dotsContainer) {
+      if (this.allImages.length <= 1) {
+        dotsContainer.style.display = 'none';
+      } else {
+        dotsContainer.style.display = 'flex';
+        dotsContainer.innerHTML = this.allImages
+          .map((url, idx) => {
+            const isActive = url === this.activeImageUrl;
+            return `
+              <button type="button" class="giveaway-gallery__dot ${isActive ? 'is-active' : ''}" data-ref="dot-${idx}" data-url="${url}" aria-label="Foto ${idx + 1}"></button>
+            `;
+          })
+          .join('');
+      }
+    }
+
     const thumbsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-thumbs"]');
     if (!thumbsContainer) return;
 
@@ -398,6 +488,135 @@ export class GiveawayDetailController {
         `;
       })
       .join('');
+  }
+
+  private startGallerySlideshow(): void {
+    this.stopGallerySlideshow();
+    if (this.allImages.length <= 1) return;
+
+    this.slideshowInterval = setInterval(() => {
+      if (this.isGalleryHovered) return;
+      this.advanceGalleryImage();
+    }, 2500);
+  }
+
+  private stopGallerySlideshow(): void {
+    if (this.slideshowInterval) {
+      clearInterval(this.slideshowInterval);
+      this.slideshowInterval = null;
+    }
+  }
+
+  private advanceGalleryImage(): void {
+    if (this.allImages.length <= 1) return;
+    const currentIndex = this.allImages.indexOf(this.activeImageUrl);
+    const nextIndex = (currentIndex + 1) % this.allImages.length;
+    this.setActiveGalleryImage(this.allImages[nextIndex]);
+  }
+
+  private setActiveGalleryImage(url: string): void {
+    if (!url || url === this.activeImageUrl) return;
+    this.activeImageUrl = url;
+
+    const mainImg = this.container.querySelector<HTMLImageElement>('[data-ref="gallery-main-image"]');
+    if (mainImg) {
+      mainImg.style.opacity = '0.4';
+      setTimeout(() => {
+        mainImg.src = url;
+        mainImg.style.opacity = '1';
+      }, 120);
+    }
+
+    const dotsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-dots"]');
+    if (dotsContainer) {
+      dotsContainer.querySelectorAll<HTMLButtonElement>('.giveaway-gallery__dot').forEach((el) => {
+        el.classList.toggle('is-active', el.getAttribute('data-url') === url);
+      });
+    }
+
+    const thumbsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-thumbs"]');
+    if (thumbsContainer) {
+      thumbsContainer.querySelectorAll<HTMLButtonElement>('.giveaway-gallery__thumb').forEach((el) => {
+        el.classList.toggle('is-active', el.getAttribute('data-url') === url);
+      });
+    }
+  }
+
+  private checkPendingOrderStorage(): void {
+    try {
+      const stored = localStorage.getItem('boreal_pending_order_' + this.uuid);
+      if (!stored) return;
+      const data = JSON.parse(stored);
+      if (data?.order?.expires_at && new Date(data.order.expires_at).getTime() > Date.now()) {
+        this.activePendingOrder = data;
+        const ticketNums = data.order.ticket_numbers || [];
+        for (const num of ticketNums) {
+          this.reservedSet.add(num);
+        }
+        this.renderPendingOrderBanner();
+      } else {
+        localStorage.removeItem('boreal_pending_order_' + this.uuid);
+      }
+    } catch (_) {
+      localStorage.removeItem('boreal_pending_order_' + this.uuid);
+    }
+  }
+
+  private renderPendingOrderBanner(): void {
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="banner-pending-order"]');
+    const summaryEl = this.container.querySelector<HTMLElement>('[data-ref="pending-order-summary"]');
+    const timerEl = this.container.querySelector<HTMLElement>('[data-ref="pending-order-timer"]');
+
+    if (!this.activePendingOrder || !banner) {
+      if (banner) banner.classList.add('is-hidden');
+      this.stopPendingOrderTimer();
+      return;
+    }
+
+    const { order } = this.activePendingOrder;
+    const expiresAtMs = new Date(order.expires_at).getTime();
+
+    if (Date.now() >= expiresAtMs) {
+      this.clearPendingOrder();
+      return;
+    }
+
+    banner.classList.remove('is-hidden');
+    if (summaryEl) {
+      summaryEl.textContent = `${order.ticket_count} boletos apartados ($${order.total_amount.toFixed(2)} ${order.currency})`;
+    }
+
+    this.stopPendingOrderTimer();
+    const updateCountdown = () => {
+      const diff = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
+      if (diff <= 0) {
+        this.clearPendingOrder();
+        return;
+      }
+      const mins = Math.floor(diff / 60);
+      const secs = diff % 60;
+      if (timerEl) {
+        timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')} restantes`;
+      }
+    };
+
+    updateCountdown();
+    this.pendingOrderTimer = setInterval(updateCountdown, 1000);
+  }
+
+  private clearPendingOrder(): void {
+    this.stopPendingOrderTimer();
+    this.activePendingOrder = null;
+    localStorage.removeItem('boreal_pending_order_' + this.uuid);
+    const banner = this.container.querySelector<HTMLElement>('[data-ref="banner-pending-order"]');
+    if (banner) banner.classList.add('is-hidden');
+  }
+
+  private stopPendingOrderTimer(): void {
+    if (this.pendingOrderTimer) {
+      clearInterval(this.pendingOrderTimer);
+      this.pendingOrderTimer = null;
+    }
   }
 
   private getVisibleTicketNumbers(): number[] {
@@ -541,6 +760,21 @@ export class GiveawayDetailController {
       priceEl.textContent = t('giveaway.total_price', { currency, total });
     }
 
+    const triggerText = this.container.querySelector<HTMLElement>('[data-ref="quantity-selected-text"]');
+    const triggerPrice = this.container.querySelector<HTMLElement>('[data-ref="quantity-selected-price"]');
+    if (triggerText) {
+      triggerText.textContent = count === 1 ? '1 boleto' : `${count} boletos`;
+    }
+    if (triggerPrice) {
+      triggerPrice.textContent = `$${total} ${currency}`;
+    }
+
+    const options = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="list-quantities"] .menu-item');
+    options.forEach((opt) => {
+      const qty = parseInt(opt.getAttribute('data-qty') || '0', 10);
+      opt.classList.toggle('is-active', qty === count);
+    });
+
     const buyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-buy-giveaway"]');
     if (buyBtn) {
       if (this.isSalesClosed()) {
@@ -555,6 +789,118 @@ export class GiveawayDetailController {
         buyBtn.disabled = count === 0;
       }
     }
+  }
+
+  private renderQuantitiesDropdown(): void {
+    if (!this.giveaway) return;
+    const listEl = this.container.querySelector<HTMLElement>('[data-ref="list-quantities"]');
+    if (!listEl) return;
+
+    const rawOptions = this.giveaway.package_options;
+    const options = Array.isArray(rawOptions) && rawOptions.length > 0 ? rawOptions : [1, 3, 5, 10, 20];
+    const currency = this.giveaway.currency || 'MXN';
+    const price = this.giveaway.ticket_price || 0;
+
+    listEl.innerHTML = options
+      .map((qty) => {
+        const subtotal = (qty * price).toFixed(2);
+        const qtyLabel = qty === 1 ? '1 boleto' : `${qty} boletos`;
+        return `
+          <button type="button" class="menu-item" data-ref="option-qty-${qty}" data-qty="${qty}">
+            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+            <span class="menu-item__text">${qtyLabel}</span>
+            <span class="menu-item__subtext">$${subtotal} ${currency}</span>
+          </button>
+        `;
+      })
+      .join('');
+  }
+
+  private bindQuantityDropdown(): void {
+    const signal = this.abortController?.signal;
+    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-quantity"]');
+    const trigger = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-quantity"]');
+    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-quantity"]');
+    const menu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-quantity"]');
+    const listEl = this.container.querySelector<HTMLElement>('[data-ref="list-quantities"]');
+
+    const closeDropdown = () => {
+      wrapper?.classList.remove('is-open');
+      trigger?.classList.remove('is-open');
+      backdrop?.classList.remove('is-open');
+      menu?.classList.remove('is-open');
+      trigger?.setAttribute('aria-expanded', 'false');
+    };
+
+    const openDropdown = () => {
+      wrapper?.classList.add('is-open');
+      trigger?.classList.add('is-open');
+      backdrop?.classList.add('is-open');
+      menu?.classList.add('is-open');
+      trigger?.setAttribute('aria-expanded', 'true');
+    };
+
+    trigger?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (wrapper?.classList.contains('is-open')) {
+          closeDropdown();
+        } else {
+          openDropdown();
+        }
+      },
+      { signal }
+    );
+
+    backdrop?.addEventListener(
+      'click',
+      (e) => {
+        if (e.target === backdrop) {
+          closeDropdown();
+        }
+      },
+      { signal }
+    );
+
+    document.addEventListener(
+      'click',
+      (e) => {
+        if (!wrapper?.contains(e.target as Node)) {
+          closeDropdown();
+        }
+      },
+      { signal }
+    );
+
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape') {
+          closeDropdown();
+        }
+      },
+      { signal }
+    );
+
+    listEl?.addEventListener(
+      'click',
+      (e) => {
+        const itemBtn = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>('.menu-item');
+        if (!itemBtn) return;
+        const qtyStr = itemBtn.getAttribute('data-qty');
+        if (!qtyStr) return;
+        const qty = parseInt(qtyStr, 10);
+        closeDropdown();
+        if (this.isSalesClosed()) {
+          showToast(t('giveaway.toast_sales_closed'), 'warning');
+          return;
+        }
+        this.selectRandomTickets(qty);
+      },
+      { signal }
+    );
   }
 
   private renderNotFound(): void {
@@ -586,7 +932,10 @@ export class GiveawayDetailController {
     }
 
     this.selectedTickets.clear();
-    const targetCount = Math.min(count, availableCount, 20);
+    const rawOptions = this.giveaway.package_options;
+    const maxPkg = Array.isArray(rawOptions) && rawOptions.length > 0 ? Math.max(...rawOptions) : 20;
+    const maxAllowed = Math.max(20, maxPkg);
+    const targetCount = Math.min(count, availableCount, maxAllowed);
     let attempts = 0;
     const maxAttempts = targetCount * 500;
 
@@ -625,6 +974,60 @@ export class GiveawayDetailController {
   private bindDynamicEvents(): void {
     const signal = this.abortController?.signal;
 
+    const galleryContainer = this.container.querySelector<HTMLElement>('[data-ref="giveaway-gallery"]');
+    galleryContainer?.addEventListener(
+      'mouseenter',
+      () => {
+        this.isGalleryHovered = true;
+      },
+      { signal }
+    );
+
+    galleryContainer?.addEventListener(
+      'mouseleave',
+      () => {
+        this.isGalleryHovered = false;
+      },
+      { signal }
+    );
+
+    const dotsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-dots"]');
+    dotsContainer?.addEventListener(
+      'click',
+      (e) => {
+        const dot = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>('.giveaway-gallery__dot');
+        if (!dot) return;
+        const url = dot.getAttribute('data-url');
+        if (url && url !== this.activeImageUrl) {
+          this.setActiveGalleryImage(url);
+          this.startGallerySlideshow();
+        }
+      },
+      { signal }
+    );
+
+    const reopenBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reopen-bank-modal"]');
+    reopenBtn?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.activePendingOrder) {
+          this.openBankInfoModal(this.activePendingOrder.order, this.activePendingOrder.bankAccounts);
+        }
+      },
+      { signal }
+    );
+
+    const gotoValidateBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-goto-validate-payment"]');
+    gotoValidateBtn?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        navigate('/validate-payment');
+      },
+      { signal }
+    );
+
     const thumbsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-thumbs"]');
     thumbsContainer?.addEventListener(
       'click',
@@ -633,18 +1036,8 @@ export class GiveawayDetailController {
         if (!btn) return;
         const url = btn.getAttribute('data-url');
         if (url && url !== this.activeImageUrl) {
-          this.activeImageUrl = url;
-          const mainImg = this.container.querySelector<HTMLImageElement>('[data-ref="gallery-main-image"]');
-          if (mainImg) {
-            mainImg.style.opacity = '0.4';
-            setTimeout(() => {
-              mainImg.src = url;
-              mainImg.style.opacity = '1';
-            }, 120);
-          }
-          thumbsContainer.querySelectorAll('.giveaway-gallery__thumb').forEach((el) => {
-            el.classList.toggle('is-active', el === btn);
-          });
+          this.setActiveGalleryImage(url);
+          this.startGallerySlideshow();
         }
       },
       { signal }
@@ -673,8 +1066,11 @@ export class GiveawayDetailController {
           this.selectedTickets.delete(num);
           ticketBtn.classList.remove('is-selected');
         } else {
-          if (this.selectedTickets.size >= 20) {
-            showToast('No puedes seleccionar más de 20 boletos por orden.', 'warning');
+          const rawOptions = this.giveaway?.package_options;
+          const maxPkg = Array.isArray(rawOptions) && rawOptions.length > 0 ? Math.max(...rawOptions) : 20;
+          const maxAllowed = Math.max(20, maxPkg);
+          if (this.selectedTickets.size >= maxAllowed) {
+            showToast(`No puedes seleccionar más de ${maxAllowed} boletos por orden.`, 'warning');
             return;
           }
           this.selectedTickets.add(num);
@@ -731,22 +1127,7 @@ export class GiveawayDetailController {
       { signal }
     );
 
-    const quickBtns = this.container.querySelectorAll<HTMLButtonElement>('.giveaway-qty-btn');
-    quickBtns.forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        (e) => {
-          e.preventDefault();
-          if (this.isSalesClosed()) {
-            showToast(t('giveaway.toast_sales_closed'), 'warning');
-            return;
-          }
-          const qty = parseInt(btn.getAttribute('data-qty') || '1', 10);
-          this.selectRandomTickets(qty);
-        },
-        { signal }
-      );
-    });
+    this.bindQuantityDropdown();
 
     const buyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-buy-giveaway"]');
     buyBtn?.addEventListener(
@@ -797,38 +1178,197 @@ export class GiveawayDetailController {
     const total = (count * this.giveaway.ticket_price).toFixed(2);
     const currency = this.giveaway.currency || 'MXN';
     const ticketList = Array.from(this.selectedTickets)
-      .map((n) => `<span class="giveaway-ticket is-selected" style="height: 30px; width: 50px; font-size: 11px; cursor: default;">#${n.toString().padStart(3, '0')}</span>`)
+      .map((n) => `<span class="giveaway-ticket giveaway-ticket--chip is-selected" data-ref="chip-ticket-${n}">#${n.toString().padStart(3, '0')}</span>`)
       .join('');
+
+    let selectedLada = COUNTRY_LADAS[0];
+    let selectedState = '';
 
     const modalBody = document.createElement('div');
     modalBody.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div style="display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border-radius: 12px; background: var(--bg-surface-elevated); border: 1px solid var(--border-color);">
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
-            <span style="color: var(--text-secondary);">${count} boletos seleccionados:</span>
-            <span style="font-weight: 800; font-size: 15px; color: var(--text-primary);">$${total} ${currency}</span>
-          </div>
-          <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
-            ${ticketList}
-          </div>
-        </div>
-
-        <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">${t('orders.modal_data_desc')}</p>
-
+      <div class="modal-reservation-box" data-ref="modal-reservation-box">
         <label class="field" data-ref="field-buyer-name">
           <input class="field__input" data-ref="input-buyer-name" type="text" maxlength="100" placeholder=" " value="" autocomplete="name" />
           <span class="field__label" data-ref="label-buyer-name">${t('orders.full_name_label')}</span>
         </label>
 
-        <label class="field" data-ref="field-buyer-phone">
-          <input class="field__input" data-ref="input-buyer-phone" type="tel" maxlength="20" placeholder=" " value="" autocomplete="tel" />
-          <span class="field__label" data-ref="label-buyer-phone">${t('orders.phone_label')}</span>
-        </label>
+        <div class="phone-lada-row" data-ref="phone-lada-row">
+          <div class="settings-dropdown-wrapper lada-dropdown-wrapper" data-ref="dropdown-wrapper-lada">
+            <button type="button" class="lada-dropdown-trigger" data-ref="btn-trigger-lada" aria-haspopup="listbox" aria-expanded="false">
+              <div class="lada-trigger__content" data-ref="lada-trigger-content">
+                <span class="lada-trigger__flag" data-ref="lada-trigger-flag">${selectedLada.flag}</span>
+                <span class="lada-trigger__code" data-ref="lada-trigger-code">${selectedLada.code}</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-lada-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+            <div class="menu-panel menu-panel--dropdown lada-menu-panel" data-ref="dropdown-menu-lada" role="listbox">
+              <div class="menu-panel__list" data-ref="list-ladas">
+                ${COUNTRY_LADAS.map((lada) => `
+                  <button type="button" class="menu-item${lada.code === selectedLada.code ? ' is-active' : ''}" data-ref="item-lada-${lada.code}" data-lada-code="${lada.code}" role="option">
+                    <span class="menu-item__text" data-ref="text-lada-item">${lada.flag} ${lada.name} (${lada.code})</span>
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+
+          <label class="field phone-input-field" data-ref="field-buyer-phone">
+            <input class="field__input field__input--has-action" data-ref="input-buyer-phone" type="tel" maxlength="14" placeholder=" " value="" autocomplete="tel" />
+            <span class="field__label" data-ref="label-buyer-phone">${t('orders.phone_label')}</span>
+            <span class="field__action" data-ref="action-buyer-phone">
+              <svg class="component-icon" data-ref="icon-phone-call" aria-hidden="true"><use href="/icons.svg#call"></use></svg>
+            </span>
+          </label>
+        </div>
+        <div class="field-helper-text" data-ref="helper-phone-whatsapp">
+          <svg class="component-icon field-helper-text__icon" data-ref="icon-phone-whatsapp" aria-hidden="true"><use href="/icons.svg#whatsapp"></use></svg>
+          <span>Los ganadores serán contactados exclusivamente por WhatsApp.</span>
+        </div>
+
+        <div class="settings-dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-buyer-state">
+          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-buyer-state" aria-haspopup="listbox" aria-expanded="false">
+            <div class="dropdown-trigger__left" data-ref="trigger-state-left">
+              <svg class="component-icon dropdown-trigger__icon" data-ref="icon-state-trigger" aria-hidden="true"><use href="/icons.svg#location_on"></use></svg>
+              <span class="dropdown-trigger__text" data-ref="text-buyer-state-selected">${t('orders.select_state_placeholder')}</span>
+            </div>
+            <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-state-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-full" data-ref="dropdown-menu-buyer-state" role="listbox">
+            <div class="menu-panel__list" data-ref="list-buyer-states">
+              ${MEXICAN_STATES.map((state) => `
+                <button type="button" class="menu-item" data-ref="item-state-${escapeHtml(state)}" data-state-value="${escapeHtml(state)}" role="option">
+                  <span class="menu-item__text" data-ref="text-state-item">${escapeHtml(state)}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-reservation-summary" data-ref="reservation-summary">
+          <div class="modal-reservation-summary__row" data-ref="summary-row">
+            <span class="modal-reservation-summary__label" data-ref="summary-label">${count} boletos seleccionados:</span>
+            <span class="modal-reservation-summary__total" data-ref="summary-total">$${total} ${currency}</span>
+          </div>
+          <div class="modal-reservation-summary__tickets" data-ref="summary-tickets">
+            ${ticketList}
+          </div>
+        </div>
       </div>
     `;
 
     const nameInput = modalBody.querySelector<HTMLInputElement>('[data-ref="input-buyer-name"]');
     const phoneInput = modalBody.querySelector<HTMLInputElement>('[data-ref="input-buyer-phone"]');
+    const ladaWrapper = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-lada"]');
+    const ladaTrigger = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-lada"]');
+    const ladaMenu = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-menu-lada"]');
+    const ladaFlag = modalBody.querySelector<HTMLElement>('[data-ref="lada-trigger-flag"]');
+    const ladaCode = modalBody.querySelector<HTMLElement>('[data-ref="lada-trigger-code"]');
+    const ladaItems = modalBody.querySelectorAll<HTMLButtonElement>('[data-lada-code]');
+
+    const stateWrapper = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-buyer-state"]');
+    const stateTrigger = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-buyer-state"]');
+    const stateMenu = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-menu-buyer-state"]');
+    const stateSelectedText = modalBody.querySelector<HTMLElement>('[data-ref="text-buyer-state-selected"]');
+    const stateItems = modalBody.querySelectorAll<HTMLButtonElement>('[data-state-value]');
+
+    phoneInput?.addEventListener('input', () => {
+      if (selectedLada.code === '+52') {
+        phoneInput.value = formatMexicanPhone(phoneInput.value);
+      }
+    });
+
+    const closeLadaDropdown = () => {
+      ladaWrapper?.classList.remove('is-open');
+      ladaTrigger?.classList.remove('is-open');
+      ladaMenu?.classList.remove('is-open');
+      ladaTrigger?.setAttribute('aria-expanded', 'false');
+    };
+
+    const openLadaDropdown = () => {
+      ladaWrapper?.classList.add('is-open');
+      ladaTrigger?.classList.add('is-open');
+      ladaMenu?.classList.add('is-open');
+      ladaTrigger?.setAttribute('aria-expanded', 'true');
+    };
+
+    const closeStateDropdown = () => {
+      stateWrapper?.classList.remove('is-open');
+      stateTrigger?.classList.remove('is-open');
+      stateMenu?.classList.remove('is-open');
+      stateTrigger?.setAttribute('aria-expanded', 'false');
+    };
+
+    const openStateDropdown = () => {
+      stateWrapper?.classList.add('is-open');
+      stateTrigger?.classList.add('is-open');
+      stateMenu?.classList.add('is-open');
+      stateTrigger?.setAttribute('aria-expanded', 'true');
+    };
+
+    ladaTrigger?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeStateDropdown();
+      if (ladaWrapper?.classList.contains('is-open')) {
+        closeLadaDropdown();
+      } else {
+        openLadaDropdown();
+      }
+    });
+
+    ladaItems.forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const code = item.getAttribute('data-lada-code');
+        const found = COUNTRY_LADAS.find((l) => l.code === code);
+        if (found) {
+          selectedLada = found;
+          if (ladaFlag) ladaFlag.textContent = found.flag;
+          if (ladaCode) ladaCode.textContent = found.code;
+          ladaItems.forEach((btn) => btn.classList.remove('is-active'));
+          item.classList.add('is-active');
+          if (phoneInput) {
+            phoneInput.value = selectedLada.code === '+52' ? formatMexicanPhone(phoneInput.value) : phoneInput.value.replace(/\D/g, '');
+          }
+        }
+        closeLadaDropdown();
+      });
+    });
+
+    stateTrigger?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeLadaDropdown();
+      if (stateWrapper?.classList.contains('is-open')) {
+        closeStateDropdown();
+      } else {
+        openStateDropdown();
+      }
+    });
+
+    stateItems.forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        selectedState = item.getAttribute('data-state-value') || '';
+        if (stateSelectedText) {
+          stateSelectedText.textContent = selectedState;
+        }
+        stateItems.forEach((btn) => btn.classList.remove('is-active'));
+        item.classList.add('is-active');
+        closeStateDropdown();
+      });
+    });
+
+    modalBody.addEventListener('click', (e) => {
+      if (!stateWrapper?.contains(e.target as Node)) {
+        closeStateDropdown();
+      }
+      if (!ladaWrapper?.contains(e.target as Node)) {
+        closeLadaDropdown();
+      }
+    });
 
     const modal = openModal({
       bodyHtml: modalBody,
@@ -838,23 +1378,41 @@ export class GiveawayDetailController {
       description: t('orders.modal_reserving_desc'),
       onConfirm: async () => {
         const name = nameInput?.value.trim() || '';
-        const phone = phoneInput?.value.trim() || '';
+        const rawPhone = phoneInput?.value || '';
+        const cleanDigits = rawPhone.replace(/\D/g, '');
+        const state = selectedState.trim();
 
         if (name.length < 2) {
           modal.setError('Ingresa tu nombre completo para continuar.');
           return false;
         }
 
-        if (phone.length < 8) {
-          modal.setError('Ingresa un número de teléfono válido.');
+        if (selectedLada.code === '+52') {
+          const mexPhone = normalizeMexicanPhone(rawPhone);
+          if (mexPhone.length !== 10) {
+            modal.setError('Ingresa un número celular válido de 10 dígitos.');
+            return false;
+          }
+        } else {
+          if (cleanDigits.length < 7 || cleanDigits.length > 15) {
+            modal.setError('Ingresa un número telefónico válido (entre 7 y 15 dígitos).');
+            return false;
+          }
+        }
+
+        if (!state) {
+          modal.setError('Selecciona tu estado de la República.');
           return false;
         }
 
         modal.setError('');
 
+        const finalPhone = selectedLada.code === '+52' ? normalizeMexicanPhone(rawPhone) : `${selectedLada.code}${cleanDigits}`;
+
         const res = await reserveTicketsApi({
           customerName: name,
-          customerPhone: phone,
+          customerPhone: finalPhone,
+          customerState: state,
           giveawayUuid: this.giveaway!.uuid,
           ticketNumbers: Array.from(this.selectedTickets),
         });
@@ -883,86 +1441,110 @@ export class GiveawayDetailController {
 
   private openBankInfoModal(order: Order, bankAccounts: BankAccount[]): void {
     let timerInterval: number | null = null;
+    this.activePendingOrder = { bankAccounts, order };
+    try {
+      localStorage.setItem('boreal_pending_order_' + this.uuid, JSON.stringify(this.activePendingOrder));
+    } catch (_) {}
+    this.renderPendingOrderBanner();
 
     const modalBody = document.createElement('div');
     modalBody.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <!-- Reloj Regresivo 30 min -->
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 12px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #d97706; font-size: 13px; font-weight: 600;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <svg class="component-icon" aria-hidden="true" style="width: 16px; height: 16px;"><use href="/icons.svg#schedule"></use></svg>
-            <span>${t('orders.timer_label')}</span>
+      <div class="payment-split" data-ref="payment-split-box">
+        <div class="payment-split__left" data-ref="payment-split-left">
+          <div class="payment-split__header" data-ref="payment-header">
+            <h2 class="payment-split__title" data-ref="payment-title">${t('orders.payment_info_title')}</h2>
+            <p class="payment-split__desc" data-ref="payment-desc">${t('orders.payment_info_desc')}</p>
           </div>
-          <span data-ref="spei-timer-countdown" style="font-size: 16px; font-weight: 800;">29:59</span>
-        </div>
 
-        <!-- Cuentas Bancarias Disponibles -->
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-          ${bankAccounts
-            .map(
-              (acc) => `
-            <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--bg-surface-elevated); border: 1px solid var(--border-color);">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 14px; font-weight: 700; color: var(--text-primary);">${escapeHtml(acc.bank_name)}</span>
-                <span style="font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-secondary);">${escapeHtml(acc.currency)}</span>
-              </div>
-              <div style="font-size: 12.5px; color: var(--text-secondary);">
-                <span>${t('orders.beneficiary_label')}: </span>
-                <strong style="color: var(--text-primary);">${escapeHtml(acc.account_holder)}</strong>
-              </div>
-              ${acc.clabe ? `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-color);">
-                <div>
-                  <span style="font-size: 11px; color: var(--text-tertiary); display: block;">${t('orders.clabe_label')}</span>
-                  <span style="font-size: 14px; font-weight: 800; letter-spacing: 0.5px; color: var(--text-primary);">${escapeHtml(acc.clabe)}</span>
-                </div>
-                <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-copy-clabe-${acc.id}" data-copy-val="${escapeHtml(acc.clabe)}">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
-                  <span>${t('orders.copy_clabe')}</span>
-                </button>
-              </div>` : ''}
-              ${acc.card_number ? `
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-color);">
-                <div>
-                  <span style="font-size: 11px; color: var(--text-tertiary); display: block;">${t('orders.card_number_label')}</span>
-                  <span style="font-size: 14px; font-weight: 800; letter-spacing: 1px; color: var(--text-primary);">${escapeHtml(acc.card_number)}</span>
-                </div>
-                <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-copy-card-${acc.id}" data-copy-val="${escapeHtml(acc.card_number)}">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
-                  <span>${t('orders.copy_card')}</span>
-                </button>
-              </div>` : ''}
+          <div class="modal-timer-box" data-ref="timer-box">
+            <div class="modal-timer-box__left" data-ref="timer-box-left">
+              <svg class="component-icon modal-timer-box__icon" data-ref="timer-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+              <span class="modal-timer-box__label" data-ref="timer-label">${t('orders.timer_label')}</span>
             </div>
-          `
-            )
-            .join('')}
-        </div>
+            <span class="modal-timer-digits" data-ref="spei-timer-countdown">29:59</span>
+          </div>
 
-        <!-- Monto exacto y Concepto obligatorio -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div style="padding: 12px 14px; border-radius: 12px; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <span style="font-size: 11px; color: var(--text-tertiary); display: block;">${t('orders.amount_to_pay')}</span>
-              <span style="font-size: 20px; font-weight: 800; color: var(--text-primary);">$${order.total_amount.toFixed(2)} ${order.currency}</span>
+          <div class="modal-info-stat-card" data-ref="card-amount-to-pay">
+            <div class="modal-info-stat-card__text" data-ref="text-amount-to-pay">
+              <span class="modal-info-stat-card__label" data-ref="label-amount-to-pay">${t('orders.amount_to_pay')}</span>
+              <span class="modal-info-stat-card__val" data-ref="val-amount-to-pay">$${order.total_amount.toFixed(2)} ${order.currency}</span>
             </div>
-            <button type="button" class="component-button component-button--ghost component-button--h28" data-ref="btn-copy-amount" data-copy-val="${order.total_amount.toFixed(2)}" style="margin-top: 8px; align-self: flex-start;">
-              <span>${t('orders.copy_amount')}</span>
+            <button type="button" class="component-button component-button--ghost component-button--h32 component-button--icon-only modal-copy-btn" data-ref="btn-copy-amount" data-tooltip="${t('orders.copy_amount')}" data-copy-val="${order.total_amount.toFixed(2)}">
+              <svg class="component-icon" data-ref="copy-amount-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
             </button>
           </div>
 
-          <div style="padding: 12px 14px; border-radius: 12px; background: var(--bg-surface-elevated); border: 1px solid var(--border-color); display: flex; flex-direction: column; justify-content: space-between;">
-            <div>
-              <span style="font-size: 11px; color: var(--text-tertiary); display: block;">${t('orders.concept_label')}</span>
-              <span style="font-size: 15px; font-weight: 800; color: var(--text-primary);">${order.concept_reference}</span>
+          <div class="modal-info-stat-card" data-ref="card-concept-reference">
+            <div class="modal-info-stat-card__text" data-ref="text-concept-reference">
+              <span class="modal-info-stat-card__label" data-ref="label-concept-reference">${t('orders.concept_label')}</span>
+              <span class="modal-info-stat-card__val modal-info-stat-card__val--concept" data-ref="val-concept-reference">${escapeHtml(order.concept_reference)}</span>
             </div>
-            <button type="button" class="component-button component-button--ghost component-button--h28" data-ref="btn-copy-concept" data-copy-val="${order.concept_reference}" style="margin-top: 8px; align-self: flex-start;">
-              <span>Copiar</span>
+            <button type="button" class="component-button component-button--ghost component-button--h32 component-button--icon-only modal-copy-btn" data-ref="btn-copy-concept" data-tooltip="Copiar concepto" data-copy-val="${escapeHtml(order.concept_reference)}">
+              <svg class="component-icon" data-ref="copy-concept-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+            </button>
+          </div>
+
+          <div class="modal-receipt-note" data-ref="note-receipt">
+            ${t('orders.receipt_instruction')}
+          </div>
+
+          <div class="banner banner--danger is-hidden" data-ref="split-modal-error"></div>
+
+          <div class="payment-split__actions" data-ref="payment-actions">
+            <button type="button" class="component-button component-button--black component-button--h45 component-button--w-full" data-ref="btn-modal-upload-receipt">
+              <svg class="component-icon" data-ref="upload-receipt-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
+              <span>${t('orders.go_to_validate_btn')}</span>
+            </button>
+            <button type="button" class="component-button component-button--ghost component-button--h38 component-button--w-full" data-ref="btn-modal-close-split">
+              <span>Entendido, pagar después</span>
             </button>
           </div>
         </div>
 
-        <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; padding: 10px 12px; border-radius: 10px; background: var(--bg-surface-elevated); border-left: 3px solid #3b82f6;">
-          ${t('orders.receipt_instruction')}
+        <div class="payment-split__right" data-ref="payment-split-right">
+          <div class="payment-split__section-header" data-ref="section-header-accounts">
+            <h3 class="payment-split__section-title" data-ref="section-title-accounts">Cuentas bancarias autorizadas</h3>
+            <p class="payment-split__section-desc" data-ref="section-desc-accounts">Transfiere el monto exacto a cualquiera de las siguientes cuentas:</p>
+          </div>
+
+          <div class="payment-split__accounts-list" data-ref="accounts-list">
+            ${bankAccounts.length === 0 ? `
+              <div class="empty-accounts-notice" data-ref="notice-empty-accounts">
+                No hay cuentas bancarias activas registradas en este sorteo. Por favor contacta al organizador.
+              </div>
+            ` : bankAccounts.map((acc) => `
+              <div class="modal-bank-card" data-ref="bank-card-${acc.id}">
+                <div class="modal-bank-card__header" data-ref="bank-card-header-${acc.id}">
+                  <span class="modal-bank-card__name" data-ref="bank-name-${acc.id}">${escapeHtml(acc.bank_name)}</span>
+                  <span class="modal-bank-card__currency" data-ref="bank-currency-${acc.id}">${escapeHtml(acc.currency)}</span>
+                </div>
+                <div class="modal-bank-card__holder" data-ref="bank-holder-${acc.id}">
+                  <span>${t('orders.beneficiary_label')}: </span>
+                  <strong class="modal-bank-card__holder-name" data-ref="bank-holder-name-${acc.id}">${escapeHtml(acc.account_holder)}</strong>
+                </div>
+                ${acc.clabe ? `
+                <div class="modal-bank-field" data-ref="field-clabe-${acc.id}">
+                  <div class="modal-bank-field__content" data-ref="field-clabe-content-${acc.id}">
+                    <span class="modal-bank-field__label" data-ref="label-clabe-${acc.id}">${t('orders.clabe_label')}</span>
+                    <span class="modal-bank-field__value" data-ref="value-clabe-${acc.id}">${escapeHtml(acc.clabe)}</span>
+                  </div>
+                  <button type="button" class="component-button component-button--ghost component-button--h32 component-button--icon-only modal-copy-btn" data-ref="btn-copy-clabe-${acc.id}" data-tooltip="${t('orders.copy_clabe')}" data-copy-val="${escapeHtml(acc.clabe)}">
+                    <svg class="component-icon" data-ref="icon-copy-clabe-${acc.id}" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                  </button>
+                </div>` : ''}
+                ${acc.card_number ? `
+                <div class="modal-bank-field" data-ref="field-card-${acc.id}">
+                  <div class="modal-bank-field__content" data-ref="field-card-content-${acc.id}">
+                    <span class="modal-bank-field__label" data-ref="label-card-${acc.id}">${t('orders.card_number_label')}</span>
+                    <span class="modal-bank-field__value modal-bank-field__value--card" data-ref="value-card-${acc.id}">${escapeHtml(acc.card_number)}</span>
+                  </div>
+                  <button type="button" class="component-button component-button--ghost component-button--h32 component-button--icon-only modal-copy-btn" data-ref="btn-copy-card-${acc.id}" data-tooltip="${t('orders.copy_card')}" data-copy-val="${escapeHtml(acc.card_number)}">
+                    <svg class="component-icon" data-ref="icon-copy-card-${acc.id}" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                  </button>
+                </div>` : ''}
+              </div>
+            `).join('')}
+          </div>
         </div>
       </div>
     `;
@@ -979,27 +1561,35 @@ export class GiveawayDetailController {
 
     const modal = openModal({
       bodyHtml: modalBody,
-      cancelText: t('common.close'),
-      confirmClass: 'component-button--black',
-      confirmText: t('orders.go_to_validate_btn'),
-      description: t('orders.payment_info_desc'),
+      showCancel: false,
+      showConfirm: false,
+      size: 'split',
       onClose: () => {
         if (timerInterval) {
           clearInterval(timerInterval);
           timerInterval = null;
         }
       },
-      onConfirm: () => {
-        if (timerInterval) clearInterval(timerInterval);
-        modal.close();
-        navigate('/validate-payment');
-        return true;
-      },
-      size: 'md',
-      title: t('orders.payment_info_title'),
+    });
+
+    const uploadBtn = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-modal-upload-receipt"]');
+    const closeSplitBtn = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-modal-close-split"]');
+
+    uploadBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (timerInterval) clearInterval(timerInterval);
+      modal.close();
+      navigate(`/validate-payment?order=${encodeURIComponent(order.uuid)}`);
+    });
+
+    closeSplitBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (timerInterval) clearInterval(timerInterval);
+      modal.close();
     });
 
     const countdownEl = modalBody.querySelector<HTMLElement>('[data-ref="spei-timer-countdown"]');
+    const splitErrorEl = modalBody.querySelector<HTMLElement>('[data-ref="split-modal-error"]');
     const expiresAt = new Date(order.expires_at).getTime();
 
     timerInterval = window.setInterval(() => {
@@ -1014,12 +1604,17 @@ export class GiveawayDetailController {
       } else {
         if (countdownEl) countdownEl.textContent = '0:00';
         if (timerInterval) clearInterval(timerInterval);
-        modal.setError(t('orders.expired_notice'));
+        if (splitErrorEl) {
+          splitErrorEl.textContent = t('orders.expired_notice');
+          splitErrorEl.classList.remove('is-hidden');
+        }
       }
     }, 1000);
   }
 
   destroy(): void {
+    this.stopPendingOrderTimer();
+    this.stopGallerySlideshow();
     if (this.countdownTimer) {
       clearInterval(this.countdownTimer);
       this.countdownTimer = null;

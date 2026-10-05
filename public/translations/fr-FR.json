@@ -10,7 +10,7 @@
     "drawing": "Tirage",
     "expand_drawer": "Développer le menu",
     "faq": "Foire Aux Questions",
-    "help": "Aide & FAQ",
+    "help": "Aide",
     "home": "Accueil",
     "legal_policies": "Politiques & Juridique",
     "navigation": "Navigation",
@@ -27,7 +27,7 @@
     "active_badge": "Actif",
     "clear_search": "Effacer la recherche",
     "completed_badge": "Terminé",
-    "drawing_now": "🎉 Tirage en cours !",
+    "drawing_now": "Tirage en cours !",
     "empty_giveaways": "Aucun tirage disponible pour le moment.",
     "hero_title": "Que souhaiteriez-vous gagner aujourd'hui ?",
     "sales_closed_badge": "Ventes fermées",
@@ -38,9 +38,9 @@
     "sold_out": "Épuisé",
     "ticket_price": "${price} MXN par billet",
     "tickets_left": "{count} disponibles",
-    "time_left_days": "⏳ {days}j {hours}h {minutes}m {seconds}s",
-    "time_left_hours": "⏳ {hours}h {minutes}m {seconds}s",
-    "time_left_soon": "🚨 Tirage dans {minutes}:{seconds}",
+    "time_left_days": "{days}j {hours}h {minutes}m {seconds}s",
+    "time_left_hours": "{hours}h {minutes}m {seconds}s",
+    "time_left_soon": "Tirage dans {minutes}:{seconds}",
     "view_winner_btn": "Voir le Gagnant",
     "winner_announced": "Gagnant : {name} (Billet #{ticket})"
   },
@@ -138,8 +138,8 @@
     "bank_name_label": "Banque réceptrice",
     "beneficiary_label": "Bénéficiaire",
     "clabe_label": "CLABE interbancaire (18 chiffres)",
-    "concept_hint": "Indiquez votre nom ou référence dans le motif du virement.",
-    "concept_label": "Motif du virement (Obligatoire)",
+    "concept_hint": "Indiquez votre nom complet officiel dans le motif du virement.",
+    "concept_label": "Motif / Référence (Votre nom complet)",
     "continue_btn": "Réserver et voir les coordonnées",
     "copied": "Copié dans le presse-papier !",
     "copy_amount": "Copier le montant",
@@ -154,7 +154,9 @@
     "payment_info_desc": "Effectuez votre virement SPEI avant expiration de la réservation.",
     "payment_info_title": "Fiche de Virement SPEI",
     "phone_label": "Téléphone / WhatsApp (10 chiffres)",
-    "receipt_instruction": "Conservez une capture du reçu avec la clé de suivi SPEI bien lisible.",
+    "receipt_instruction": "Lors du virement, indiquez votre nom complet comme motif de paiement. Conservez une capture du reçu.",
+    "select_state_placeholder": "Sélectionnez votre état",
+    "state_label": "État du Mexique",
     "timer_label": "Temps de réservation restant :"
   },
   "validate_payment": {
@@ -220,5 +222,10 @@
     "prizes_desc": "Délais, documents requis et étapes sécurisées de livraison des prix.",
     "responsible_gaming_title": "Politique de Jeu Responsable",
     "responsible_gaming_desc": "Engagement envers la prévention, l'information et le contrôle de l'activité de jeu."
+  },
+  "error": {
+    "back_to_home": "Retour à l'accueil",
+    "not_found_desc": "La page que vous recherchez n'existe pas, a été déplacée ou l'adresse est incorrecte.",
+    "not_found_title": "Page Non Trouvée"
   }
 }

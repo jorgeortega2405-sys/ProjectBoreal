@@ -76,12 +76,12 @@ export async function render(rawPath = window.location.pathname): Promise<void> 
         query: new URLSearchParams(window.location.search),
       });
     } else {
-      const { createHomeView } = await import('./views/home.view.js');
-      nextViewElement = await createHomeView();
+      const { createNotFoundView } = await import('./views/not-found.view.js');
+      nextViewElement = await createNotFoundView();
     }
   } catch {
-    const { createHomeView } = await import('./views/home.view.js');
-    nextViewElement = await createHomeView();
+    const { createNotFoundView } = await import('./views/not-found.view.js');
+    nextViewElement = await createNotFoundView();
   }
 
   if (navId !== currentNavigation || !nextViewElement) {

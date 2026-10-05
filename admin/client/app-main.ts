@@ -1,7 +1,8 @@
 import { initRouter, navigate } from './app-router.js';
-import { initTheme } from './services/theme.service.js';
 import { setupLayoutScrollSync } from './components/layout.component.js';
+import { initTheme } from './services/theme.service.js';
 
+let isSyncingScroll = false;
 let scrollTicking = false;
 
 function handleScrollEvent(e: Event): void {
@@ -9,11 +10,17 @@ function handleScrollEvent(e: Event): void {
   if (!target || target.nodeType !== 1) return;
 
   if (target.classList.contains('layout-content')) {
-    const scrollableBody = target.querySelector<HTMLElement>(
-      '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable'
-    );
-    if (scrollableBody && scrollableBody.scrollTop !== target.scrollTop) {
-      scrollableBody.scrollTop = target.scrollTop;
+    if (!isSyncingScroll) {
+      const scrollableBody = target.querySelector<HTMLElement>(
+        '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable'
+      );
+      if (scrollableBody && Math.abs(scrollableBody.scrollTop - target.scrollTop) > 0.5) {
+        isSyncingScroll = true;
+        scrollableBody.scrollTop = target.scrollTop;
+        requestAnimationFrame(() => {
+          isSyncingScroll = false;
+        });
+      }
     }
   } else if (
     target.classList.contains('view-scrollable') ||
@@ -21,9 +28,15 @@ function handleScrollEvent(e: Event): void {
     target.classList.contains('layout-scrollable') ||
     target.classList.contains('layout-body--scrollable')
   ) {
-    const layoutContent = target.closest<HTMLElement>('.layout-content:has(.layout-nav)');
-    if (layoutContent && layoutContent.scrollTop !== target.scrollTop) {
-      layoutContent.scrollTop = target.scrollTop;
+    if (!isSyncingScroll) {
+      const layoutContent = target.closest<HTMLElement>('.layout-content:has(.layout-nav)');
+      if (layoutContent && Math.abs(layoutContent.scrollTop - target.scrollTop) > 0.5) {
+        isSyncingScroll = true;
+        layoutContent.scrollTop = target.scrollTop;
+        requestAnimationFrame(() => {
+          isSyncingScroll = false;
+        });
+      }
     }
   }
 }

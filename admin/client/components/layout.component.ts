@@ -320,8 +320,13 @@ export function setupLayoutScrollSync(): void {
   }
 
   const updateScrollHeight = () => {
-    const scrollHeight = scrollableBody.scrollHeight;
-    layoutContent.style.setProperty('--layout-scroll-height', `${scrollHeight}px`);
+    const maxScroll = Math.max(0, scrollableBody.scrollHeight - scrollableBody.clientHeight);
+    if (maxScroll === 0) {
+      layoutContent.style.removeProperty('--layout-scroll-height');
+      return;
+    }
+    const neededHeight = layoutContent.clientHeight + maxScroll;
+    layoutContent.style.setProperty('--layout-scroll-height', `${neededHeight}px`);
   };
 
   updateScrollHeight();
@@ -331,6 +336,7 @@ export function setupLayoutScrollSync(): void {
   });
 
   activeResizeObserver.observe(scrollableBody);
+  activeResizeObserver.observe(layoutContent);
   const firstChild = scrollableBody.firstElementChild;
   if (firstChild) {
     activeResizeObserver.observe(firstChild);

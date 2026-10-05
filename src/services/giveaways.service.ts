@@ -19,7 +19,7 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
     if (cached) return cached;
 
     const [rows] = await pool.query<GiveawayRow[]>(
-      `SELECT id, uuid, title, slug, description, primary_image_url, image_urls,
+      `SELECT id, uuid, title, slug, description, primary_image_url, image_urls, package_options,
               CAST(ticket_price AS DOUBLE) AS ticket_price,
               total_tickets, available_tickets, currency, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
@@ -36,6 +36,9 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
     const list = rows.map((row) => ({
       ...row,
       image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
+      package_options: row.package_options
+        ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
+        : [1, 3, 5, 10, 20],
     }));
 
     await setCache('giveaways:active', list, 30);
@@ -53,7 +56,7 @@ export async function getGiveawayByUuid(uuid: string): Promise<Giveaway | null> 
     if (cached) return cached;
 
     const [rows] = await pool.query<GiveawayRow[]>(
-      `SELECT id, uuid, title, slug, description, primary_image_url, image_urls,
+      `SELECT id, uuid, title, slug, description, primary_image_url, image_urls, package_options,
               CAST(ticket_price AS DOUBLE) AS ticket_price,
               total_tickets, available_tickets, currency, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
@@ -70,6 +73,9 @@ export async function getGiveawayByUuid(uuid: string): Promise<Giveaway | null> 
     const result = {
       ...row,
       image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
+      package_options: row.package_options
+        ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
+        : [1, 3, 5, 10, 20],
     };
 
     await setCache(cacheKey, result, 60);

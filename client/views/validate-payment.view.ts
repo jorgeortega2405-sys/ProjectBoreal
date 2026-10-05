@@ -4,6 +4,7 @@ import { lookupOrdersApi, uploadReceiptApi } from '../services/orders.service.js
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { Order } from '../types/order.types.js';
+import { formatMexicanPhone, normalizeMexicanPhone } from '../utils/phone.util.js';
 
 function escapeHtml(str: string | null | undefined): string {
   if (!str) return '';
@@ -36,8 +37,17 @@ export class ValidatePaymentController {
   }
 
   private async searchOrders(phone: string): Promise<void> {
-    const cleanPhone = phone.trim();
-    if (!cleanPhone || cleanPhone.length < 6) return;
+    let cleanPhone = normalizeMexicanPhone(phone);
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      const rawDigits = phone.replace(/\D/g, '');
+      if (rawDigits.length >= 10 && rawDigits.length <= 15) {
+        cleanPhone = rawDigits;
+      }
+    }
+    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 15) {
+      showToast('Ingresa un número celular válido para buscar tus boletos.', 'warning');
+      return;
+    }
 
     this.orders = await lookupOrdersApi(cleanPhone);
     this.renderOrders();
@@ -51,23 +61,23 @@ export class ValidatePaymentController {
 
     if (this.orders.length === 0) {
       listContainer.innerHTML = '';
-      emptyState.style.display = 'block';
+      emptyState.classList.remove('is-hidden');
       return;
     }
 
-    emptyState.style.display = 'none';
+    emptyState.classList.add('is-hidden');
     listContainer.innerHTML = this.orders
       .map((order) => {
         const isWinner = order.is_winner === 1;
         const winnerBannerHtml = isWinner
           ? `
-            <div class="winner-congrats-card" style="margin-bottom: 4px; padding: 14px 18px; border-radius: 12px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(16, 185, 129, 0.18)); border: 1px solid rgba(245, 158, 11, 0.5); display: flex; flex-direction: column; gap: 4px;">
-              <div style="font-size: 15px; font-weight: 800; color: #f59e0b; display: flex; align-items: center; gap: 8px;">
+            <div class="winner-congrats-card" data-ref="winner-banner-${order.uuid}">
+              <div class="winner-congrats-card__title" data-ref="winner-title-${order.uuid}">
                 <span>🏆</span>
                 <span>${t('validate_payment.winner_banner_title')}</span>
               </div>
-                ${escapeHtml(t('validate_payment.winner_banner_desc', { ticket: String(order.winner_ticket_number || ''), title: order.giveaway_title || '' }))}
-              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+              ${escapeHtml(t('validate_payment.winner_banner_desc', { ticket: String(order.winner_ticket_number || ''), title: order.giveaway_title || '' }))}
+              <div class="winner-congrats-card__info" data-ref="winner-info-${order.uuid}">
                 ${t('validate_payment.winner_contact_info')}
               </div>
             </div>
@@ -78,9 +88,9 @@ export class ValidatePaymentController {
           .map((n) => {
             const isThisWinningTicket = isWinner && order.winner_ticket_number === n;
             if (isThisWinningTicket) {
-              return `<span class="giveaway-ticket is-winner" style="height: 34px; width: 66px; font-size: 12px; cursor: default; background: #f59e0b; color: #000000; font-weight: 800; border: 2px solid #fbbf24; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);">★ #${n.toString().padStart(3, '0')}</span>`;
+              return `<span class="giveaway-ticket giveaway-ticket--winner is-winner" data-ref="chip-winner-${n}">★ #${n.toString().padStart(3, '0')}</span>`;
             }
-            return `<span class="giveaway-ticket is-selected" style="height: 32px; width: 54px; font-size: 11.5px; cursor: default;">#${n.toString().padStart(3, '0')}</span>`;
+            return `<span class="giveaway-ticket giveaway-ticket--chip is-selected" data-ref="chip-ticket-${n}">#${n.toString().padStart(3, '0')}</span>`;
           })
           .join('');
 
@@ -92,27 +102,27 @@ export class ValidatePaymentController {
 
         if (isWinner) {
           badgeHtml = `
-            <span class="giveaway-badge" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border-color: rgba(245, 158, 11, 0.5); font-size: 12px; font-weight: 700; padding: 6px 12px;">
+            <span class="giveaway-badge giveaway-badge--winner" data-ref="badge-winner-${order.uuid}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
               <span>${t('validate_payment.winner_badge')}</span>
             </span>
           `;
         } else if (order.giveaway_status === 'completed') {
           badgeHtml = `
-            <span class="giveaway-badge" style="background: rgba(107, 114, 128, 0.12); color: var(--text-secondary); border-color: var(--border-subtle); font-size: 12px; padding: 6px 12px;">
+            <span class="giveaway-badge giveaway-badge--muted" data-ref="badge-not-winner-${order.uuid}">
               <span>${t('validate_payment.status_not_winner')}</span>
             </span>
           `;
         } else if (order.status === 'completed') {
           badgeHtml = `
-            <span class="giveaway-badge giveaway-badge--active" style="font-size: 12px; padding: 6px 12px;">
+            <span class="giveaway-badge giveaway-badge--active" data-ref="badge-completed-${order.uuid}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
               <span>${t('validate_payment.status_completed')} • ${t('validate_payment.status_awaiting_draw')}</span>
             </span>
           `;
         } else if (order.status === 'in_review') {
           badgeHtml = `
-            <span class="giveaway-badge" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6; border-color: rgba(59, 130, 246, 0.3); font-size: 12px; padding: 6px 12px;">
+            <span class="giveaway-badge giveaway-badge--info" data-ref="badge-review-${order.uuid}">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
               <span>${t('validate_payment.status_in_review')}</span>
             </span>
@@ -123,7 +133,7 @@ export class ValidatePaymentController {
             const secs = diffSeconds % 60;
             const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
             badgeHtml = `
-              <span class="giveaway-badge" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b; border-color: rgba(245, 158, 11, 0.3); font-size: 12px; padding: 6px 12px;" data-ref="badge-timer-${order.uuid}">
+              <span class="giveaway-badge giveaway-badge--warning" data-ref="badge-timer-${order.uuid}">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
                 <span data-ref="timer-text-${order.uuid}">${t('validate_payment.time_left', { time: timeStr })}</span>
               </span>
@@ -136,43 +146,43 @@ export class ValidatePaymentController {
             `;
           } else {
             badgeHtml = `
-              <span class="giveaway-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.25); font-size: 12px; padding: 6px 12px;">
+              <span class="giveaway-badge giveaway-badge--danger" data-ref="badge-expired-${order.uuid}">
                 <span>${t('validate_payment.status_expired')}</span>
               </span>
             `;
           }
         } else {
           badgeHtml = `
-            <span class="giveaway-badge" style="font-size: 12px; padding: 6px 12px;">
+            <span class="giveaway-badge" data-ref="badge-cancelled-${order.uuid}">
               <span>${t('validate_payment.status_cancelled')}</span>
             </span>
           `;
         }
 
         return `
-          <div class="card" data-ref="order-card-${order.uuid}" style="background: var(--bg-surface-elevated); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+          <div class="validate-order-card" data-ref="order-card-${order.uuid}">
             ${winnerBannerHtml}
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
-              <div>
-                <span style="font-size: 11.5px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.5px;">Folio: ${escapeHtml(order.concept_reference)} • ${escapeHtml(order.customer_name)}</span>
-                <h3 style="font-size: 18px; font-weight: 700; margin: 4px 0 0 0; color: var(--text-primary);">${escapeHtml(order.giveaway_title || 'Sorteo')}</h3>
+            <div class="validate-order-card__header">
+              <div class="validate-order-card__meta">
+                <span class="validate-order-card__folio">Participante: ${escapeHtml(order.customer_name)}${order.customer_state ? ` (${escapeHtml(order.customer_state)})` : ''}</span>
+                <h3 class="validate-order-card__title">${escapeHtml(order.giveaway_title || 'Sorteo')}</h3>
               </div>
-              <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="validate-order-card__actions">
                 ${badgeHtml}
                 ${actionBtnHtml}
               </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-              <span style="font-size: 12.5px; color: var(--text-secondary); font-weight: 600;">Boletos apartados (${order.ticket_count}):</span>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <div class="validate-order-card__tickets-box">
+              <span class="validate-order-card__tickets-label">Boletos apartados (${order.ticket_count}):</span>
+              <div class="validate-order-card__tickets-chips">
                 ${ticketChips}
               </div>
             </div>
 
-            <div style="display: flex; justify-content: space-between; align-items: baseline; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 13.5px;">
-              <span style="color: var(--text-secondary);">Total:</span>
-              <span style="font-size: 18px; font-weight: 800; color: var(--text-primary);">$${order.total_amount.toFixed(2)} ${escapeHtml(order.currency)}</span>
+            <div class="validate-order-card__footer">
+              <span class="validate-order-card__total-label">Total:</span>
+              <span class="validate-order-card__total-val">$${order.total_amount.toFixed(2)} ${escapeHtml(order.currency)}</span>
             </div>
           </div>
         `;
@@ -238,6 +248,14 @@ export class ValidatePaymentController {
     );
 
     input?.addEventListener(
+      'input',
+      () => {
+        input.value = formatMexicanPhone(input.value);
+      },
+      { signal }
+    );
+
+    input?.addEventListener(
       'keydown',
       (e) => {
         if (e.key === 'Enter') {
@@ -268,19 +286,19 @@ export class ValidatePaymentController {
 
     const modalBody = document.createElement('div');
     modalBody.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <p style="font-size: 13.5px; color: var(--text-secondary); margin: 0;">${t('validate_payment.modal_upload_desc')}</p>
+      <div class="upload-receipt-box" data-ref="modal-upload-box">
+        <p class="upload-receipt-box__desc" data-ref="modal-upload-desc">${t('validate_payment.modal_upload_desc')}</p>
 
         <!-- Dropzone -->
-        <label class="field" data-ref="field-receipt-drop" style="border: 2px dashed var(--border-color); border-radius: 14px; padding: 24px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: var(--bg-surface-elevated); transition: border-color var(--sl-transition-fast);">
-          <svg class="component-icon" aria-hidden="true" style="width: 32px; height: 32px; color: var(--text-tertiary);"><use href="/icons.svg#add_photo_alternate"></use></svg>
-          <span style="font-size: 13px; font-weight: 500; color: var(--text-secondary);">${t('validate_payment.drop_receipt_text')}</span>
-          <input class="field__input" data-ref="file-input-receipt" type="file" accept="image/*,.pdf" style="display: none;" />
+        <label class="field receipt-dropzone" data-ref="field-receipt-drop">
+          <svg class="component-icon receipt-dropzone__icon" data-ref="icon-drop-receipt" aria-hidden="true"><use href="/icons.svg#add_photo_alternate"></use></svg>
+          <span class="receipt-dropzone__text" data-ref="text-drop-receipt">${t('validate_payment.drop_receipt_text')}</span>
+          <input class="field__input receipt-dropzone__file-input" data-ref="file-input-receipt" type="file" accept="image/*,.pdf" />
         </label>
 
         <!-- Preview miniatura -->
-        <div data-ref="receipt-preview-box" style="display: none; width: 100%; max-height: 180px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); position: relative;">
-          <img data-ref="receipt-preview-img" src="" alt="Comprobante" style="width: 100%; height: 180px; object-fit: contain; background: #000000;" />
+        <div class="receipt-preview-box is-hidden" data-ref="receipt-preview-box">
+          <img class="receipt-preview-img" data-ref="receipt-preview-img" src="" alt="Comprobante" />
         </div>
 
         <!-- Clave de rastreo opcional -->
@@ -305,7 +323,7 @@ export class ValidatePaymentController {
         selectedBase64 = ev.target?.result as string;
         if (previewBox && previewImg) {
           previewImg.src = selectedBase64;
-          previewBox.style.display = 'block';
+          previewBox.classList.remove('is-hidden');
         }
 
         if (trackingInput && !trackingInput.value) {
@@ -321,7 +339,7 @@ export class ValidatePaymentController {
       cancelText: t('common.cancel'),
       confirmClass: 'component-button--black',
       confirmText: t('validate_payment.submit_receipt_btn'),
-      description: `Orden ${order.concept_reference} • Monto: $${order.total_amount.toFixed(2)} ${order.currency}`,
+      description: `Participante: ${order.customer_name} • Monto: $${order.total_amount.toFixed(2)} ${order.currency}`,
       onConfirm: async () => {
         if (!selectedBase64) {
           modal.setError('Por favor selecciona una imagen del comprobante bancario.');

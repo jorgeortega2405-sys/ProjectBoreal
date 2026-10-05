@@ -12,18 +12,125 @@ export function getIsSidebarOpen(): boolean {
   return isDrawerOpen;
 }
 
+export interface DrawerItemConfig {
+  icon: string;
+  i18nKey?: string;
+  label: string;
+  path: string;
+  ref: string;
+}
+
+export interface DrawerSectionConfig {
+  i18nKey?: string;
+  items: DrawerItemConfig[];
+  title: string;
+}
+
+export interface DrawerPageConfig {
+  headerSubtitle: string;
+  headerSubtitleI18n?: string;
+  headerTitle: string;
+  headerTitleI18n?: string;
+  id: string;
+  sections: DrawerSectionConfig[];
+}
+
+const DRAWER_CONFIGS: Record<string, DrawerPageConfig> = {
+  help: {
+    id: 'help',
+    headerTitle: 'Políticas y Legal',
+    headerSubtitle: 'Términos, políticas y soporte oficial',
+    headerTitleI18n: 'nav.legal_policies',
+    headerSubtitleI18n: 'legal.subtitle',
+    sections: [
+      {
+        title: 'Políticas y Legal',
+        i18nKey: 'nav.legal_policies',
+        items: [
+          {
+            icon: 'help',
+            i18nKey: 'nav.help',
+            label: 'Ayuda',
+            path: '/help',
+            ref: 'btn-drawer-help',
+          },
+          {
+            icon: 'description',
+            i18nKey: 'nav.terms',
+            label: 'Términos y Condiciones',
+            path: '/terms',
+            ref: 'btn-drawer-terms',
+          },
+          {
+            icon: 'shield',
+            i18nKey: 'nav.privacy',
+            label: 'Política de Privacidad',
+            path: '/privacy',
+            ref: 'btn-drawer-privacy',
+          },
+          {
+            icon: 'cookie',
+            i18nKey: 'nav.cookies',
+            label: 'Política de Cookies',
+            path: '/cookies',
+            ref: 'btn-drawer-cookies',
+          },
+          {
+            icon: 'gavel',
+            i18nKey: 'nav.rules',
+            label: 'Reglas del Sorteo',
+            path: '/rules',
+            ref: 'btn-drawer-rules',
+          },
+          {
+            icon: 'workspace_premium',
+            i18nKey: 'nav.prizes',
+            label: 'Entrega de Premios',
+            path: '/prizes',
+            ref: 'btn-drawer-prizes',
+          },
+          {
+            icon: 'verified_user',
+            i18nKey: 'nav.responsible_gaming',
+            label: 'Juego Responsable',
+            path: '/responsible-gaming',
+            ref: 'btn-drawer-responsible-gaming',
+          },
+        ],
+      },
+    ],
+  },
+};
+
+function getDrawerConfigForRoute(path: string): DrawerPageConfig | null {
+  const legalRoutes = [
+    '/help',
+    '/faq',
+    '/ayuda',
+    '/terms',
+    '/terminos',
+    '/privacy',
+    '/privacidad',
+    '/cookies',
+    '/rules',
+    '/reglas',
+    '/prizes',
+    '/premios',
+    '/responsible-gaming',
+    '/juego-responsable',
+  ];
+  if (legalRoutes.some((r) => path === r || path.startsWith(r + '/'))) {
+    return DRAWER_CONFIGS.help;
+  }
+  return null;
+}
+
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
   const isHome = path === '/' || path === '';
   const isSettings = path === '/settings' || path.startsWith('/settings');
   const isValidate = path === '/validate-payment' || path === '/validar-pago';
-  const isHelp = path === '/help' || path === '/faq' || path === '/ayuda' || path.startsWith('/help');
-  const isTerms = path === '/terms' || path === '/terminos';
-  const isPrivacy = path === '/privacy' || path === '/privacidad';
-  const isCookies = path === '/cookies';
-  const isRules = path === '/rules' || path === '/reglas';
-  const isPrizes = path === '/prizes' || path === '/premios';
-  const isResponsibleGaming = path === '/responsible-gaming' || path === '/juego-responsable';
-  const isAnyHelpOrLegal = isHelp || isTerms || isPrivacy || isCookies || isRules || isPrizes || isResponsibleGaming;
+  const config = getDrawerConfigForRoute(path);
+  const isHelpOrLegal = config !== null;
 
   const itemHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-home"]');
   const btnHome = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-home"]');
@@ -32,31 +139,43 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const itemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
   const btnHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
   const btnSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
+  const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
   itemHome?.classList.toggle('is-active', isHome);
   btnHome?.classList.toggle('is-active', isHome);
   itemValidate?.classList.toggle('is-active', isValidate);
   btnValidate?.classList.toggle('is-active', isValidate);
-  itemHelp?.classList.toggle('is-active', isAnyHelpOrLegal);
-  btnHelp?.classList.toggle('is-active', isAnyHelpOrLegal);
+  itemHelp?.classList.toggle('is-active', isHelpOrLegal);
+  btnHelp?.classList.toggle('is-active', isHelpOrLegal);
   btnSettings?.classList.toggle('is-active', isSettings);
 
-  const drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
-  if (drawer) {
-    drawer.querySelector('[data-ref="btn-drawer-home"]')?.classList.toggle('is-active', isHome);
-    drawer.querySelector('[data-ref="btn-drawer-validate-payment"]')?.classList.toggle('is-active', isValidate);
-    drawer.querySelector('[data-ref="btn-drawer-help"]')?.classList.toggle('is-active', isHelp);
-    drawer.querySelector('[data-ref="btn-drawer-terms"]')?.classList.toggle('is-active', isTerms);
-    drawer.querySelector('[data-ref="btn-drawer-privacy"]')?.classList.toggle('is-active', isPrivacy);
-    drawer.querySelector('[data-ref="btn-drawer-cookies"]')?.classList.toggle('is-active', isCookies);
-    drawer.querySelector('[data-ref="btn-drawer-rules"]')?.classList.toggle('is-active', isRules);
-    drawer.querySelector('[data-ref="btn-drawer-prizes"]')?.classList.toggle('is-active', isPrizes);
-    drawer.querySelector('[data-ref="btn-drawer-responsible-gaming"]')?.classList.toggle('is-active', isResponsibleGaming);
-    drawer.querySelector('[data-ref="btn-drawer-settings"]')?.classList.toggle('is-active', isSettings);
+  if (!config) {
+    isDrawerOpen = false;
+    btnToggle?.classList.remove('is-active');
+    closeDynamicDrawer();
+  } else {
+    let drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+    if (!drawer || drawer.dataset.currentConfig !== config.id) {
+      if (drawer) {
+        drawer.remove();
+      }
+      drawer = createDrawerElement(config);
+      drawer.dataset.currentConfig = config.id;
+      bindDynamicDrawerEvents(drawer);
+      renderIcons(drawer);
+      translateElement(drawer);
+      sidebar.appendChild(drawer);
+    }
+    updateDrawerActiveItem(drawer, path);
+    isDrawerOpen = true;
+    btnToggle?.classList.add('is-active');
+    requestAnimationFrame(() => {
+      drawer?.classList.add('is-open', 'is-expanded');
+    });
   }
 }
 
-function createDrawerElement(): HTMLElement {
+function createDrawerElement(config: DrawerPageConfig): HTMLElement {
   const drawer = document.createElement('div');
   drawer.className = 'layout-drawer';
   drawer.setAttribute('data-ref', 'layout-drawer');
@@ -66,123 +185,67 @@ function createDrawerElement(): HTMLElement {
   drawerHeader.setAttribute('data-ref', 'drawer-header');
   drawerHeader.innerHTML = `
     <div class="drawer-header__info" data-ref="drawer-header-info">
-      <span class="drawer-header__title" data-ref="drawer-header-title" data-i18n="app.name">ProjectBoreal</span>
-      <span class="drawer-header__subtitle" data-ref="drawer-header-subtitle" data-i18n="app.tagline">Plataforma de sorteos interactivos</span>
+      <span class="drawer-header__title" data-ref="drawer-header-title"${config.headerTitleI18n ? ` data-i18n="${config.headerTitleI18n}"` : ''}>${config.headerTitle}</span>
+      <span class="drawer-header__subtitle" data-ref="drawer-header-subtitle"${config.headerSubtitleI18n ? ` data-i18n="${config.headerSubtitleI18n}"` : ''}>${config.headerSubtitle}</span>
     </div>
   `;
 
   const drawerBody = document.createElement('div');
   drawerBody.className = 'layout-drawer__body';
   drawerBody.setAttribute('data-ref', 'drawer-body');
-  drawerBody.innerHTML = `
-    <div class="drawer-section" data-ref="drawer-section-nav">
-      <div class="drawer-section__header" data-ref="drawer-header-nav">
-        <span class="drawer-section__title" data-ref="title-drawer-nav" data-i18n="nav.navigation">Navegación</span>
-      </div>
-      <div class="drawer-items-list" data-ref="drawer-items-nav">
-        <button type="button" class="menu-item" data-ref="btn-drawer-home">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-home" data-i18n="nav.home">Inicio</span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-drawer-validate-payment">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-validate-payment" data-i18n="nav.validate_payment">Validar Pago</span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-drawer-help">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-help" data-i18n="nav.help">Preguntas Frecuentes</span>
-        </button>
-      </div>
-    </div>
 
-    <div class="drawer-section" data-ref="drawer-section-legal">
-      <div class="drawer-section__header" data-ref="drawer-header-legal">
-        <span class="drawer-section__title" data-ref="title-drawer-legal" data-i18n="nav.legal_policies">Políticas y Legal</span>
+  let sectionsHtml = '';
+  for (const section of config.sections) {
+    let itemsHtml = '';
+    for (const item of section.items) {
+      itemsHtml += `
+        <button type="button" class="menu-item" data-ref="${item.ref}" data-path="${item.path}">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${item.icon}"></use></svg>
+          <span class="menu-item__text" data-ref="text-${item.ref}"${item.i18nKey ? ` data-i18n="${item.i18nKey}"` : ''}>${item.label}</span>
+        </button>
+      `;
+    }
+    sectionsHtml += `
+      <div class="drawer-section" data-ref="drawer-section-${section.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}">
+        <div class="drawer-section__header" data-ref="drawer-header-${section.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}">
+          <span class="drawer-section__title"${section.i18nKey ? ` data-i18n="${section.i18nKey}"` : ''}>${section.title}</span>
+        </div>
+        <div class="drawer-items-list" data-ref="drawer-items-${section.title.toLowerCase().replace(/[^a-z0-9]/g, '-')}">
+          ${itemsHtml}
+        </div>
       </div>
-      <div class="drawer-items-list" data-ref="drawer-items-legal">
-        <button type="button" class="menu-item" data-ref="btn-drawer-terms">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-terms" data-i18n="nav.terms">Términos y Condiciones</span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-drawer-privacy">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-privacy" data-i18n="nav.privacy">Política de Privacidad</span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-drawer-cookies">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#cookie"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-cookies" data-i18n="nav.cookies">Política de Cookies</span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-drawer-rules">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#gavel"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-rules" data-i18n="nav.rules">Reglas del Sorteo</span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-drawer-prizes">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-prizes" data-i18n="nav.prizes">Entrega de Premios</span>
-        </button>
-        <button type="button" class="menu-item" data-ref="btn-drawer-responsible-gaming">
-          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
-          <span class="menu-item__text" data-ref="text-drawer-responsible-gaming" data-i18n="nav.responsible_gaming">Juego Responsable</span>
-        </button>
-      </div>
-    </div>
-  `;
+    `;
+  }
 
-  const drawerFooter = document.createElement('div');
-  drawerFooter.className = 'layout-drawer__footer';
-  drawerFooter.setAttribute('data-ref', 'drawer-footer');
-  drawerFooter.innerHTML = `
-    <button type="button" class="menu-item" data-ref="btn-drawer-settings">
-      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
-      <span class="menu-item__text" data-ref="text-drawer-settings" data-i18n="nav.settings">Configuración</span>
-    </button>
-  `;
-
+  drawerBody.innerHTML = sectionsHtml;
   drawer.appendChild(drawerHeader);
   drawer.appendChild(drawerBody);
-  drawer.appendChild(drawerFooter);
 
   return drawer;
 }
 
-function bindDrawerEvents(drawer: HTMLElement): void {
-  const routesMap: [string, string][] = [
-    ['btn-drawer-home', '/'],
-    ['btn-drawer-validate-payment', '/validate-payment'],
-    ['btn-drawer-help', '/help'],
-    ['btn-drawer-terms', '/terms'],
-    ['btn-drawer-privacy', '/privacy'],
-    ['btn-drawer-cookies', '/cookies'],
-    ['btn-drawer-rules', '/rules'],
-    ['btn-drawer-prizes', '/prizes'],
-    ['btn-drawer-responsible-gaming', '/responsible-gaming'],
-    ['btn-drawer-settings', '/settings'],
-  ];
-
-  for (const [ref, path] of routesMap) {
-    const btn = drawer.querySelector<HTMLElement>(`[data-ref="${ref}"]`);
-    btn?.addEventListener('click', (e) => {
+function bindDynamicDrawerEvents(drawer: HTMLElement): void {
+  const buttons = drawer.querySelectorAll<HTMLButtonElement>('.menu-item[data-path]');
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', (e) => {
       e.preventDefault();
-      if (window.innerWidth <= 768) {
-        toggleDrawer(false);
+      const path = btn.getAttribute('data-path');
+      if (path) {
+        if (window.innerWidth <= 768) {
+          toggleDrawer(false);
+        }
+        navigate(path);
       }
-      navigate(path);
     });
-  }
+  });
 }
 
-function openDynamicDrawer(sidebar: HTMLElement): void {
-  let drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
-  if (!drawer) {
-    drawer = createDrawerElement();
-    bindDrawerEvents(drawer);
-    renderIcons(drawer);
-    translateElement(drawer);
-    sidebar.appendChild(drawer);
-  }
-  updateSidebarActiveState(sidebar, window.location.pathname);
-  requestAnimationFrame(() => {
-    drawer?.classList.add('is-open', 'is-expanded');
+function updateDrawerActiveItem(drawer: HTMLElement, path: string): void {
+  const buttons = drawer.querySelectorAll<HTMLButtonElement>('.menu-item[data-path]');
+  buttons.forEach((btn) => {
+    const itemPath = btn.getAttribute('data-path');
+    const isActive = itemPath === path || (itemPath !== '/' && path.startsWith(itemPath + '/'));
+    btn.classList.toggle('is-active', isActive);
   });
 }
 
@@ -204,21 +267,43 @@ function closeDynamicDrawer(): void {
 export function toggleDrawer(forceState?: boolean): void {
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const btnToggle = sidebar?.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]') || document.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
-  const nextOpen = forceState !== undefined ? forceState : !isDrawerOpen;
+  const config = getDrawerConfigForRoute(window.location.pathname);
 
+  if (!config) {
+    isDrawerOpen = false;
+    btnToggle?.classList.remove('is-active');
+    closeDynamicDrawer();
+    return;
+  }
+
+  const nextOpen = forceState !== undefined ? forceState : !isDrawerOpen;
   isDrawerOpen = nextOpen;
   btnToggle?.classList.toggle('is-active', isDrawerOpen);
 
+  const drawer = sidebar?.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
   if (isDrawerOpen) {
     if (drawerRemovalTimer) {
       clearTimeout(drawerRemovalTimer);
       drawerRemovalTimer = null;
     }
-    if (sidebar) {
-      openDynamicDrawer(sidebar);
+    if (!drawer && sidebar) {
+      const newDrawer = createDrawerElement(config);
+      newDrawer.dataset.currentConfig = config.id;
+      bindDynamicDrawerEvents(newDrawer);
+      renderIcons(newDrawer);
+      translateElement(newDrawer);
+      sidebar.appendChild(newDrawer);
+      updateDrawerActiveItem(newDrawer, window.location.pathname);
+      requestAnimationFrame(() => {
+        newDrawer.classList.add('is-open', 'is-expanded');
+      });
+    } else if (drawer) {
+      drawer.classList.add('is-open', 'is-expanded');
     }
   } else {
-    closeDynamicDrawer();
+    if (drawer) {
+      drawer.classList.remove('is-open', 'is-expanded');
+    }
   }
 }
 
@@ -303,8 +388,13 @@ export function setupLayoutScrollSync(): void {
   }
 
   const updateScrollHeight = () => {
-    const scrollHeight = scrollableBody.scrollHeight;
-    layoutContent.style.setProperty('--layout-scroll-height', `${scrollHeight}px`);
+    const maxScroll = Math.max(0, scrollableBody.scrollHeight - scrollableBody.clientHeight);
+    if (maxScroll === 0) {
+      layoutContent.style.removeProperty('--layout-scroll-height');
+      return;
+    }
+    const neededHeight = layoutContent.clientHeight + maxScroll;
+    layoutContent.style.setProperty('--layout-scroll-height', `${neededHeight}px`);
   };
 
   updateScrollHeight();
@@ -314,6 +404,7 @@ export function setupLayoutScrollSync(): void {
   });
 
   activeResizeObserver.observe(scrollableBody);
+  activeResizeObserver.observe(layoutContent);
   const firstChild = scrollableBody.firstElementChild;
   if (firstChild) {
     activeResizeObserver.observe(firstChild);

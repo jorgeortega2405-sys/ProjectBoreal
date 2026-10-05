@@ -3,6 +3,7 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { deleteCache, deleteCachePattern, getCache, publishGiveawayEvent, setCache } from '../config/redis.config.js';
 import { BankAccount, Order } from '../types/order.types.js';
+import { normalizeMexicanPhone } from '../utils/phone.util.js';
 import { recordAudit } from './audit.service.js';
 import { logger } from './logger.service.js';
 
@@ -65,6 +66,7 @@ export async function getActiveBankAccounts(giveawayIdOrUuid?: number | string):
 export async function reserveTickets(data: {
   customerName: string;
   customerPhone: string;
+  customerState?: string;
   giveawayUuid: string;
   ipAddress?: string;
   ticketNumbers: number[];
@@ -130,11 +132,14 @@ export async function reserveTickets(data: {
       };
     }
 
+    const normalizedPhone = normalizeMexicanPhone(data.customerPhone) || data.customerPhone.trim();
+
     const [pendingOrders] = await conn.query<RowDataPacket[]>(
       `SELECT COUNT(*) AS active_count
        FROM orders
-       WHERE customer_phone = ? AND status = 'pending_payment' AND expires_at > NOW()`,
-      [data.customerPhone.trim()]
+       WHERE (customer_phone = ? OR REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, '+521', ''), '+52', ''), ' ', ''), '-', '') = ?)
+         AND status = 'pending_payment' AND expires_at > NOW()`,
+      [normalizedPhone, normalizedPhone]
     );
 
     if (pendingOrders.length > 0 && pendingOrders[0].active_count >= 2) {
@@ -195,38 +200,49 @@ export async function reserveTickets(data: {
     }
 
     const orderUuid = crypto.randomUUID();
-    const randomSuffix = crypto.randomInt(100, 1000);
-    const shortRef = `PB-${Date.now().toString(36).toUpperCase()}-${randomSuffix}`;
+    const conceptReference = data.customerName.trim().replace(/\s+/g, ' ').toUpperCase();
     const ticketCount = cleanNumbers.length;
     const totalAmount = ticketCount * Number(giveaway.ticket_price);
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
     const [orderResult] = await conn.query<ResultSetHeader>(
       `INSERT INTO orders (
-        uuid, giveaway_id, customer_name, customer_phone, ticket_count, ticket_numbers,
+        uuid, giveaway_id, customer_name, customer_phone, customer_state, ticket_count, ticket_numbers,
         total_amount, currency, concept_reference, status, expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_payment', ?)`,
       [
         orderUuid,
         giveaway.id,
         data.customerName.trim(),
-        data.customerPhone.trim(),
+        normalizedPhone,
+        data.customerState ? data.customerState.trim() : null,
         ticketCount,
         JSON.stringify(cleanNumbers),
         totalAmount,
         giveaway.currency,
-        shortRef,
+        conceptReference,
         expiresAt,
       ]
     );
 
     const orderId = orderResult.insertId;
 
+    const ticketValues = cleanNumbers.map((num) => [
+      giveaway.id,
+      num,
+      orderId,
+      'reserved',
+      expiresAt,
+    ]);
+
     await conn.query(
-      `UPDATE giveaway_tickets
-       SET status = 'reserved', order_id = ?, reserved_until = ?
-       WHERE giveaway_id = ? AND ticket_number IN (?)`,
-      [orderId, expiresAt, giveaway.id, cleanNumbers]
+      `INSERT INTO giveaway_tickets (giveaway_id, ticket_number, order_id, status, reserved_until)
+       VALUES ?
+       ON DUPLICATE KEY UPDATE
+         status = 'reserved',
+         order_id = VALUES(order_id),
+         reserved_until = VALUES(reserved_until)`,
+      [ticketValues]
     );
 
     await conn.query(
@@ -256,9 +272,9 @@ export async function reserveTickets(data: {
       amount: totalAmount,
       currency: giveaway.currency,
       customer_name: data.customerName.trim(),
-      customer_phone: data.customerPhone.trim(),
+      customer_phone: normalizedPhone,
       details: {
-        concept_reference: shortRef,
+        concept_reference: conceptReference,
         expires_at: expiresAt.toISOString(),
         giveaway_id: giveaway.id,
         giveaway_uuid: data.giveawayUuid,
@@ -275,11 +291,11 @@ export async function reserveTickets(data: {
 
     const createdOrder: Order = {
       bank_reference: null,
-      concept_reference: shortRef,
+      concept_reference: conceptReference,
       created_at: new Date().toISOString(),
       currency: giveaway.currency,
       customer_name: data.customerName.trim(),
-      customer_phone: data.customerPhone.trim(),
+      customer_phone: normalizedPhone,
       expires_at: expiresAt.toISOString(),
       giveaway_id: giveaway.id,
       giveaway_title: giveaway.title,
@@ -311,9 +327,9 @@ export async function reserveTickets(data: {
 
 export async function getOrdersByPhone(phone: string): Promise<Order[]> {
   try {
-    const cleanPhone = phone.trim();
+    const cleanPhone = normalizeMexicanPhone(phone) || phone.trim();
     const [rows] = await pool.query<OrderRow[]>(
-      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone,
+      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
               o.ticket_count, o.ticket_numbers,
               CAST(o.total_amount AS DOUBLE) AS total_amount,
               o.currency, o.concept_reference, o.status, o.expires_at,
@@ -323,8 +339,9 @@ export async function getOrdersByPhone(phone: string): Promise<Order[]> {
        FROM orders o
        INNER JOIN giveaways g ON o.giveaway_id = g.id
        WHERE o.customer_phone = ?
+          OR REPLACE(REPLACE(REPLACE(REPLACE(o.customer_phone, '+521', ''), '+52', ''), ' ', ''), '-', '') = ?
        ORDER BY o.created_at DESC`,
-      [cleanPhone]
+      [cleanPhone, cleanPhone]
     );
 
     return rows.map((r) => ({
@@ -340,7 +357,7 @@ export async function getOrdersByPhone(phone: string): Promise<Order[]> {
 export async function getOrderByUuid(orderUuid: string): Promise<Order | null> {
   try {
     const [rows] = await pool.query<OrderRow[]>(
-      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone,
+      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
               o.ticket_count, o.ticket_numbers,
               CAST(o.total_amount AS DOUBLE) AS total_amount,
               o.currency, o.concept_reference, o.status, o.expires_at,

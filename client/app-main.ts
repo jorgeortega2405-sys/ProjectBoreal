@@ -5,6 +5,7 @@ import { initTheme } from './services/theme.service.js';
 import { initTooltips } from './services/tooltip.service.js';
 import { initWebSocket } from './services/websocket.service.js';
 
+let isSyncingScroll = false;
 let scrollTicking = false;
 
 function handleScrollEvent(e: Event): void {
@@ -12,11 +13,17 @@ function handleScrollEvent(e: Event): void {
   if (!target || target.nodeType !== 1) return;
 
   if (target.classList.contains('layout-content')) {
-    const scrollableBody = target.querySelector<HTMLElement>(
-      '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
-    );
-    if (scrollableBody && scrollableBody.scrollTop !== target.scrollTop) {
-      scrollableBody.scrollTop = target.scrollTop;
+    if (!isSyncingScroll) {
+      const scrollableBody = target.querySelector<HTMLElement>(
+        '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
+      );
+      if (scrollableBody && Math.abs(scrollableBody.scrollTop - target.scrollTop) > 0.5) {
+        isSyncingScroll = true;
+        scrollableBody.scrollTop = target.scrollTop;
+        requestAnimationFrame(() => {
+          isSyncingScroll = false;
+        });
+      }
     }
   } else if (
     target.classList.contains('view-scrollable') ||
@@ -25,9 +32,15 @@ function handleScrollEvent(e: Event): void {
     target.classList.contains('layout-body--scrollable') ||
     target.classList.contains('component-table-wrapper')
   ) {
-    const layoutContent = target.closest<HTMLElement>('.layout-content:has(.layout-nav)');
-    if (layoutContent && layoutContent.scrollTop !== target.scrollTop) {
-      layoutContent.scrollTop = target.scrollTop;
+    if (!isSyncingScroll) {
+      const layoutContent = target.closest<HTMLElement>('.layout-content:has(.layout-nav)');
+      if (layoutContent && Math.abs(layoutContent.scrollTop - target.scrollTop) > 0.5) {
+        isSyncingScroll = true;
+        layoutContent.scrollTop = target.scrollTop;
+        requestAnimationFrame(() => {
+          isSyncingScroll = false;
+        });
+      }
     }
   }
 

@@ -32,18 +32,20 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
         <div class="modal-card__drag-zone" data-ref="modal-drag-zone" aria-hidden="true">
           <div class="modal-card__drag-handle"></div>
         </div>
+        ${title || description ? `
         <div class="modal-card__header" data-ref="modal-header">
-          <h2 class="modal-card__title" data-ref="modal-title">${title}</h2>
+          ${title ? `<h2 class="modal-card__title" data-ref="modal-title">${title}</h2>` : ''}
           ${description ? `<p class="modal-card__desc" data-ref="modal-desc">${description}</p>` : ''}
-        </div>
+        </div>` : ''}
         <div class="modal-card__body" data-ref="modal-body"></div>
+        ${showCancel || showConfirm ? `
         <div class="modal-card__footer" data-ref="modal-footer">
           <div class="modal-card__actions" data-ref="modal-actions">
             ${showCancel ? `<button type="button" class="component-button component-button--h34" data-ref="btn-modal-cancel">${cancelText}</button>` : ''}
             ${showConfirm ? `<button type="button" class="component-button component-button--h34 ${confirmClass}" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
           </div>
           <div class="banner banner--danger" data-ref="modal-error" style="display: none;"></div>
-        </div>
+        </div>` : ''}
       </div>
     </div>
   `;
@@ -146,7 +148,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
   activeModals.push(modalInstance);
 
   requestAnimationFrame(() => {
-    backdrop.classList.add('is-open');
+    backdrop.classList.add('is-open', 'is-visible');
   });
 
   return modalInstance;

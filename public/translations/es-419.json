@@ -10,7 +10,7 @@
     "drawing": "Sorteo",
     "expand_drawer": "Expandir menú",
     "faq": "Preguntas Frecuentes",
-    "help": "Ayuda y FAQ",
+    "help": "Ayuda",
     "home": "Inicio",
     "legal_policies": "Políticas y Legal",
     "navigation": "Navegación",
@@ -36,7 +36,7 @@
     "cat_vehicles": "Vehículos",
     "clear_search": "Limpiar búsqueda",
     "completed_badge": "Finalizado",
-    "drawing_now": "🎉 ¡Sorteo en curso!",
+    "drawing_now": "¡Sorteo en curso!",
     "empty_giveaways": "No se encontraron sorteos disponibles.",
     "hero_title": "¿Qué te gustaría ganar hoy?",
     "sales_closed_badge": "Venta cerrada",
@@ -47,13 +47,13 @@
     "search_placeholder": "Buscar sorteos, premios, marcas...",
     "searching": "Buscando: {query}",
     "sold_out": "Agotado",
-    "threshold_badge": "🎯 Meta: {current}% / {target}%",
+    "threshold_badge": "Meta: {current}% / {target}%",
     "threshold_target": "Meta {target}% para iniciar sorteo",
     "ticket_price": "${price} MXN por boleto",
     "tickets_left": "{count} disponibles",
-    "time_left_days": "⏳ {days}d {hours}h {minutes}m {seconds}s",
-    "time_left_hours": "⏳ {hours}h {minutes}m {seconds}s",
-    "time_left_soon": "🚨 Sorteo en {minutes}:{seconds}",
+    "time_left_days": "{days}d {hours}h {minutes}m {seconds}s",
+    "time_left_hours": "{hours}h {minutes}m {seconds}s",
+    "time_left_soon": "Sorteo en {minutes}:{seconds}",
     "view_winner_btn": "Ver Ganador",
     "winner_announced": "Ganador: {name} (Boleto #{ticket})"
   },
@@ -157,8 +157,8 @@
     "beneficiary_label": "Beneficiario",
     "card_number_label": "Número de tarjeta para depósito",
     "clabe_label": "CLABE interbancaria (18 dígitos)",
-    "concept_hint": "Coloca tu nombre o el folio en el concepto de tu transferencia bancaria.",
-    "concept_label": "Concepto de transferencia (Obligatorio)",
+    "concept_hint": "Coloca tu nombre oficial en el concepto o motivo de tu transferencia bancaria.",
+    "concept_label": "Concepto / Referencia (Tu nombre completo)",
     "continue_btn": "Apartar y ver cuentas de pago",
     "copied": "¡Copiado al portapapeles!",
     "copy_amount": "Copiar Monto",
@@ -174,7 +174,9 @@
     "payment_info_desc": "Realiza tu transferencia SPEI antes de que expire el tiempo de apartado.",
     "payment_info_title": "Ficha de Transferencia SPEI",
     "phone_label": "Teléfono / WhatsApp (10 dígitos)",
-    "receipt_instruction": "Guarda captura de tu comprobante con la Clave de Rastreo SPEI legible.",
+    "receipt_instruction": "Al realizar tu transferencia, coloca tu nombre completo en el concepto o motivo de pago. Guarda la captura de tu comprobante.",
+    "select_state_placeholder": "Selecciona tu estado",
+    "state_label": "Estado de la República",
     "timer_label": "Tiempo restante de apartado:"
   },
   "validate_payment": {
@@ -240,5 +242,10 @@
     "prizes_desc": "Plazos, documentos requeridos y procedimientos para la entrega segura de premios.",
     "responsible_gaming_title": "Política de Juego Responsable",
     "responsible_gaming_desc": "Compromiso con la participación consciente, prevención y control del juego responsable."
+  },
+  "error": {
+    "back_to_home": "Volver al inicio",
+    "not_found_desc": "La página que estás buscando no existe, ha sido movida o la dirección es incorrecta.",
+    "not_found_title": "Página no encontrada"
   }
 }

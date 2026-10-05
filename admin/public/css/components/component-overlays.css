@@ -820,6 +820,7 @@ body.modal-open {
   transition: opacity var(--sl-transition-medium), visibility var(--sl-transition-medium);
 }
 
+.modal-backdrop.is-open,
 .modal-backdrop.is-visible {
   opacity: 1;
   visibility: visible;
@@ -931,6 +932,7 @@ body.modal-open {
   box-sizing: border-box;
 }
 
+.modal-backdrop.is-open .modal-card,
 .modal-backdrop.is-visible .modal-card {
   transform: scale(1);
 }

@@ -10,7 +10,7 @@
     "drawing": "Giveaway",
     "expand_drawer": "Expand menu",
     "faq": "Frequently Asked Questions",
-    "help": "Help & FAQ",
+    "help": "Help",
     "home": "Home",
     "legal_policies": "Policies & Legal",
     "navigation": "Navigation",
@@ -36,7 +36,7 @@
     "cat_vehicles": "Vehicles",
     "clear_search": "Clear search",
     "completed_badge": "Ended",
-    "drawing_now": "🎉 Drawing in progress!",
+    "drawing_now": "Drawing in progress!",
     "empty_giveaways": "No giveaways available at the moment.",
     "hero_title": "What would you like to win today?",
     "sales_closed_badge": "Sales closed",
@@ -47,13 +47,13 @@
     "search_placeholder": "Search giveaways, prizes, brands...",
     "searching": "Searching: {query}",
     "sold_out": "Sold out",
-    "threshold_badge": "🎯 Goal: {current}% / {target}%",
+    "threshold_badge": "Goal: {current}% / {target}%",
     "threshold_target": "Goal {target}% to start draw",
     "ticket_price": "${price} MXN per ticket",
     "tickets_left": "{count} available",
-    "time_left_days": "⏳ {days}d {hours}h {minutes}m {seconds}s",
-    "time_left_hours": "⏳ {hours}h {minutes}m {seconds}s",
-    "time_left_soon": "🚨 Drawing in {minutes}:{seconds}",
+    "time_left_days": "{days}d {hours}h {minutes}m {seconds}s",
+    "time_left_hours": "{hours}h {minutes}m {seconds}s",
+    "time_left_soon": "Drawing in {minutes}:{seconds}",
     "view_winner_btn": "View Winner",
     "winner_announced": "Winner: {name} (Ticket #{ticket})"
   },
@@ -157,8 +157,8 @@
     "beneficiary_label": "Beneficiary",
     "card_number_label": "Card number for deposit",
     "clabe_label": "Interbank CLABE (18 digits)",
-    "concept_hint": "Put your name or order reference in your banking transfer concept.",
-    "concept_label": "Transfer Concept (Required)",
+    "concept_hint": "Put your official full name in the transfer concept.",
+    "concept_label": "Transfer Concept / Reference (Your full name)",
     "continue_btn": "Reserve and view bank details",
     "copied": "Copied to clipboard!",
     "copy_amount": "Copy Amount",
@@ -174,7 +174,9 @@
     "payment_info_desc": "Make your SPEI transfer before the reservation time expires.",
     "payment_info_title": "SPEI Transfer Slip",
     "phone_label": "Phone / WhatsApp (10 digits)",
-    "receipt_instruction": "Save a screenshot of your transfer receipt with legible SPEI Tracking Key.",
+    "receipt_instruction": "When transferring, include your full name as the payment concept or memo. Save a receipt screenshot.",
+    "select_state_placeholder": "Select your state",
+    "state_label": "State of Mexico",
     "timer_label": "Reservation time remaining:"
   },
   "validate_payment": {
@@ -240,5 +242,10 @@
     "prizes_desc": "Deadlines, required identification documents, and procedures for secure prize handover.",
     "responsible_gaming_title": "Responsible Gaming Policy",
     "responsible_gaming_desc": "Commitment to mindful participation, prevention, and control of gaming habits."
+  },
+  "error": {
+    "back_to_home": "Back to Home",
+    "not_found_desc": "The page you are looking for does not exist, has been moved, or the URL is incorrect.",
+    "not_found_title": "Page Not Found"
   }
 }

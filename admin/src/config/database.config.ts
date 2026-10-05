@@ -3,6 +3,7 @@ import { config } from './env.config.js';
 import { logger } from '../services/logger.service.js';
 
 export const poolLottery = mysql.createPool({
+  charset: 'utf8mb4',
   connectionLimit: config.db.lottery.connectionLimit,
   database: config.db.lottery.name,
   enableKeepAlive: true,
@@ -16,6 +17,7 @@ export const poolLottery = mysql.createPool({
 });
 
 export const poolIdentity = mysql.createPool({
+  charset: 'utf8mb4',
   connectionLimit: config.db.identity.connectionLimit,
   database: config.db.identity.name,
   enableKeepAlive: true,

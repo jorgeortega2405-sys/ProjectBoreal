@@ -93,11 +93,12 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  image-rendering: pixelated;
+  image-rendering: auto;
   background-color: transparent;
   z-index: 1;
   pointer-events: none;
   border-radius: inherit;
+  transition: opacity 0.2s ease;
 }
 
 .canvas-card__preview {
@@ -122,7 +123,7 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   max-height: 100%;
   object-fit: cover;
   background-color: transparent;
-  image-rendering: pixelated;
+  image-rendering: auto;
   padding: 0;
 }
 
@@ -313,12 +314,12 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   right: 8px;
   bottom: auto;
   left: auto;
-  font-size: 11px;
+  height: 28px;
+  font-size: 12px;
   font-weight: 600;
   gap: 4px;
-  padding: 0 10px;
-  border-radius: 20px;
-  height: 26px;
+  padding: 0 12px;
+  border-radius: 9999px;
   background: rgba(0, 0, 0, 0.65);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -330,6 +331,8 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   z-index: 10;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .canvas-card__btn-sync:hover {
@@ -365,10 +368,11 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   position: absolute;
   top: 8px;
   left: 8px;
-  font-size: 11px;
+  height: 28px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 0 12px;
+  border-radius: 9999px;
   background: rgba(0, 0, 0, 0.65);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -376,16 +380,21 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   -webkit-backdrop-filter: blur(8px);
   z-index: 2;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .giveaway-card__timer-badge {
   position: absolute;
   bottom: 8px;
   left: 8px;
-  font-size: 11px;
+  height: 28px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 0 12px;
+  border-radius: 9999px;
   background: rgba(0, 0, 0, 0.65);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -393,6 +402,10 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   -webkit-backdrop-filter: blur(8px);
   z-index: 2;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .canvas-card__info {

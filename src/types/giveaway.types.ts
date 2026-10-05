@@ -11,6 +11,7 @@ export interface Giveaway {
   id: number;
   image_urls: string[] | null;
   min_threshold_pct: number;
+  package_options?: number[] | null;
   primary_image_url: string;
   slug: string;
   start_date: string;

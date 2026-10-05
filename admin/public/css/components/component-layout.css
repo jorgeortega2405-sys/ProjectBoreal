@@ -260,6 +260,7 @@ html.dark-theme .layout-content {
   background-color: #ffffff;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior-y: none;
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }

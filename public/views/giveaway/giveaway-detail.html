@@ -10,6 +10,7 @@
           <div class="giveaway-gallery" data-ref="giveaway-gallery">
             <div class="giveaway-gallery__main" data-ref="gallery-main-card">
               <img class="giveaway-gallery__main-img" data-ref="gallery-main-image" src="" alt="" />
+              <div class="giveaway-gallery__dots" data-ref="gallery-dots"></div>
             </div>
             <div class="giveaway-gallery__thumbs" data-ref="gallery-thumbs"></div>
           </div>
@@ -18,15 +19,12 @@
           <div class="giveaway-info" data-ref="giveaway-info">
             <div class="giveaway-info__badges" data-ref="giveaway-badges">
               <span class="giveaway-badge giveaway-badge--active" data-ref="giveaway-status-badge">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified"></use></svg>
                 <span data-i18n="home.active_badge"></span>
               </span>
               <span class="giveaway-badge" data-ref="giveaway-draw-date-badge">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#calendar_today"></use></svg>
                 <span class="giveaway-badge__text" data-ref="giveaway-draw-date-text"></span>
               </span>
               <span class="giveaway-badge" data-ref="giveaway-timer-badge">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
                 <span class="giveaway-badge__text" data-ref="giveaway-timer-text"></span>
               </span>
             </div>
@@ -36,11 +34,34 @@
             <!-- Banner Ganador Oficial (si el sorteo concluyó) -->
             <div class="banner banner--success" data-ref="banner-giveaway-winner" style="display: none; margin-bottom: 16px; padding: 14px 18px; border-radius: 12px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(245, 158, 11, 0.15)); border: 1px solid rgba(245, 158, 11, 0.4);">
               <div class="banner-title" style="font-size: 15px; font-weight: 700; color: #f59e0b; margin-bottom: 4px;">
-                🏆 <span data-i18n="giveaway.winner_congrats_title"></span>
+                <span data-i18n="giveaway.winner_congrats_title"></span>
               </div>
               <div class="banner-desc" style="font-size: 13px; color: var(--text-primary);">
                 <span data-i18n="giveaway.winner_label"></span> <strong class="banner-highlight" data-ref="winner-name-display"></strong>
                 • <span data-i18n="giveaway.winner_ticket_label"></span> <strong class="banner-highlight" data-ref="winner-ticket-display"></strong>
+              </div>
+            </div>
+
+            <!-- Banner Orden Pendiente de Pago -->
+            <div class="banner banner--warning is-hidden" data-ref="banner-pending-order">
+              <div class="banner-pending-order__inner">
+                <div>
+                  <div class="banner-pending-order__title">
+                    <svg class="component-icon banner-pending-order__icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+                    <span>Tienes boletos apartados pendientes de pago</span>
+                  </div>
+                  <div class="banner-pending-order__subtitle">
+                    <span data-ref="pending-order-summary"></span> • <span class="banner-pending-order__timer" data-ref="pending-order-timer"></span>
+                  </div>
+                </div>
+                <div class="banner-pending-order__actions">
+                  <button type="button" class="component-button component-button--black component-button--h32" data-ref="btn-reopen-bank-modal">
+                    <span>Ver cuentas</span>
+                  </button>
+                  <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-goto-validate-payment">
+                    <span>Subir comprobante</span>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -53,20 +74,31 @@
               <div class="giveaway-info__progress-track">
                 <div class="giveaway-info__progress-fill" data-ref="giveaway-progress-bar"></div>
               </div>
-              <div class="giveaway-info__threshold-hint" data-ref="giveaway-threshold-hint" style="display: none; font-size: 12px; color: var(--text-secondary); margin-top: 6px;"></div>
+              <div class="giveaway-info__threshold-hint is-hidden" data-ref="giveaway-threshold-hint"></div>
             </div>
 
-            <!-- Precio por boleto -->
+            <!-- Precio por boleto y selector de paquetes -->
             <div class="giveaway-info__price-box" data-ref="giveaway-price-box">
               <div>
                 <div class="giveaway-info__price-value" data-ref="giveaway-price-value"></div>
                 <div class="giveaway-info__price-sub" data-i18n="giveaway.per_ticket"></div>
               </div>
-              <div class="giveaway-info__quick-quantities" data-ref="giveaway-quick-quantities">
-                <button type="button" class="giveaway-qty-btn" data-ref="btn-qty-1" data-qty="1">1</button>
-                <button type="button" class="giveaway-qty-btn" data-ref="btn-qty-3" data-qty="3">3</button>
-                <button type="button" class="giveaway-qty-btn" data-ref="btn-qty-5" data-qty="5">5</button>
-                <button type="button" class="giveaway-qty-btn" data-ref="btn-qty-10" data-qty="10">10</button>
+              <div class="settings-dropdown-wrapper giveaway-info__dropdown-wrapper" data-ref="dropdown-wrapper-quantity">
+                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-quantity" aria-haspopup="listbox" aria-expanded="false">
+                  <div class="dropdown-trigger__left">
+                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+                    <span class="dropdown-trigger__text" data-ref="quantity-selected-text">1 boleto</span>
+                  </div>
+                  <div class="dropdown-trigger__right">
+                    <span class="dropdown-trigger__price" data-ref="quantity-selected-price"></span>
+                    <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+                  </div>
+                </button>
+                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-quantity">
+                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-quantity" role="listbox">
+                    <div class="menu-panel__list" data-ref="list-quantities"></div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -87,7 +119,7 @@
             </div>
 
             <!-- Alerta Venta Cerrada (si falta menos de 1 hora) -->
-            <div class="banner banner--danger" data-ref="banner-sales-closed" style="display: none; margin-top: 12px; margin-bottom: 16px; padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 500;">
+            <div class="banner banner--danger giveaway-sales-closed-banner is-hidden" data-ref="banner-sales-closed">
               <span data-i18n="giveaway.sales_closed_alert"></span>
             </div>
 
@@ -106,11 +138,6 @@
           </div>
 
           <div class="giveaway-tickets__toolbar">
-            <div class="giveaway-tickets__search">
-              <svg class="component-icon giveaway-tickets__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-              <input class="giveaway-tickets__search-input" data-ref="input-ticket-search" type="text" placeholder=" " autocomplete="off" data-i18n-placeholder="giveaway.search_ticket_placeholder" />
-            </div>
-
             <div class="giveaway-tickets__legend">
               <span class="giveaway-legend-item">
                 <span class="giveaway-legend-dot giveaway-legend-dot--available"></span>
@@ -126,13 +153,17 @@
               </span>
             </div>
 
-            <div class="giveaway-tickets__actions">
-              <button type="button" class="component-button component-button--ghost component-button--h36 component-button--icon-only" data-ref="btn-lucky-pick" data-i18n-tooltip="giveaway.lucky_pick" data-i18n-aria="giveaway.lucky_pick" data-tooltip="Al azar" aria-label="Al azar">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
-              </button>
-              <button type="button" class="component-button component-button--ghost component-button--h36 component-button--icon-only" data-ref="btn-clear-selection" data-i18n-tooltip="giveaway.clear_selection" data-i18n-aria="giveaway.clear_selection" data-tooltip="Limpiar selección" aria-label="Limpiar selección">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#restart_alt"></use></svg>
-              </button>
+            <div class="giveaway-tickets__search-box">
+              <svg class="component-icon giveaway-tickets__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="giveaway-tickets__search-input" data-ref="input-ticket-search" type="text" placeholder=" " autocomplete="off" data-i18n-placeholder="giveaway.search_ticket_placeholder" />
+              <div class="giveaway-tickets__search-actions">
+                <button type="button" class="component-button component-button--ghost component-button--h30 component-button--icon-only" data-ref="btn-lucky-pick" data-i18n-tooltip="giveaway.lucky_pick" data-i18n-aria="giveaway.lucky_pick" data-tooltip="Al azar" aria-label="Al azar">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
+                </button>
+                <button type="button" class="component-button component-button--ghost component-button--h30 component-button--icon-only" data-ref="btn-clear-selection" data-i18n-tooltip="giveaway.clear_selection" data-i18n-aria="giveaway.clear_selection" data-tooltip="Limpiar selección" aria-label="Limpiar selección">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#restart_alt"></use></svg>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -148,6 +179,31 @@
             <button type="button" class="giveaway-pagination__btn" data-ref="btn-page-next" aria-label="Página siguiente">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
             </button>
+          </div>
+        </section>
+
+        <!-- Avisos de Transparencia Criptográfica y Contacto WhatsApp -->
+        <section class="giveaway-trust-section" data-ref="giveaway-trust-section">
+          <div class="giveaway-trust-grid" data-ref="giveaway-trust-grid">
+            <div class="giveaway-trust-card" data-ref="trust-card-crypto">
+              <div class="giveaway-trust-card__icon-wrapper" data-ref="trust-crypto-icon-box">
+                <svg class="component-icon giveaway-trust-card__icon" data-ref="icon-trust-shield" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+              </div>
+              <div class="giveaway-trust-card__content" data-ref="trust-crypto-content">
+                <h3 class="giveaway-trust-card__title" data-ref="trust-crypto-title">Selección Criptográfica 100% Aleatoria</h3>
+                <p class="giveaway-trust-card__desc" data-ref="trust-crypto-desc">El boleto ganador se determina de manera automatizada mediante un generador criptográfico CSPRNG de alta entropía con sellado inmutable SHA-256. Cero manipulación humana, garantizando absoluta transparencia e imparcialidad en cada sorteo.</p>
+              </div>
+            </div>
+
+            <div class="giveaway-trust-card" data-ref="trust-card-whatsapp">
+              <div class="giveaway-trust-card__icon-wrapper giveaway-trust-card__icon-wrapper--whatsapp" data-ref="trust-whatsapp-icon-box">
+                <svg class="component-icon giveaway-trust-card__icon" data-ref="icon-trust-whatsapp" aria-hidden="true"><use href="/icons.svg#whatsapp"></use></svg>
+              </div>
+              <div class="giveaway-trust-card__content" data-ref="trust-whatsapp-content">
+                <h3 class="giveaway-trust-card__title" data-ref="trust-whatsapp-title">Notificación Oficial vía WhatsApp</h3>
+                <p class="giveaway-trust-card__desc" data-ref="trust-whatsapp-desc">Los ganadores oficiales serán notificados y contactados de inmediato exclusivamente a través de WhatsApp al número celular de 10 dígitos registrado en sus boletos. Es importante que tu número cuente con WhatsApp activo.</p>
+              </div>
+            </div>
           </div>
         </section>
       </div>

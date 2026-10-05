@@ -3,6 +3,7 @@ import { BankAccount, Order, ReservationResult } from '../types/order.types.js';
 export async function reserveTicketsApi(payload: {
   customerName: string;
   customerPhone: string;
+  customerState?: string;
   giveawayUuid: string;
   ticketNumbers: number[];
 }): Promise<{

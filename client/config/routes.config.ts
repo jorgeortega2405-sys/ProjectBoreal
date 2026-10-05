@@ -114,6 +114,14 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'legal-responsible-gaming',
     match: (path) => path === '/responsible-gaming' || path === '/juego-responsable',
   },
+  {
+    handler: async () => {
+      const { createNotFoundView } = await import('../views/not-found.view.js');
+      return await createNotFoundView();
+    },
+    id: 'not-found',
+    match: (path) => path === '/404',
+  },
 ];
 
 export function findRoute(path: string): { params: Record<string, string>; route: RouteDefinition } | null {

@@ -5,6 +5,7 @@ import { recordAudit } from '../services/audit.service.js';
 import { logger } from '../services/logger.service.js';
 import { attachReceipt, getActiveBankAccounts, getOrderByUuid, getOrdersByPhone, reserveTickets } from '../services/orders.service.js';
 import { Order } from '../types/order.types.js';
+import { normalizeMexicanPhone } from '../utils/phone.util.js';
 
 function getClientIp(req: Request): string {
   const forwarded = req.headers['x-forwarded-for'];
@@ -23,7 +24,7 @@ function getUserAgent(req: Request): string {
 
 export async function reserveOrderHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { customerName, customerPhone, giveawayUuid, ticketNumbers } = req.body;
+    const { customerName, customerPhone, customerState, giveawayUuid, ticketNumbers } = req.body;
 
     if (!customerName || typeof customerName !== 'string' || customerName.trim().length < 2) {
       res.status(400).json({
@@ -33,9 +34,16 @@ export async function reserveOrderHandler(req: Request, res: Response): Promise<
       return;
     }
 
-    if (!customerPhone || typeof customerPhone !== 'string' || customerPhone.trim().length < 8) {
+    let cleanPhone = normalizeMexicanPhone(customerPhone);
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      const rawDigits = String(customerPhone || '').replace(/\D/g, '');
+      if (rawDigits.length >= 10 && rawDigits.length <= 15) {
+        cleanPhone = rawDigits;
+      }
+    }
+    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 15) {
       res.status(400).json({
-        error: 'El número de teléfono es requerido y debe ser válido.',
+        error: 'El número de teléfono debe ser un número celular válido (entre 10 y 15 dígitos).',
         success: false,
       });
       return;
@@ -59,7 +67,8 @@ export async function reserveOrderHandler(req: Request, res: Response): Promise<
 
     const result = await reserveTickets({
       customerName,
-      customerPhone,
+      customerPhone: cleanPhone,
+      customerState: typeof customerState === 'string' ? customerState.trim() : undefined,
       giveawayUuid,
       ipAddress: getClientIp(req),
       ticketNumbers,
@@ -171,21 +180,27 @@ function maskOrder(order: Order): Order {
 export async function lookupOrdersHandler(req: Request, res: Response): Promise<void> {
   try {
     const { phone } = req.body;
-    const cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
-    if (cleanPhone.length < 10) {
+    let cleanPhone = normalizeMexicanPhone(phone);
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      const rawDigits = String(phone || '').replace(/\D/g, '');
+      if (rawDigits.length >= 10 && rawDigits.length <= 15) {
+        cleanPhone = rawDigits;
+      }
+    }
+    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 15) {
       res.status(400).json({
-        error: 'Debes proporcionar un número de teléfono válido de al menos 10 dígitos.',
+        error: 'Debes proporcionar un número de teléfono válido (entre 10 y 15 dígitos).',
         success: false,
       });
       return;
     }
 
-    const orders = await getOrdersByPhone(phone.trim());
+    const orders = await getOrdersByPhone(cleanPhone);
 
     await recordAudit({
       action: 'ORDER_LOOKUP',
       actor_type: 'customer',
-      customer_phone: phone.trim(),
+      customer_phone: cleanPhone,
       details: {
         results_count: orders.length,
       },

@@ -446,6 +446,7 @@
   --border-lighter: rgba(0, 0, 0, 0.05);
   --border-transparent-20: rgba(0, 0, 0, 0.12);
   --border-dynamic: 1px solid var(--border-color);
+  --border-subtle-translucent: #00000020;
 
   --overlay-dark: rgba(0, 0, 0, 0.45);
   --overlay-blur: blur(6px);
@@ -588,6 +589,7 @@ body.dark-theme {
   --border-lighter: rgba(255, 255, 255, 0.05);
   --border-transparent-20: rgba(255, 255, 255, 0.12);
   --border-dynamic: 1px solid var(--border-color);
+  --border-subtle-translucent: #ffffff20;
 
   --overlay-dark: rgba(0, 0, 0, 0.75);
 
@@ -709,6 +711,7 @@ body.dark-theme {
     --border-lighter: rgba(255, 255, 255, 0.05);
     --border-transparent-20: rgba(255, 255, 255, 0.12);
     --border-dynamic: 1px solid var(--border-color);
+    --border-subtle-translucent: #ffffff20;
 
     --overlay-dark: rgba(0, 0, 0, 0.75);
 

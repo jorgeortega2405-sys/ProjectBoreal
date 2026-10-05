@@ -10,7 +10,7 @@
     "drawing": "Sorteio",
     "expand_drawer": "Expandir menu",
     "faq": "Perguntas Frequentes",
-    "help": "Ajuda & FAQ",
+    "help": "Ajuda",
     "home": "Início",
     "legal_policies": "Políticas & Legal",
     "navigation": "Navegação",
@@ -27,7 +27,7 @@
     "active_badge": "Ativo",
     "clear_search": "Limpar busca",
     "completed_badge": "Finalizado",
-    "drawing_now": "🎉 Sorteio em andamento!",
+    "drawing_now": "Sorteio em andamento!",
     "empty_giveaways": "Nenhum sorteio disponível no momento.",
     "hero_title": "O que você gostaria de ganhar hoje?",
     "sales_closed_badge": "Vendas encerradas",
@@ -38,9 +38,9 @@
     "sold_out": "Esgotado",
     "ticket_price": "${price} MXN por bilhete",
     "tickets_left": "{count} disponíveis",
-    "time_left_days": "⏳ {days}d {hours}h {minutes}m {seconds}s",
-    "time_left_hours": "⏳ {hours}h {minutes}m {seconds}s",
-    "time_left_soon": "🚨 Sorteio em {minutes}:{seconds}",
+    "time_left_days": "{days}d {hours}h {minutes}m {seconds}s",
+    "time_left_hours": "{hours}h {minutes}m {seconds}s",
+    "time_left_soon": "Sorteio em {minutes}:{seconds}",
     "view_winner_btn": "Ver Ganhador",
     "winner_announced": "Ganhador: {name} (Bilhete #{ticket})"
   },
@@ -138,8 +138,8 @@
     "bank_name_label": "Banco recebedor",
     "beneficiary_label": "Beneficiário",
     "clabe_label": "Chave / CLABE (18 dígitos)",
-    "concept_hint": "Coloque seu nome ou número do pedido no conceito da transferência.",
-    "concept_label": "Conceito de transferência (Obrigatório)",
+    "concept_hint": "Coloque seu nome completo oficial no conceito da transferência.",
+    "concept_label": "Conceito / Referência (Seu nome completo)",
     "continue_btn": "Reservar e ver dados bancários",
     "copied": "Copiado para a área de transferência!",
     "copy_amount": "Copiar Valor",
@@ -154,7 +154,9 @@
     "payment_info_desc": "Faça sua transferência SPEI antes que o tempo de reserva expire.",
     "payment_info_title": "Comprovante de Transferência SPEI",
     "phone_label": "Telefone / WhatsApp (10 dígitos)",
-    "receipt_instruction": "Guarde o comprovante com a Chave de Rastreio SPEI legível.",
+    "receipt_instruction": "Ao realizar a transferência, coloque seu nome completo como conceito de pagamento. Guarde o comprovante.",
+    "select_state_placeholder": "Selecione seu estado",
+    "state_label": "Estado do México",
     "timer_label": "Tempo restante da reserva:"
   },
   "validate_payment": {
@@ -220,5 +222,10 @@
     "prizes_desc": "Prazos, documentos exigidos e procedimentos de segurança na entrega dos prêmios.",
     "responsible_gaming_title": "Política de Jogo Responsável",
     "responsible_gaming_desc": "Compromisso com a conscientização, prevenção e controle na participação responsável."
+  },
+  "error": {
+    "back_to_home": "Voltar ao início",
+    "not_found_desc": "A página que você procura não existe, foi movida ou o endereço está incorreto.",
+    "not_found_title": "Página não encontrada"
   }
 }
