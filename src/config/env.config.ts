@@ -1,7 +1,6 @@
 import 'dotenv/config';
 
 export const config = {
-  banxicoSandbox: process.env.BANXICO_SANDBOX === 'true',
   cassandra: {
     contactPoints: (process.env.CASSANDRA_CONTACT_POINTS || '127.0.0.1').split(',').map((s) => s.trim()),
     keyspace: process.env.CASSANDRA_KEYSPACE || 'boreal_audit',

@@ -1,15 +1,38 @@
+# Dependencias
 node_modules/
 admin/node_modules/
 
+# Compilación y builds
 dist/
 admin/dist/
 build/
 .vite/
 *.tsbuildinfo
-
 target/
 websocket/target/
 
+# Python: Caches, Bytecode y Entornos Virtuales
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+payment_worker/__pycache__/
+payment_worker/logs/
+payment_worker/storage/
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Variables de entorno y secretos
 .env
 .env.*
 !.env.example
@@ -20,6 +43,7 @@ cookies.txt
 *.pem
 *.key
 
+# Logs y depuración
 logs/
 admin/logs/
 *.log
@@ -28,10 +52,13 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Almacenamiento dinámico de archivos y subidas
 storage/receipts/*
 !storage/receipts/.gitkeep
-public/uploads/
+public/uploads/*
+!public/uploads/.gitkeep
 
+# IDEs y editores
 .agents/
 .vscode/
 .idea/
@@ -41,8 +68,8 @@ public/uploads/
 *.sln
 *.sw?
 
+# Archivos de sistema operativo
 .DS_Store
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-

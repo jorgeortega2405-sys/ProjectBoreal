@@ -463,17 +463,21 @@ export async function attachReceipt(data: {
       );
     }
 
-    if (trackingKey) {
-      await conn.query(
-        `INSERT INTO spei_validation_queue (
-          order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status
-        ) VALUES (?, ?, ?, 0, 6, NOW(), 'pending')
-        ON DUPLICATE KEY UPDATE tracking_key = VALUES(tracking_key), next_retry_at = NOW(), status = 'pending'`,
-        [order.id, trackingKey, order.total_amount]
-      );
-    }
+    await conn.query(
+      `INSERT INTO spei_validation_queue (
+        order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status
+      ) VALUES (?, ?, ?, 0, 6, NOW(), 'pending')
+      ON DUPLICATE KEY UPDATE tracking_key = COALESCE(VALUES(tracking_key), tracking_key), next_retry_at = NOW(), status = 'pending'`,
+      [order.id, trackingKey || 'PENDING_OCR', order.total_amount]
+    );
 
     await conn.commit();
+
+    await publishGiveawayEvent('boreal:queue:new_receipt', {
+      order_id: order.id,
+      order_uuid: data.orderUuid,
+      tracking_key: trackingKey || null,
+    });
 
     if (order.giveaway_uuid) {
       await deleteCache(`giveaway:${order.giveaway_uuid}:tickets`);

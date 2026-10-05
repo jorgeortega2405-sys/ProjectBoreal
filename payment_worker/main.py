@@ -1,4 +1,5 @@
 import concurrent.futures
+import datetime
 import json
 import logging
 import os
@@ -13,6 +14,7 @@ import redis
 from ocr_engine import OCREngine
 from receipt_parser import ReceiptParser
 from banxico_client import BanxicoClient
+from bank_catalog import BANCO_CODES, get_bank_code_by_clabe
 
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -38,9 +40,9 @@ os.makedirs(STORAGE_RECEIPTS_DIR, exist_ok=True)
 
 MAX_WORKERS = int(os.getenv("PAYMENT_WORKER_CONCURRENCY", "5"))
 BATCH_SIZE = int(os.getenv("PAYMENT_WORKER_BATCH_SIZE", "5"))
-CYCLE_SLEEP_SECONDS = float(os.getenv("PAYMENT_WORKER_SLEEP", "2.5"))
+CYCLE_SLEEP_SECONDS = float(os.getenv("PAYMENT_WORKER_SLEEP", "2.0"))
 LOCK_TTL_SECONDS = 180
-BACKOFF_INTERVALS = [30, 120, 300, 600, 900, 1800]
+BACKOFF_INTERVALS = [30, 90, 180, 300, 600, 900]
 
 def get_db_connection():
     return pymysql.connect(
@@ -73,7 +75,7 @@ class ReceiptWorker:
             max_workers=MAX_WORKERS,
             thread_name_prefix="PaymentWorkerThread"
         )
-        logger.info(f"Payment Worker inicializado. ID: {self.worker_id}. Concurrencia: {MAX_WORKERS} hilos.")
+        logger.info(f"Payment Worker de Producción inicializado. ID: {self.worker_id}. Concurrencia: {MAX_WORKERS} hilos.")
 
     def handle_shutdown(self, signum, frame):
         logger.info(f"Señal de terminación recibida ({signum}). Apagando worker de forma segura...")
@@ -112,10 +114,10 @@ class ReceiptWorker:
                     cur.execute("""
                         INSERT INTO spei_validation_queue (
                             order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status
-                        ) VALUES (%s, %s, %s, %s, %s, DATE_ADD(NOW(), INTERVAL 3 MINUTE), 'verifying')
+                        ) VALUES (%s, %s, %s, %s, %s, DATE_ADD(NOW(), INTERVAL 2 MINUTE), 'verifying')
                         ON DUPLICATE KEY UPDATE
                             status = 'verifying',
-                            next_retry_at = DATE_ADD(NOW(), INTERVAL 3 MINUTE),
+                            next_retry_at = DATE_ADD(NOW(), INTERVAL 2 MINUTE),
                             last_checked_at = NOW()
                     """, (
                         order["id"],
@@ -199,12 +201,8 @@ class ReceiptWorker:
             raw_tracking_key = validation.get("tracking_key") or order.get("tracking_key")
             tracking_key = raw_tracking_key.strip().upper() if (raw_tracking_key and isinstance(raw_tracking_key, str)) else None
 
-            if not tracking_key:
-                validation["valid"] = False
-                validation["errors"].append(
-                    "Clave de rastreo no detectada en comprobante ni en orden. Se requiere clave de rastreo SPEI válida para certificar la liquidación en Banxico CEP."
-                )
-            else:
+            # Detección de replay attack si hay clave de rastreo
+            if tracking_key:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT id, uuid FROM orders
@@ -219,20 +217,48 @@ class ReceiptWorker:
                             f"Clave de rastreo {tracking_key} ya fue registrada o liquidada en la orden {duplicate['uuid']} (Replay Attack prevenido)."
                         )
 
+            # Si hay rechazo fatal (monto incorrecto, replay attack, comprobante fallido):
             if validation.get("fatal_error"):
                 logger.warning(f"[{order_uuid}] RECHAZO FATAL: {validation['errors']}")
                 self._cancel_and_release_order(order, conn, validation["errors"], parsed=parsed)
                 return False
 
-            matched_acc = validation.get("matched_account") or (bank_accounts[0] if bank_accounts else {})
-            beneficiary_clabe = matched_acc.get("clabe") if matched_acc else None
+            # Caso 1: Transferencia Intrabancaria (Mismo Banco, ej. BBVA -> BBVA)
+            is_intrabank = validation.get("is_intrabank", False)
+            if is_intrabank and validation["valid"]:
+                logger.info(f"[{order_uuid}] Transferencia intrabancaria confirmada ({validation.get('sender_bank')}). Monto y comprobante validados.")
+                self._approve_and_liquidate_order(
+                    order=order,
+                    conn=conn,
+                    tracking_key=tracking_key or f"INTRA-{int(time.time())}",
+                    parsed=parsed,
+                    validation=validation,
+                    banxico_res={
+                        "verified": True,
+                        "is_intrabank": True,
+                        "status": "liquidated",
+                        "message": "Acreditado por coincidencia intrabancaria directa."
+                    }
+                )
+                return True
+
+            # Caso 2: Transferencia Interbancaria SPEI
+            if not tracking_key:
+                validation["valid"] = False
+                validation["errors"].append(
+                    "Clave de rastreo SPEI no detectada en comprobante ni proporcionada en la orden. Reintentando análisis."
+                )
+
             banxico_res = None
             if tracking_key:
                 try:
                     banxico_res = BanxicoClient.query_cep(
                         tracking_key=tracking_key,
                         amount=float(order["total_amount"]),
-                        beneficiary_clabe=beneficiary_clabe
+                        date_str=validation.get("date"),
+                        beneficiary_clabe=validation.get("receiver_clabe"),
+                        sender_bank_code=validation.get("sender_bank_code"),
+                        receiver_bank_code=validation.get("receiver_bank_code")
                     )
                 except Exception as b_err:
                     banxico_res = {
@@ -245,7 +271,7 @@ class ReceiptWorker:
             is_liquidated_by_banxico = bool(
                 banxico_res
                 and banxico_res.get("verified") is True
-                and banxico_res.get("status") == "liquidated"
+                and banxico_res.get("status") in ("liquidated", "intrabank")
             )
 
             if validation["valid"] and tracking_key and is_liquidated_by_banxico:
@@ -355,7 +381,7 @@ class ReceiptWorker:
                             "end_date": updated_g["end_date"].isoformat() if hasattr(updated_g["end_date"], "isoformat") else str(updated_g["end_date"]),
                             "countdown_hours": cd_hours
                         }
-                        logger.info(f"[{order_uuid}] Umbral alcanzado para sorteo {g_row['uuid']} ({pct_sold:.1f}% >= {g_row['min_threshold_pct']}%). Cronometro de {cd_hours}h activado.")
+                        logger.info(f"[{order_uuid}] Umbral alcanzado para sorteo {g_row['uuid']} ({pct_sold:.1f}% >= {g_row['min_threshold_pct']}%). Cronómetro de {cd_hours}h activado.")
 
             conn.commit()
 
@@ -387,7 +413,7 @@ class ReceiptWorker:
         except Exception as r_err:
             logger.warning(f"[{order_uuid}] Error al notificar a Redis: {r_err}")
 
-        logger.info(f"[{order_uuid}] Orden LIQUIDADA Y PAGADA exitosamente.")
+        logger.info(f"[{order_uuid}] Orden LIQUIDADA Y PAGADA exitosamente. Boletos marcados como pagados.")
 
     def _cancel_and_release_order(self, order: Dict[str, Any], conn, errors: List[str], parsed: Any = None, banxico_res: Any = None):
         order_uuid = order["uuid"]
@@ -594,7 +620,7 @@ class ReceiptWorker:
         signal.signal(signal.SIGINT, self.handle_shutdown)
         signal.signal(signal.SIGTERM, self.handle_shutdown)
 
-        logger.info("Worker Python en ejecución multi-hilo. Esperando comprobantes...")
+        logger.info("Worker Python en ejecución multi-hilo. Escuchando cola de comprobantes...")
         while self.running:
             try:
                 self.run_cycle()

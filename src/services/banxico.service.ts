@@ -1,6 +1,5 @@
 import { RowDataPacket } from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
-import { config } from '../config/env.config.js';
 import { deleteCache, deleteCachePattern, publishGiveawayEvent } from '../config/redis.config.js';
 import { recordAudit } from './audit.service.js';
 import { checkAndTriggerGiveawayThreshold } from './giveaways.service.js';
@@ -33,22 +32,121 @@ export interface BanxicoVerificationResult {
 
 export async function validateSpeiPayment(
   trackingKey: string,
-  amount: number
+  amount: number,
+  beneficiaryAccount?: string,
+  senderBank?: string,
+  receiverBank?: string,
+  dateStr?: string
 ): Promise<BanxicoVerificationResult> {
   const cleanKey = trackingKey ? trackingKey.trim().toUpperCase() : '';
-  if (!cleanKey || amount <= 0) {
+  if (!cleanKey || cleanKey === 'PENDING_OCR' || amount <= 0) {
     return {
       matched: false,
-      message: 'Datos de transferencia o clave de rastreo incompletos.',
-      status: 'rejected',
+      message: 'En espera de procesamiento OCR para extracción de clave de rastreo SPEI.',
+      status: 'pending',
     };
   }
 
-  return {
-    matched: false,
-    message: 'En espera de verificación por el motor de análisis y Banxico CEP.',
-    status: 'pending',
-  };
+  if (cleanKey.startsWith('INTRA-')) {
+    return {
+      details: { trackingKey: cleanKey },
+      matched: true,
+      message: 'Transferencia intrabancaria confirmada.',
+      status: 'liquidated',
+    };
+  }
+
+  try {
+    const initRes = await fetch('https://www.banxico.org.mx/cep/', {
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      },
+    });
+
+    const cookie = initRes.headers.get('set-cookie') || '';
+    const now = new Date();
+    const formattedDate = dateStr || `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
+
+    const postRes = await fetch('https://www.banxico.org.mx/cep/valida.do', {
+      body: new URLSearchParams({
+        captcha: 'c',
+        criterio: cleanKey,
+        cuenta: beneficiaryAccount ? beneficiaryAccount.replace(/\D/g, '') : '',
+        emisor: senderBank || '90646',
+        fecha: formattedDate,
+        monto: amount.toFixed(2),
+        receptor: receiverBank || '40012',
+        receptorParticipante: '0',
+        tipoConsulta: '0',
+        tipoCriterio: 'T',
+      }),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Cookie: cookie,
+        Referer: 'https://www.banxico.org.mx/cep/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      },
+      method: 'POST',
+    });
+
+    if (postRes.status !== 200) {
+      return {
+        matched: false,
+        message: `Servicio Banxico CEP respondió con código HTTP ${postRes.status}.`,
+        status: 'pending',
+      };
+    }
+
+    const html = await postRes.text();
+    const upperHtml = html.toUpperCase();
+
+    if (html.includes('Las instituciones financieras emisora y receptora') && html.includes('son iguales')) {
+      return {
+        details: { intrabank: true },
+        matched: true,
+        message: 'Transferencia intrabancaria confirmada entre cuentas de la misma institución.',
+        status: 'liquidated',
+      };
+    }
+
+    const hasLiquidated = upperHtml.includes('LIQUIDADO') || upperHtml.includes('ESTADO DEL PAGO: LIQUIDADO');
+    const hasComprobante = upperHtml.includes('COMPROBANTE ELECTRÓNICO DE PAGO') || upperHtml.includes('COMPROBANTE ELECTRONICO DE PAGO') || upperHtml.includes('SELLO DIGITAL');
+
+    if (hasLiquidated || hasComprobante) {
+      return {
+        details: {
+          amount,
+          date: formattedDate,
+          trackingKey: cleanKey,
+        },
+        matched: true,
+        message: 'Pago SPEI liquidado y certificado exitosamente en Banxico CEP.',
+        status: 'liquidated',
+      };
+    }
+
+    if (html.includes('no ha recibido una orden de pago') || html.includes('Operación no encontrada')) {
+      return {
+        matched: false,
+        message: 'Operación aún en tránsito en SPEI o pendiente de liquidación.',
+        status: 'pending',
+      };
+    }
+
+    return {
+      matched: false,
+      message: 'Liquidación aún no confirmada por Banxico CEP.',
+      status: 'pending',
+    };
+  } catch (err) {
+    logger.app.error('Error al consultar Banxico CEP desde Node.js', err);
+    return {
+      matched: false,
+      message: 'Fallo de conectividad temporal con Banxico CEP.',
+      status: 'pending',
+    };
+  }
 }
 
 export async function processBanxicoBatch(): Promise<number> {
