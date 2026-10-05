@@ -69,13 +69,27 @@ export async function uploadReceiptApi(payload: {
   }
 }
 
-export async function fetchBankAccountsApi(): Promise<BankAccount[]> {
+export async function fetchBankAccountsApi(giveawayUuid?: string): Promise<BankAccount[]> {
   try {
-    const res = await fetch('/api/orders/bank-accounts');
+    const url = giveawayUuid
+      ? `/api/orders/bank-accounts?giveaway=${encodeURIComponent(giveawayUuid)}`
+      : '/api/orders/bank-accounts';
+    const res = await fetch(url);
     if (!res.ok) return [];
     const json = await res.json();
     return json.success && Array.isArray(json.data) ? json.data : [];
   } catch (_) {
     return [];
+  }
+}
+
+export async function fetchOrderDetailApi(uuid: string): Promise<Order | null> {
+  try {
+    const res = await fetch(`/api/orders/${encodeURIComponent(uuid)}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.success && json.data ? json.data : null;
+  } catch (_) {
+    return null;
   }
 }

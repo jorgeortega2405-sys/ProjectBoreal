@@ -1724,6 +1724,22 @@ html.dark-theme .home-hero__title {
   color: var(--text-placeholder, #94a3b8);
 }
 
+.view-search-pill button,
+.view-search-pill .component-button,
+.home-search-pill button,
+.home-search-pill .component-button {
+  border-radius: 50% !important;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
 html[data-theme="dark"] .view-search-pill,
 html[data-theme="dark"] .home-search-pill,
 html.dark-theme .view-search-pill,

@@ -577,7 +577,7 @@ html.dark-theme .banner--winner .banner-highlight {
 .giveaway-tickets__search-input {
   width: 100%;
   height: 44px;
-  padding: 0 76px 0 40px;
+  padding: 0 84px 0 40px;
   border-radius: 12px;
   border: 1px solid var(--border-subtle-translucent) !important;
   background: transparent !important;
@@ -605,6 +605,22 @@ html.dark-theme .banner--winner .banner-highlight {
   align-items: center;
   gap: 4px;
   z-index: 2;
+}
+
+.giveaway-tickets__search-actions button,
+.giveaway-tickets__search-actions .component-button {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  border-radius: 50% !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
 .giveaway-tickets__legend {
@@ -669,7 +685,7 @@ html.dark-theme .giveaway-legend-dot--selected {
   font-weight: 600;
   cursor: pointer;
   user-select: none;
-  transition: all var(--sl-transition-x-fast);
+  transition: border-color var(--sl-transition-fast), box-shadow var(--sl-transition-fast);
   border: 1px solid var(--border-subtle-translucent) !important;
   background: transparent !important;
   background-color: transparent !important;
@@ -682,8 +698,8 @@ html.dark-theme .giveaway-legend-dot--selected {
   border-color: var(--text-primary) !important;
   background: transparent !important;
   background-color: transparent !important;
-  transform: translateY(-2px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  transform: none !important;
+  box-shadow: 0 0 0 1.5px var(--text-primary) !important;
 }
 
 .giveaway-ticket.is-selected {
@@ -1051,6 +1067,11 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   background-color: var(--bg-hover);
 }
 
+.modal-reservation-box .settings-dropdown-wrapper.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 /* ==========================================================================
    Modal Split de Doble Anchura (Pagos y Transferencia Bancaria)
    ========================================================================== */
@@ -1104,7 +1125,7 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   padding: 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
   border-right: 1px solid var(--border-subtle-translucent);
   overflow-y: auto;
   min-height: 0;
@@ -1117,7 +1138,7 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   padding: 32px 28px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   overflow-y: auto;
   min-height: 0;
   max-height: 100%;
@@ -1128,7 +1149,7 @@ html.dark-theme .giveaway-pagination__btn.is-active {
 .payment-split__accounts-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .payment-split__title {
@@ -1224,7 +1245,7 @@ html.dark-theme .giveaway-pagination__btn.is-active {
 }
 
 /* ==========================================================================
-   Sección de Confianza, Transparencia Criptográfica y WhatsApp
+   Sección de Confianza, Transparencia Criptográfica y WhatsApp (Acordeones FAQ)
    ========================================================================== */
 
 .giveaway-trust-section {
@@ -1233,9 +1254,9 @@ html.dark-theme .giveaway-pagination__btn.is-active {
 }
 
 .giveaway-trust-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   width: 100%;
 }
 
@@ -1252,6 +1273,89 @@ html.dark-theme .giveaway-pagination__btn.is-active {
 
 .giveaway-trust-card:hover {
   border-color: var(--text-primary);
+}
+
+.giveaway-trust-accordion {
+  border-radius: 18px;
+  background: transparent;
+  border: 1px solid var(--border-subtle-translucent);
+  transition: border-color var(--sl-transition-fast);
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.giveaway-trust-accordion:hover {
+  border-color: var(--text-primary);
+}
+
+.giveaway-trust-accordion.is-open {
+  border-color: var(--border-color);
+}
+
+.giveaway-trust-accordion__trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 16px;
+  box-sizing: border-box;
+  color: var(--text-primary);
+  font-family: inherit;
+  transition: background-color var(--sl-transition-fast);
+}
+
+.giveaway-trust-accordion__trigger:hover {
+  background-color: var(--bg-hover, rgba(255, 255, 255, 0.03));
+}
+
+.giveaway-trust-accordion__trigger-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.giveaway-trust-accordion__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.giveaway-trust-accordion__chevron {
+  width: 20px;
+  height: 20px;
+  color: var(--text-tertiary);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), color var(--sl-transition-fast);
+  flex-shrink: 0;
+}
+
+.giveaway-trust-accordion.is-open .giveaway-trust-accordion__chevron {
+  transform: rotate(180deg);
+  color: var(--text-primary);
+}
+
+.giveaway-trust-accordion__content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  opacity: 0;
+}
+
+.giveaway-trust-accordion.is-open .giveaway-trust-accordion__content {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.giveaway-trust-accordion__inner {
+  padding: 0 22px 20px 82px;
 }
 
 .giveaway-trust-card__icon-wrapper {
@@ -1292,16 +1396,23 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   letter-spacing: -0.01em;
 }
 
-.giveaway-trust-card__desc {
+.giveaway-trust-card__summary {
   font-size: 13px;
   color: var(--text-secondary);
-  line-height: 1.5;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.giveaway-trust-card__desc {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
   margin: 0;
 }
 
 @media (max-width: 768px) {
-  .giveaway-trust-grid {
-    grid-template-columns: 1fr;
+  .giveaway-trust-accordion__inner {
+    padding: 0 18px 18px 18px;
   }
 }
 
@@ -1390,7 +1501,7 @@ html.dark-theme .giveaway-pagination__btn.is-active {
 .modal-bank-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 14px 16px;
   border-radius: 14px;
   background: transparent;
@@ -1584,10 +1695,73 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   color: var(--text-primary);
 }
 
+.validate-orders__notice,
+.validate-hero__notice {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px 0;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: transparent;
+  border: 1px solid var(--border-subtle-translucent);
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.validate-orders__notice-icon,
+.validate-hero__notice-icon {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.validate-orders__notice-text,
+.validate-hero__notice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.view-search-pill button,
+.view-search-pill .component-button,
+[data-ref="btn-search-orders"] {
+  border-radius: 50% !important;
+}
+
 .validate-order-card__actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.validate-order-card__review-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  font-size: 12.5px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  box-sizing: border-box;
+}
+
+.validate-order-card__review-note .component-icon {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  color: #3b82f6;
+  flex-shrink: 0;
 }
 
 .validate-order-card__tickets-box {
@@ -1694,8 +1868,8 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   gap: 10px;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(234, 179, 8, 0.08);
-  border: 1px solid rgba(234, 179, 8, 0.28);
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.35);
   color: var(--text-primary);
   box-sizing: border-box;
 }
@@ -1706,7 +1880,7 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   min-width: 18px;
   min-height: 18px;
   margin-top: 1px;
-  fill: #eab308;
+  fill: #3b82f6;
 }
 
 .modal-bank-warning__content {
@@ -1731,7 +1905,7 @@ html.dark-theme .giveaway-pagination__btn.is-active {
 .payment-split__accounts-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .empty-accounts-notice {

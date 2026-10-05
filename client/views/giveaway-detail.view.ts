@@ -9,6 +9,7 @@ import { onWebSocketEvent } from '../services/websocket.service.js';
 import { Giveaway } from '../types/giveaway.types.js';
 import { BankAccount, Order } from '../types/order.types.js';
 import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
+import { getCitiesForState, MEXICAN_STATES } from '../utils/mexican-locations.util.js';
 import { formatCurrency, formatNumber } from '../utils/number.util.js';
 import { formatMexicanPhone, normalizeMexicanPhone } from '../utils/phone.util.js';
 
@@ -51,41 +52,6 @@ const COUNTRY_LADAS = [
   { code: '+595', flag: '🇵🇾', name: 'Paraguay' },
   { code: '+598', flag: '🇺🇾', name: 'Uruguay' },
   { code: '+34', flag: '🇪🇸', name: 'España' },
-];
-
-const MEXICAN_STATES = [
-  'Aguascalientes',
-  'Baja California',
-  'Baja California Sur',
-  'Campeche',
-  'Chiapas',
-  'Chihuahua',
-  'Ciudad de México',
-  'Coahuila',
-  'Colima',
-  'Durango',
-  'Estado de México',
-  'Guanajuato',
-  'Guerrero',
-  'Hidalgo',
-  'Jalisco',
-  'Michoacán',
-  'Morelos',
-  'Nayarit',
-  'Nuevo León',
-  'Oaxaca',
-  'Puebla',
-  'Querétaro',
-  'Quintana Roo',
-  'San Luis Potosí',
-  'Sinaloa',
-  'Sonora',
-  'Tabasco',
-  'Tamaulipas',
-  'Tlaxcala',
-  'Veracruz',
-  'Yucatán',
-  'Zacatecas',
 ];
 
 export class GiveawayDetailController {
@@ -1416,6 +1382,21 @@ export class GiveawayDetailController {
       },
       { signal }
     );
+
+    const trustAccordions = this.container.querySelectorAll<HTMLElement>('.giveaway-trust-accordion');
+    trustAccordions.forEach((accordion) => {
+      const trigger = accordion.querySelector<HTMLButtonElement>('.giveaway-trust-accordion__trigger');
+      trigger?.addEventListener(
+        'click',
+        (e) => {
+          e.preventDefault();
+          const isOpen = accordion.classList.contains('is-open');
+          accordion.classList.toggle('is-open', !isOpen);
+          trigger.setAttribute('aria-expanded', String(!isOpen));
+        },
+        { signal }
+      );
+    });
   }
 
   private openReservationModal(): void {
@@ -1474,10 +1455,6 @@ export class GiveawayDetailController {
             </span>
           </label>
         </div>
-        <div class="field-helper-text" data-ref="helper-phone-whatsapp">
-          <svg class="component-icon field-helper-text__icon" data-ref="icon-phone-whatsapp" aria-hidden="true"><use href="/icons.svg#whatsapp"></use></svg>
-          <span>Los ganadores serán contactados exclusivamente por WhatsApp.</span>
-        </div>
 
         <div class="settings-dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-buyer-state">
           <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-buyer-state" aria-haspopup="listbox" aria-expanded="false">
@@ -1495,6 +1472,19 @@ export class GiveawayDetailController {
                 </button>
               `).join('')}
             </div>
+          </div>
+        </div>
+
+        <div class="settings-dropdown-wrapper dropdown-wrapper--full is-disabled" data-ref="dropdown-wrapper-buyer-city">
+          <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-buyer-city" aria-haspopup="listbox" aria-expanded="false" disabled>
+            <div class="dropdown-trigger__left" data-ref="trigger-city-left">
+              <svg class="component-icon dropdown-trigger__icon" data-ref="icon-city-trigger" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
+              <span class="dropdown-trigger__text" data-ref="text-buyer-city-selected">Selecciona tu ciudad / municipio</span>
+            </div>
+            <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-city-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+          </button>
+          <div class="menu-panel menu-panel--dropdown menu-panel--w-full" data-ref="dropdown-menu-buyer-city" role="listbox">
+            <div class="menu-panel__list" data-ref="list-buyer-cities"></div>
           </div>
         </div>
 
@@ -1524,6 +1514,14 @@ export class GiveawayDetailController {
     const stateMenu = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-menu-buyer-state"]');
     const stateSelectedText = modalBody.querySelector<HTMLElement>('[data-ref="text-buyer-state-selected"]');
     const stateItems = modalBody.querySelectorAll<HTMLButtonElement>('[data-state-value]');
+
+    const cityWrapper = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-buyer-city"]');
+    const cityTrigger = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-buyer-city"]');
+    const cityMenu = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-menu-buyer-city"]');
+    const citySelectedText = modalBody.querySelector<HTMLElement>('[data-ref="text-buyer-city-selected"]');
+    const cityList = modalBody.querySelector<HTMLElement>('[data-ref="list-buyer-cities"]');
+
+    let selectedCity = '';
 
     phoneInput?.addEventListener('input', () => {
       if (selectedLada.code === '+52') {
@@ -1559,10 +1557,26 @@ export class GiveawayDetailController {
       stateTrigger?.setAttribute('aria-expanded', 'true');
     };
 
+    const closeCityDropdown = () => {
+      cityWrapper?.classList.remove('is-open');
+      cityTrigger?.classList.remove('is-open');
+      cityMenu?.classList.remove('is-open');
+      cityTrigger?.setAttribute('aria-expanded', 'false');
+    };
+
+    const openCityDropdown = () => {
+      if (cityTrigger?.disabled) return;
+      cityWrapper?.classList.add('is-open');
+      cityTrigger?.classList.add('is-open');
+      cityMenu?.classList.add('is-open');
+      cityTrigger?.setAttribute('aria-expanded', 'true');
+    };
+
     ladaTrigger?.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       closeStateDropdown();
+      closeCityDropdown();
       if (ladaWrapper?.classList.contains('is-open')) {
         closeLadaDropdown();
       } else {
@@ -1594,12 +1608,63 @@ export class GiveawayDetailController {
       e.preventDefault();
       e.stopPropagation();
       closeLadaDropdown();
+      closeCityDropdown();
       if (stateWrapper?.classList.contains('is-open')) {
         closeStateDropdown();
       } else {
         openStateDropdown();
       }
     });
+
+    cityTrigger?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeLadaDropdown();
+      closeStateDropdown();
+      if (cityWrapper?.classList.contains('is-open')) {
+        closeCityDropdown();
+      } else {
+        openCityDropdown();
+      }
+    });
+
+    const populateCities = (stateName: string) => {
+      if (!cityList) return;
+      const cities = getCitiesForState(stateName);
+      cityList.innerHTML = cities
+        .map(
+          (city) => `
+            <button type="button" class="menu-item" data-ref="item-city-${escapeHtml(city)}" data-city-value="${escapeHtml(city)}" role="option">
+              <span class="menu-item__text" data-ref="text-city-item">${escapeHtml(city)}</span>
+            </button>
+          `
+        )
+        .join('');
+
+      cityWrapper?.classList.remove('is-disabled');
+      if (cityTrigger) {
+        cityTrigger.disabled = false;
+      }
+      if (citySelectedText) {
+        citySelectedText.textContent = 'Selecciona tu ciudad / municipio';
+      }
+      selectedCity = '';
+
+      const cityItems = cityList.querySelectorAll<HTMLButtonElement>('[data-city-value]');
+      cityItems.forEach((cItem) => {
+        cItem.addEventListener('click', (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          selectedCity = cItem.getAttribute('data-city-value') || '';
+          if (citySelectedText) {
+            citySelectedText.textContent = selectedCity;
+          }
+          cityItems.forEach((btn) => btn.classList.remove('is-active'));
+          cItem.classList.add('is-active');
+          closeCityDropdown();
+        });
+      });
+    };
 
     stateItems.forEach((item) => {
       item.addEventListener('click', (e) => {
@@ -1612,6 +1677,7 @@ export class GiveawayDetailController {
         stateItems.forEach((btn) => btn.classList.remove('is-active'));
         item.classList.add('is-active');
         closeStateDropdown();
+        populateCities(selectedState);
       });
     });
 
@@ -1621,6 +1687,9 @@ export class GiveawayDetailController {
       }
       if (!ladaWrapper?.contains(e.target as Node)) {
         closeLadaDropdown();
+      }
+      if (!cityWrapper?.contains(e.target as Node)) {
+        closeCityDropdown();
       }
     });
 
@@ -1659,14 +1728,20 @@ export class GiveawayDetailController {
           return false;
         }
 
+        if (!selectedCity) {
+          modal.setError('Selecciona tu ciudad o municipio.');
+          return false;
+        }
+
         modal.setError('');
 
         const finalPhone = selectedLada.code === '+52' ? normalizeMexicanPhone(rawPhone) : `${selectedLada.code}${cleanDigits}`;
+        const finalState = `${state}, ${selectedCity}`;
 
         const res = await reserveTicketsApi({
           customerName: name,
           customerPhone: finalPhone,
-          customerState: state,
+          customerState: finalState,
           giveawayUuid: this.giveaway!.uuid,
           ticketNumbers: Array.from(this.selectedTickets),
         });
