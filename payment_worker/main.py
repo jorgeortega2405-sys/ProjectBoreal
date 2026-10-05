@@ -44,22 +44,70 @@ CYCLE_SLEEP_SECONDS = float(os.getenv("PAYMENT_WORKER_SLEEP", "2.0"))
 LOCK_TTL_SECONDS = 180
 BACKOFF_INTERVALS = [30, 90, 180, 300, 600, 900]
 
-def get_db_connection():
-    return pymysql.connect(
-        host=os.getenv("DB_HOST", "127.0.0.1"),
-        port=int(os.getenv("DB_PORT", 3306)),
-        user=os.getenv("DB_USER", "sprite_user"),
-        password=os.getenv("DB_PASSWORD", "sprite_password"),
-        database=os.getenv("DB_NAME", "db_lottery"),
-        cursorclass=pymysql.cursors.DictCursor,
-        autocommit=False
-    )
+def get_db_connection(max_retries: int = 3, retry_delay: float = 1.0):
+    primary_host = os.getenv("DB_LOTTERY_HOST") or os.getenv("DB_HOST", "127.0.0.1")
+    hosts_to_try = [primary_host]
+    if primary_host == "mysql" and "127.0.0.1" not in hosts_to_try:
+        hosts_to_try.append("127.0.0.1")
+    elif primary_host in ("127.0.0.1", "localhost") and "mysql" not in hosts_to_try:
+        hosts_to_try.append("mysql")
+
+    port = int(os.getenv("DB_PORT", 3306))
+    user = os.getenv("DB_USER", "sprite_user")
+    password = os.getenv("DB_PASSWORD", "sprite_password")
+    database = os.getenv("DB_LOTTERY_NAME") or os.getenv("DB_NAME", "db_lottery")
+
+    last_err = None
+    for attempt in range(max_retries):
+        for host in hosts_to_try:
+            try:
+                return pymysql.connect(
+                    host=host,
+                    port=port,
+                    user=user,
+                    password=password,
+                    database=database,
+                    cursorclass=pymysql.cursors.DictCursor,
+                    autocommit=False,
+                    connect_timeout=5,
+                    read_timeout=15,
+                    write_timeout=15
+                )
+            except pymysql.err.OperationalError as e:
+                last_err = e
+        if attempt < max_retries - 1:
+            time.sleep(retry_delay)
+
+    raise last_err or pymysql.err.OperationalError(2003, f"No se pudo conectar a MySQL en los hosts: {hosts_to_try}")
 
 def get_redis_client():
     pwd = os.getenv("REDIS_PASSWORD", "boreal_redis_auth_key_2026!")
+    primary_host = os.getenv("REDIS_HOST", "127.0.0.1")
+    hosts_to_try = [primary_host]
+    if primary_host == "redis" and "127.0.0.1" not in hosts_to_try:
+        hosts_to_try.append("127.0.0.1")
+    elif primary_host in ("127.0.0.1", "localhost") and "redis" not in hosts_to_try:
+        hosts_to_try.append("redis")
+
+    port = int(os.getenv("REDIS_PORT", 6379))
+    for host in hosts_to_try:
+        try:
+            client = redis.Redis(
+                host=host,
+                port=port,
+                password=pwd if pwd else None,
+                decode_responses=True,
+                socket_timeout=5,
+                socket_connect_timeout=5
+            )
+            client.ping()
+            return client
+        except Exception:
+            continue
+
     return redis.Redis(
-        host=os.getenv("REDIS_HOST", "127.0.0.1"),
-        port=int(os.getenv("REDIS_PORT", 6379)),
+        host=primary_host,
+        port=port,
         password=pwd if pwd else None,
         decode_responses=True
     )
@@ -90,6 +138,7 @@ class ReceiptWorker:
                     SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
                            o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) as total_amount,
                            o.currency, o.concept_reference, o.status, o.receipt_url, o.receipt_filename, o.tracking_key,
+                           o.created_at,
                            g.uuid AS giveaway_uuid,
                            COALESCE(q.attempts, 0) AS queue_attempts,
                            COALESCE(q.max_attempts, 6) AS queue_max_attempts
@@ -599,9 +648,18 @@ class ReceiptWorker:
             conn.close()
 
     def run_cycle(self):
-        self.sweep_expired_orders()
+        try:
+            self.sweep_expired_orders()
+        except pymysql.err.OperationalError as db_err:
+            logger.warning(f"Aviso de conexión BD en barrido: {db_err}")
+            return
 
-        batch = self.fetch_and_reserve_batch()
+        try:
+            batch = self.fetch_and_reserve_batch()
+        except pymysql.err.OperationalError as db_err:
+            logger.warning(f"Aviso de conexión BD al obtener lote: {db_err}")
+            return
+
         if not batch:
             return
 
@@ -621,9 +679,17 @@ class ReceiptWorker:
         signal.signal(signal.SIGTERM, self.handle_shutdown)
 
         logger.info("Worker Python en ejecución multi-hilo. Escuchando cola de comprobantes...")
+        consecutive_db_errors = 0
         while self.running:
             try:
                 self.run_cycle()
+                consecutive_db_errors = 0
+            except pymysql.err.OperationalError as db_err:
+                consecutive_db_errors += 1
+                if consecutive_db_errors % 5 == 1:
+                    logger.warning(f"Esperando conexión a base de datos MySQL ({db_err}). Reintentando en breve...")
+                time.sleep(min(CYCLE_SLEEP_SECONDS * 2, 8.0))
+                continue
             except Exception as e:
                 logger.error(f"Error inesperado en ciclo principal del worker: {e}", exc_info=True)
             time.sleep(CYCLE_SLEEP_SECONDS)

@@ -144,6 +144,31 @@ class ReceiptParser:
             errors.append(f"El monto en el comprobante (${extracted_amount:.2f}) no coincide con el total de la orden (${expected_amount:.2f}).")
             fatal_error = True
 
+        # 1b. Validar Fecha de la Transferencia (Rechazo de comprobantes pasados o antiguos)
+        receipt_date_str = parsed.get("date")
+        if receipt_date_str:
+            try:
+                d_parts = receipt_date_str.split('-')
+                receipt_date = datetime.date(int(d_parts[2]), int(d_parts[1]), int(d_parts[0]))
+
+                order_created = order.get("created_at")
+                if isinstance(order_created, datetime.datetime):
+                    order_date = order_created.date()
+                elif isinstance(order_created, str):
+                    order_date = datetime.date.fromisoformat(order_created[:10])
+                else:
+                    order_date = datetime.date.today()
+
+                day_diff = (order_date - receipt_date).days
+                if day_diff > 1:
+                    errors.append(f"La fecha de transferencia ({receipt_date_str}) es anterior a la fecha de la orden ({order_date.strftime('%d-%m-%Y')}). No se admiten comprobantes de rifas o fechas anteriores.")
+                    fatal_error = True
+                elif day_diff < -1:
+                    errors.append(f"La fecha de transferencia ({receipt_date_str}) es inconsistente con la fecha de la orden.")
+                    fatal_error = True
+            except Exception:
+                pass
+
         # 2. Identificar Cuenta y Banco Receptor Autorizado
         bank_accounts = bank_account_or_list if isinstance(bank_account_or_list, list) else [bank_account_or_list]
         full_text_lower = parsed.get("full_text", "").lower()

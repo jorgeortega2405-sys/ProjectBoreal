@@ -964,9 +964,11 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   background: transparent !important;
   background-color: transparent !important;
   border: 1px solid var(--border-subtle-translucent) !important;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px;
 }
 
 .modal-copy-btn {
@@ -1057,6 +1059,7 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   width: 960px !important;
   max-width: calc(100vw - 32px) !important;
   min-height: 520px !important;
+  height: min(680px, calc(100vh - 48px)) !important;
   max-height: calc(100vh - 48px) !important;
   padding: 0 !important;
   display: flex !important;
@@ -1076,19 +1079,24 @@ html.dark-theme .giveaway-pagination__btn.is-active {
 .modal-card--split .modal-card__body {
   width: 100% !important;
   height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
   padding: 0 !important;
   margin: 0 !important;
   display: flex !important;
-  flex: 1 !important;
+  flex: 1 1 0% !important;
   overflow: hidden !important;
 }
 
 .payment-split {
   display: grid;
-  grid-template-columns: 430px 1fr;
+  grid-template-columns: 430px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   width: 100%;
   height: 100%;
-  min-height: 520px;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -1099,6 +1107,8 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   gap: 16px;
   border-right: 1px solid var(--border-subtle-translucent);
   overflow-y: auto;
+  min-height: 0;
+  max-height: 100%;
   box-sizing: border-box;
   background: transparent;
 }
@@ -1109,9 +1119,16 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   flex-direction: column;
   gap: 14px;
   overflow-y: auto;
+  min-height: 0;
+  max-height: 100%;
   box-sizing: border-box;
   background: transparent;
-  max-height: calc(100vh - 80px);
+}
+
+.payment-split__accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .payment-split__title {

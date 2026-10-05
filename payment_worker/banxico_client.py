@@ -54,6 +54,10 @@ class BanxicoClient:
         - receiver_bank_code: Código Banxico de 5 dígitos de la institución receptora
         """
         clean_key = tracking_key.strip().upper() if tracking_key else ""
+        # Corregir confusión OCR común en prefijo de rastreo BBVA (MBANO -> MBAN0)
+        if re.match(r'^MBAN[O]([0-9A-Z]+)$', clean_key):
+            clean_key = "MBAN0" + clean_key[5:]
+
         if not clean_key or amount <= 0:
             return {
                 "verified": False,
