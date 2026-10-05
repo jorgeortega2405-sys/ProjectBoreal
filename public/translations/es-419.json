@@ -6,10 +6,20 @@
   },
   "nav": {
     "collapse_drawer": "Contraer menú",
+    "cookies": "Política de Cookies",
     "drawing": "Sorteo",
     "expand_drawer": "Expandir menú",
+    "faq": "Preguntas Frecuentes",
+    "help": "Ayuda y FAQ",
     "home": "Inicio",
+    "legal_policies": "Políticas y Legal",
+    "navigation": "Navegación",
+    "prizes": "Entrega de Premios",
+    "privacy": "Política de Privacidad",
+    "responsible_gaming": "Juego Responsable",
+    "rules": "Reglas del Sorteo",
     "settings": "Configuración",
+    "terms": "Términos y Condiciones",
     "toggle_drawer": "Alternar menú lateral",
     "validate_payment": "Validar Pago"
   },
@@ -198,5 +208,37 @@
     "winner_banner_desc": "¡Tu boleto #{ticket} fue el seleccionado en el sorteo '{title}'!",
     "winner_banner_title": "¡FELICIDADES! ERES EL GANADOR",
     "winner_contact_info": "Nuestro equipo se pondrá en contacto contigo a través de tu número telefónico registrado para coordinar la entrega oficial de tu premio."
+  },
+  "help": {
+    "title": "Centro de Ayuda y Preguntas Frecuentes",
+    "subtitle": "Encuentra respuestas claras y rápidas sobre cómo participar, validar tus pagos, el proceso de sorteo y entrega de premios.",
+    "search_placeholder": "¿En qué podemos ayudarte? Busca por tema o palabra clave...",
+    "category_all": "Todas",
+    "category_participation": "Participación",
+    "category_payments": "Pagos y Validación",
+    "category_draws": "Sorteos y Lotería",
+    "category_prizes": "Premios y Entrega",
+    "legal_title": "Políticas y Documentación Legal",
+    "legal_subtitle": "Transparencia, seguridad y claridad en cada uno de nuestros procesos",
+    "contact_support_title": "¿No encontraste lo que buscabas?",
+    "contact_support_desc": "Nuestro equipo de soporte está disponible para resolver cualquier inquietud.",
+    "contact_support_btn": "Contactar Soporte"
+  },
+  "legal": {
+    "back_to_help": "Volver al Centro de Ayuda",
+    "placeholder_notice": "Este documento legal se encuentra en proceso de redacción y formalización normativa conforme al marco legal aplicable.",
+    "effective_date": "Vigente a partir de: Octubre 2026",
+    "terms_title": "Términos y Condiciones de Uso",
+    "terms_desc": "Normas que rigen el acceso, uso de la plataforma y participación en los sorteos.",
+    "privacy_title": "Política de Privacidad y Protección de Datos",
+    "privacy_desc": "Cómo recopilamos, utilizamos, almacenamos y protegemos tus datos personales.",
+    "cookies_title": "Política de Cookies",
+    "cookies_desc": "Información detallada sobre el uso de cookies y tecnologías similares en la plataforma.",
+    "rules_title": "Reglas del Sorteo y Bases Legales",
+    "rules_desc": "Requisitos de participación, mecánica de asignación de boletos y selección de ganadores.",
+    "prizes_title": "Política de Reclamación y Entrega de Premios",
+    "prizes_desc": "Plazos, documentos requeridos y procedimientos para la entrega segura de premios.",
+    "responsible_gaming_title": "Política de Juego Responsable",
+    "responsible_gaming_desc": "Compromiso con la participación consciente, prevención y control del juego responsable."
   }
 }

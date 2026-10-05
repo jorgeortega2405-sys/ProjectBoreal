@@ -6,10 +6,20 @@
   },
   "nav": {
     "collapse_drawer": "Réduire le menu",
+    "cookies": "Politique de Cookies",
     "drawing": "Tirage",
     "expand_drawer": "Développer le menu",
+    "faq": "Foire Aux Questions",
+    "help": "Aide & FAQ",
     "home": "Accueil",
+    "legal_policies": "Politiques & Juridique",
+    "navigation": "Navigation",
+    "prizes": "Remise des Lots",
+    "privacy": "Politique de Confidentialité",
+    "responsible_gaming": "Jeu Responsable",
+    "rules": "Règlement du Tirage",
     "settings": "Paramètres",
+    "terms": "Conditions Générales",
     "toggle_drawer": "Basculer le menu latéral",
     "validate_payment": "Valider le Paiement"
   },
@@ -178,5 +188,37 @@
     "winner_banner_desc": "Votre billet #{ticket} a été tiré au sort dans '{title}' !",
     "winner_banner_title": "FÉLICITATIONS ! VOUS AVEZ GAGNÉ",
     "winner_contact_info": "Notre équipe vous contactera au numéro enregistré pour organiser la remise officielle de votre lot."
+  },
+  "help": {
+    "title": "Centre d'Aide & Foire Aux Questions",
+    "subtitle": "Trouvez des réponses claires sur la participation, la validation des paiements, le déroulement des tirages et la livraison des prix.",
+    "search_placeholder": "Comment pouvons-nous vous aider ? Recherchez par mot-clé...",
+    "category_all": "Toutes",
+    "category_participation": "Participation",
+    "category_payments": "Paiements & Validation",
+    "category_draws": "Tirages & Loterie",
+    "category_prizes": "Prix & Livraison",
+    "legal_title": "Politiques & Documentation Légale",
+    "legal_subtitle": "Transparence, sécurité et rigueur dans chacun de nos processus",
+    "contact_support_title": "Vous ne trouvez pas votre réponse ?",
+    "contact_support_desc": "Notre équipe d'assistance est à votre écoute pour vous aider.",
+    "contact_support_btn": "Contacter l'Assistance"
+  },
+  "legal": {
+    "back_to_help": "Retour au Centre d'Aide",
+    "placeholder_notice": "Ce document juridique est actuellement en cours de formalisation et de mise en conformité réglementaire.",
+    "effective_date": "En vigueur à partir de : Octobre 2026",
+    "terms_title": "Conditions Générales d'Utilisation",
+    "terms_desc": "Règles régissant l'accès à la plateforme et la participation aux tirages au sort.",
+    "privacy_title": "Politique de Confidentialité et Protection des Données",
+    "privacy_desc": "Comment nous collectons, traitons et protégeons vos données personnelles.",
+    "cookies_title": "Politique relative aux Cookies",
+    "cookies_desc": "Informations détaillées sur l'utilisation des cookies et technologies similaires.",
+    "rules_title": "Règlement Officiel des Tirages au Sort",
+    "rules_desc": "Modalités d'éligibilité, attribution des numéros et désignation des gagnants.",
+    "prizes_title": "Procédure de Réclamation et Remise des Lots",
+    "prizes_desc": "Délais, documents requis et étapes sécurisées de livraison des prix.",
+    "responsible_gaming_title": "Politique de Jeu Responsable",
+    "responsible_gaming_desc": "Engagement envers la prévention, l'information et le contrôle de l'activité de jeu."
   }
 }

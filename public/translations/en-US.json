@@ -6,10 +6,20 @@
   },
   "nav": {
     "collapse_drawer": "Collapse menu",
+    "cookies": "Cookie Policy",
     "drawing": "Giveaway",
     "expand_drawer": "Expand menu",
+    "faq": "Frequently Asked Questions",
+    "help": "Help & FAQ",
     "home": "Home",
+    "legal_policies": "Policies & Legal",
+    "navigation": "Navigation",
+    "prizes": "Prize Delivery",
+    "privacy": "Privacy Policy",
+    "responsible_gaming": "Responsible Gaming",
+    "rules": "Giveaway Rules",
     "settings": "Settings",
+    "terms": "Terms & Conditions",
     "toggle_drawer": "Toggle side menu",
     "validate_payment": "Validate Payment"
   },
@@ -198,5 +208,37 @@
     "winner_banner_desc": "Your ticket #{ticket} was drawn in '{title}'!",
     "winner_banner_title": "CONGRATULATIONS! YOU WON",
     "winner_contact_info": "Our team will reach out to you via your registered phone number to coordinate the official delivery of your prize."
+  },
+  "help": {
+    "title": "Help Center & Frequently Asked Questions",
+    "subtitle": "Find quick and clear answers on how to enter, validate payments, the draw process, and prize delivery.",
+    "search_placeholder": "How can we help you? Search by topic or keyword...",
+    "category_all": "All",
+    "category_participation": "Participation",
+    "category_payments": "Payments & Validation",
+    "category_draws": "Draws & Lottery",
+    "category_prizes": "Prizes & Delivery",
+    "legal_title": "Policies & Legal Documentation",
+    "legal_subtitle": "Transparency, security, and clarity in every process",
+    "contact_support_title": "Didn't find what you were looking for?",
+    "contact_support_desc": "Our support team is available to assist you with any questions.",
+    "contact_support_btn": "Contact Support"
+  },
+  "legal": {
+    "back_to_help": "Back to Help Center",
+    "placeholder_notice": "This legal document is currently undergoing formalization and review in compliance with applicable regulations.",
+    "effective_date": "Effective date: October 2026",
+    "terms_title": "Terms and Conditions of Use",
+    "terms_desc": "Rules governing platform access, usage, and giveaway participation.",
+    "privacy_title": "Privacy Policy & Data Protection",
+    "privacy_desc": "How we collect, use, store, and protect your personal information.",
+    "cookies_title": "Cookie Policy",
+    "cookies_desc": "Detailed information about the use of cookies and similar technologies.",
+    "rules_title": "Giveaway Rules & Official Terms",
+    "rules_desc": "Participation requirements, ticket allocation mechanics, and winner selection.",
+    "prizes_title": "Prize Claim & Delivery Policy",
+    "prizes_desc": "Deadlines, required identification documents, and procedures for secure prize handover.",
+    "responsible_gaming_title": "Responsible Gaming Policy",
+    "responsible_gaming_desc": "Commitment to mindful participation, prevention, and control of gaming habits."
   }
 }

@@ -1,0 +1,170 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="help-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="help-scrollable">
+    <div class="settings-layout settings-layout--wide" data-ref="help-layout">
+
+      <div class="settings-header" data-ref="help-header">
+        <h1 class="settings-title" data-ref="help-title" data-i18n="help.title">Centro de Ayuda y Preguntas Frecuentes</h1>
+        <p class="settings-subtitle" data-ref="help-subtitle" data-i18n="help.subtitle">Encuentra respuestas claras y rápidas sobre cómo participar, validar tus pagos, el proceso de sorteo y entrega de premios.</p>
+        
+        <div class="field field--search" data-ref="help-search-field" style="width: 100%; max-width: 560px; margin-top: 14px;">
+          <input class="field__input" data-ref="input-help-search" type="search" placeholder=" " autocomplete="off" />
+          <span class="field__label" data-ref="label-help-search" data-i18n="help.search_placeholder">¿En qué podemos ayudarte? Busca por tema o palabra clave...</span>
+        </div>
+      </div>
+
+      <div class="category-pills-container" data-ref="faq-category-pills" style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 8px 0 16px 0;">
+        <button type="button" class="component-button component-button--h36 component-button--secondary is-active" data-ref="btn-cat-all" data-category="all" data-i18n="help.category_all">Todas</button>
+        <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-cat-participation" data-category="participation" data-i18n="help.category_participation">Participación</button>
+        <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-cat-payments" data-category="payments" data-i18n="help.category_payments">Pagos y Validación</button>
+        <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-cat-draws" data-category="draws" data-i18n="help.category_draws">Sorteos y Lotería</button>
+        <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-cat-prizes" data-category="prizes" data-i18n="help.category_prizes">Premios y Entrega</button>
+      </div>
+
+      <div class="settings-group" data-ref="faq-accordion-group">
+        
+        <div class="faq-accordion-item" data-ref="faq-item" data-category="participation">
+          <button type="button" class="faq-accordion-trigger" data-ref="faq-trigger">
+            <span class="faq-accordion-question" data-ref="faq-q">¿Cómo compro o aparto boletos para un sorteo?</span>
+            <svg class="component-icon faq-accordion-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+          </button>
+          <div class="faq-accordion-content" data-ref="faq-answer">
+            <div class="faq-accordion-body" data-ref="faq-body">
+              Selecciona el sorteo de tu interés en la pantalla de inicio, elige la cantidad de boletos o ingresa los números deseados mediante el selector interactivo. Al confirmar tu selección e ingresar tu nombre y número de teléfono, los boletos quedarán apartados a tu nombre de forma temporal para que realices tu transferencia SPEI.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-accordion-item" data-ref="faq-item" data-category="participation">
+          <button type="button" class="faq-accordion-trigger" data-ref="faq-trigger">
+            <span class="faq-accordion-question" data-ref="faq-q">¿Cuánto tiempo tengo para pagar mis boletos apartados?</span>
+            <svg class="component-icon faq-accordion-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+          </button>
+          <div class="faq-accordion-content" data-ref="faq-answer">
+            <div class="faq-accordion-body" data-ref="faq-body">
+              Dispones de un período de reserva establecido (generalmente entre 12 y 24 horas) para realizar tu pago y subir el comprobante. Una vez subido tu comprobante, el apartado entra en un período de gracia de 48 horas mientras Banxico valida tu transferencia de manera automática.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-accordion-item" data-ref="faq-item" data-category="payments">
+          <button type="button" class="faq-accordion-trigger" data-ref="faq-trigger">
+            <span class="faq-accordion-question" data-ref="faq-q">¿Cuáles son los métodos de pago aceptados?</span>
+            <svg class="component-icon faq-accordion-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+          </button>
+          <div class="faq-accordion-content" data-ref="faq-answer">
+            <div class="faq-accordion-body" data-ref="faq-body">
+              Aceptamos transferencias electrónicas interbancarias vía SPEI a nuestras cuentas bancarias oficiales autorizadas (STP, BBVA, etc.). Al momento de apartar, el sistema te proporcionará la CLABE interbancaria, el banco receptor y el concepto de pago exacto que debes colocar en tu banca móvil.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-accordion-item" data-ref="faq-item" data-category="payments">
+          <button type="button" class="faq-accordion-trigger" data-ref="faq-trigger">
+            <span class="faq-accordion-question" data-ref="faq-q">¿Cómo valido mi comprobante de pago SPEI?</span>
+            <svg class="component-icon faq-accordion-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+          </button>
+          <div class="faq-accordion-content" data-ref="faq-answer">
+            <div class="faq-accordion-body" data-ref="faq-body">
+              Dirígete a la sección <strong>Validar Pago</strong> en el menú lateral. Ingresa el número telefónico con el que realizaste tu apartado. Allí podrás ver tus órdenes y presionar "Subir Comprobante" adjuntando la captura de tu transferencia o ingresando la Clave de Rastreo SPEI de 30 dígitos emitida por tu banco. Nuestro sistema verifica la autenticidad del pago con el Banco de México (Banxico).
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-accordion-item" data-ref="faq-item" data-category="draws">
+          <button type="button" class="faq-accordion-trigger" data-ref="faq-trigger">
+            <span class="faq-accordion-question" data-ref="faq-q">¿Cómo se eligen a los ganadores?</span>
+            <svg class="component-icon faq-accordion-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+          </button>
+          <div class="faq-accordion-content" data-ref="faq-answer">
+            <div class="faq-accordion-body" data-ref="faq-body">
+              Todos nuestros sorteos se realizan con estricta transparencia y trazabilidad basados en los resultados oficiales de los sorteos mayores de la Lotería Nacional para la Asistencia Pública o mediante nuestra ruleta criptográfica verificada en tiempo real vía WebSocket.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq-accordion-item" data-ref="faq-item" data-category="prizes">
+          <button type="button" class="faq-accordion-trigger" data-ref="faq-trigger">
+            <span class="faq-accordion-question" data-ref="faq-q">¿Cómo y cuándo se entregan los premios?</span>
+            <svg class="component-icon faq-accordion-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+          </button>
+          <div class="faq-accordion-content" data-ref="faq-answer">
+            <div class="faq-accordion-body" data-ref="faq-body">
+              Una vez anunciado el ganador oficial, nuestro equipo de soporte se comunica directamente vía telefónica y WhatsApp al número registrado en un plazo no mayor a 24 horas. Los premios físicos se envían asegurados por paquetería o se entregan de manera presencial, y los premios en efectivo se transfieren por SPEI a la cuenta bancaria verificada a nombre del ganador.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="settings-header" data-ref="help-legal-header" style="margin-top: 24px;">
+        <h2 class="settings-title" data-ref="help-legal-title" data-i18n="help.legal_title">Políticas y Documentación Legal</h2>
+        <p class="settings-subtitle" data-ref="help-legal-subtitle" data-i18n="help.legal_subtitle">Transparencia, seguridad y claridad en cada uno de nuestros procesos</p>
+      </div>
+
+      <div class="legal-cards-grid" data-ref="help-legal-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; width: 100%; box-sizing: border-box;">
+        
+        <button type="button" class="component-button legal-card-item" data-ref="btn-card-terms" data-path="/terms">
+          <div class="legal-card-item__icon" data-ref="icon-card-terms">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+          </div>
+          <div class="legal-card-item__content" data-ref="content-card-terms">
+            <span class="legal-card-item__title" data-ref="title-card-terms" data-i18n="legal.terms_title">Términos y Condiciones</span>
+            <span class="legal-card-item__desc" data-ref="desc-card-terms" data-i18n="legal.terms_desc">Normas que rigen el acceso y participación en los sorteos.</span>
+          </div>
+        </button>
+
+        <button type="button" class="component-button legal-card-item" data-ref="btn-card-privacy" data-path="/privacy">
+          <div class="legal-card-item__icon" data-ref="icon-card-privacy">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+          </div>
+          <div class="legal-card-item__content" data-ref="content-card-privacy">
+            <span class="legal-card-item__title" data-ref="title-card-privacy" data-i18n="legal.privacy_title">Política de Privacidad</span>
+            <span class="legal-card-item__desc" data-ref="desc-card-privacy" data-i18n="legal.privacy_desc">Cómo recopilamos y protegemos tus datos personales.</span>
+          </div>
+        </button>
+
+        <button type="button" class="component-button legal-card-item" data-ref="btn-card-cookies" data-path="/cookies">
+          <div class="legal-card-item__icon" data-ref="icon-card-cookies">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cookie"></use></svg>
+          </div>
+          <div class="legal-card-item__content" data-ref="content-card-cookies">
+            <span class="legal-card-item__title" data-ref="title-card-cookies" data-i18n="legal.cookies_title">Política de Cookies</span>
+            <span class="legal-card-item__desc" data-ref="desc-card-cookies" data-i18n="legal.cookies_desc">Uso de cookies y almacenamiento local en la plataforma.</span>
+          </div>
+        </button>
+
+        <button type="button" class="component-button legal-card-item" data-ref="btn-card-rules" data-path="/rules">
+          <div class="legal-card-item__icon" data-ref="icon-card-rules">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#gavel"></use></svg>
+          </div>
+          <div class="legal-card-item__content" data-ref="content-card-rules">
+            <span class="legal-card-item__title" data-ref="title-card-rules" data-i18n="legal.rules_title">Reglas del Sorteo</span>
+            <span class="legal-card-item__desc" data-ref="desc-card-rules" data-i18n="legal.rules_desc">Bases legales, mecánica y determinación de ganadores.</span>
+          </div>
+        </button>
+
+        <button type="button" class="component-button legal-card-item" data-ref="btn-card-prizes" data-path="/prizes">
+          <div class="legal-card-item__icon" data-ref="icon-card-prizes">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#workspace_premium"></use></svg>
+          </div>
+          <div class="legal-card-item__content" data-ref="content-card-prizes">
+            <span class="legal-card-item__title" data-ref="title-card-prizes" data-i18n="legal.prizes_title">Entrega de Premios</span>
+            <span class="legal-card-item__desc" data-ref="desc-card-prizes" data-i18n="legal.prizes_desc">Reclamación, documentación requerida y plazos.</span>
+          </div>
+        </button>
+
+        <button type="button" class="component-button legal-card-item" data-ref="btn-card-responsible-gaming" data-path="/responsible-gaming">
+          <div class="legal-card-item__icon" data-ref="icon-card-responsible-gaming">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+          </div>
+          <div class="legal-card-item__content" data-ref="content-card-responsible-gaming">
+            <span class="legal-card-item__title" data-ref="title-card-responsible-gaming" data-i18n="legal.responsible_gaming_title">Juego Responsable</span>
+            <span class="legal-card-item__desc" data-ref="desc-card-responsible-gaming" data-i18n="legal.responsible_gaming_desc">Compromiso con la participación consciente y control.</span>
+          </div>
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+</div>

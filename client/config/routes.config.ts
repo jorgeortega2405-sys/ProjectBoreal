@@ -58,6 +58,62 @@ export const APP_ROUTES: RouteDefinition[] = [
     id: 'drawing',
     match: (path) => path === '/drawing' || path === '/canvas' || path === '/draw',
   },
+  {
+    handler: async () => {
+      const { createHelpView } = await import('../views/help.view.js');
+      return await createHelpView();
+    },
+    id: 'help',
+    match: (path) => path === '/help' || path === '/faq' || path === '/ayuda',
+  },
+  {
+    handler: async () => {
+      const { createLegalView } = await import('../views/legal.view.js');
+      return await createLegalView('terms');
+    },
+    id: 'legal-terms',
+    match: (path) => path === '/terms' || path === '/terminos',
+  },
+  {
+    handler: async () => {
+      const { createLegalView } = await import('../views/legal.view.js');
+      return await createLegalView('privacy');
+    },
+    id: 'legal-privacy',
+    match: (path) => path === '/privacy' || path === '/privacidad',
+  },
+  {
+    handler: async () => {
+      const { createLegalView } = await import('../views/legal.view.js');
+      return await createLegalView('cookies');
+    },
+    id: 'legal-cookies',
+    match: (path) => path === '/cookies',
+  },
+  {
+    handler: async () => {
+      const { createLegalView } = await import('../views/legal.view.js');
+      return await createLegalView('rules');
+    },
+    id: 'legal-rules',
+    match: (path) => path === '/rules' || path === '/reglas',
+  },
+  {
+    handler: async () => {
+      const { createLegalView } = await import('../views/legal.view.js');
+      return await createLegalView('prizes');
+    },
+    id: 'legal-prizes',
+    match: (path) => path === '/prizes' || path === '/premios',
+  },
+  {
+    handler: async () => {
+      const { createLegalView } = await import('../views/legal.view.js');
+      return await createLegalView('responsible-gaming');
+    },
+    id: 'legal-responsible-gaming',
+    match: (path) => path === '/responsible-gaming' || path === '/juego-responsable',
+  },
 ];
 
 export function findRoute(path: string): { params: Record<string, string>; route: RouteDefinition } | null {
