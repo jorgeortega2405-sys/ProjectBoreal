@@ -1,9 +1,10 @@
-import { checkCassandraConnection } from './config/cassandra.config.js';
-import { checkDbConnection } from './config/database.config.js';
+import { checkCassandraConnection, closeCassandraConnection } from './config/cassandra.config.js';
+import { checkDbConnection, closeDbConnections } from './config/database.config.js';
 import { config } from './config/env.config.js';
-import { acquireDistributedLock, checkRedisConnection, releaseDistributedLock } from './config/redis.config.js';
+import { acquireDistributedLock, checkRedisConnection, closeRedisConnection, releaseDistributedLock } from './config/redis.config.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
 import giveawaysRoutes from './routes/giveaways.routes.js';
+import healthRoutes from './routes/health.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import { processBanxicoBatch } from './services/banxico.service.js';
 import { drawGiveawayWinners } from './services/giveaways.service.js';
@@ -137,6 +138,7 @@ function createExpressApp(): express.Express {
   app.use(requestLogger);
 
   app.use('/api/giveaways', giveawaysRoutes);
+  app.use('/api/health', healthRoutes);
   app.use('/api/orders', ordersRoutes);
 
   app.use(
@@ -222,11 +224,26 @@ async function startWorkerServer(): Promise<void> {
   }
 
   const handleShutdown = async (signal: string) => {
-    logger.app.info(`Worker [PID ${process.pid}] recibió ${signal}. Cerrando ordenadamente...`);
-    server.close(() => {
-      logger.app.info(`Worker [PID ${process.pid}] finalizado exitosamente.`);
-      process.exit(0);
+    logger.app.info(`Worker [PID ${process.pid}] recibió ${signal}. Drenando conexiones ordenadamente...`);
+    server.close(async () => {
+      try {
+        await Promise.allSettled([
+          closeDbConnections(),
+          closeRedisConnection(),
+          closeCassandraConnection(),
+        ]);
+        logger.app.info(`Worker [PID ${process.pid}] finalizado exitosamente.`);
+        process.exit(0);
+      } catch (err) {
+        logger.app.error('Error al cerrar conexiones en shutdown del worker', err);
+        process.exit(1);
+      }
     });
+
+    setTimeout(() => {
+      logger.app.error('Forzando apagado por timeout en shutdown del worker.');
+      process.exit(1);
+    }, 10000).unref();
   };
 
   process.on('SIGTERM', () => void handleShutdown('SIGTERM'));
@@ -252,16 +269,17 @@ async function startPrimaryCluster(): Promise<void> {
     cluster.fork();
   });
 
-  const handleShutdown = (signal: string) => {
+  const handleShutdown = async (signal: string) => {
     logger.app.info(`Proceso maestro recibió ${signal}. Deteniendo cluster...`);
     for (const id in cluster.workers) {
       cluster.workers[id]?.kill();
     }
+    await closeRedisConnection();
     process.exit(0);
   };
 
-  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-  process.on('SIGINT', () => handleShutdown('SIGINT'));
+  process.on('SIGTERM', () => void handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => void handleShutdown('SIGINT'));
 }
 
 async function bootstrap(): Promise<void> {

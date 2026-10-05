@@ -13,6 +13,12 @@ services:
       - ./database/db_identity.sql:/docker-entrypoint-initdb.d/01-db_identity.sql:ro
       - ./database/db_lottery.sql:/docker-entrypoint-initdb.d/02-db_lottery.sql:ro
       - mysql_data:/var/lib/mysql
+    mem_limit: 1536m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h localhost -u $${MYSQL_USER} -p$${MYSQL_PASSWORD}"]
       interval: 5s
@@ -31,6 +37,12 @@ services:
       - "127.0.0.1:6379:6379"
     volumes:
       - redis_data:/data
+    mem_limit: 512m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD:-boreal_redis_auth_key_2026!}\" ping | grep -q PONG || exit 1"]
       interval: 5s
@@ -51,6 +63,12 @@ services:
       HEAP_NEWSIZE: 128M
     volumes:
       - cassandra_data:/var/lib/cassandra
+    mem_limit: 2048m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
     healthcheck:
       test: ["CMD-SHELL", "cqlsh -e 'describe cluster' || exit 1"]
       interval: 15s
@@ -68,6 +86,34 @@ services:
       - ./database/db_cassandra.cql:/db_cassandra.cql:ro
     command: ["sh", "-c", "echo 'Cargando esquema CQL en Cassandra...' && cqlsh cassandra 9042 -f /db_cassandra.cql && echo 'Esquema de auditoria aplicado con exito.'"]
     restart: "no"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  websocket:
+    build:
+      context: ./websocket
+      dockerfile: Dockerfile
+    container_name: boreal-websocket
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3008:3008"
+    environment:
+      PORT: 3008
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-boreal_redis_auth_key_2026!}
+    depends_on:
+      redis:
+        condition: service_healthy
+    mem_limit: 256m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
 
 volumes:
   mysql_data:

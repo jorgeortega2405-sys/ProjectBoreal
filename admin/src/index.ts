@@ -1,7 +1,7 @@
 import apiRoutes from './routes/api.routes.js';
-import { checkCassandraConnection } from './config/cassandra.config.js';
-import { checkDbConnection } from './config/database.config.js';
-import { checkRedisConnection } from './config/redis.config.js';
+import { checkCassandraConnection, closeCassandraConnection } from './config/cassandra.config.js';
+import { checkDbConnection, closeDbConnections } from './config/database.config.js';
+import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
 import { config } from './config/env.config.js';
 import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
@@ -138,11 +138,26 @@ async function startServer(): Promise<void> {
     });
 
     const handleShutdown = (signal: string) => {
-      logger.app.info(`Recibida señal ${signal}. Cerrando servidor administrativo...`);
-      server.close(() => {
-        logger.app.info('Servidor administrativo cerrado correctamente.');
-        process.exit(0);
+      logger.app.info(`Recibida señal ${signal}. Drenando conexiones del servidor administrativo...`);
+      server.close(async () => {
+        try {
+          await Promise.allSettled([
+            closeDbConnections(),
+            closeRedisConnection(),
+            closeCassandraConnection(),
+          ]);
+          logger.app.info('Servidor administrativo cerrado limpiamente.');
+          process.exit(0);
+        } catch (err) {
+          logger.app.error('Error al cerrar recursos en shutdown de admin', err);
+          process.exit(1);
+        }
       });
+
+      setTimeout(() => {
+        logger.app.error('Forzando cierre de admin por timeout de shutdown.');
+        process.exit(1);
+      }, 10000).unref();
     };
 
     process.on('SIGTERM', () => handleShutdown('SIGTERM'));

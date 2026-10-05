@@ -80,4 +80,15 @@ export async function deleteCachePattern(pattern: string): Promise<void> {
   }
 }
 
+export async function closeRedisConnection(): Promise<void> {
+  try {
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      await redis.quit();
+    }
+    logger.db.info('Conexión a Redis cerrada exitosamente para Admin.');
+  } catch (err) {
+    logger.db.warn('Error al cerrar cliente Redis en Admin', err);
+  }
+}
+
 export default redis;

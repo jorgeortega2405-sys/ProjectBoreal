@@ -59,3 +59,9 @@ export async function checkDbConnection(retries = 10, delayMs = 2000): Promise<v
     }
   }
 }
+
+export async function closeDbConnections(): Promise<void> {
+  await Promise.allSettled([poolLottery.end(), poolIdentity.end()]);
+  logger.db.info('Conexiones a MySQL cerradas exitosamente para Admin.');
+}
+

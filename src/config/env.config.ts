@@ -50,6 +50,6 @@ export const config = {
   },
   websocket: {
     host: process.env.WEBSOCKET_HOST || '127.0.0.1',
-    port: parseInt(process.env.WEBSOCKET_PORT || '3005', 10),
+    port: parseInt(process.env.WEBSOCKET_PORT || '3008', 10),
   },
 };

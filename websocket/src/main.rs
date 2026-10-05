@@ -42,9 +42,9 @@ enum ClientInboundMessage {
 #[tokio::main]
 async fn main() {
     let port = env::var("PORT")
-        .unwrap_or_else(|_| "3005".to_string())
+        .unwrap_or_else(|_| "3008".to_string())
         .parse::<u16>()
-        .unwrap_or(3005);
+        .unwrap_or(3008);
 
     let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| {
         let host = env::var("REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());

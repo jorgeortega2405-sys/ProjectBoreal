@@ -3,6 +3,7 @@ import authRoutes from './auth.routes.js';
 import bankAccountsRoutes from './bank-accounts.routes.js';
 import dashboardRoutes from './dashboard.routes.js';
 import giveawaysRoutes from './giveaways.routes.js';
+import healthRoutes from './health.routes.js';
 import ordersRoutes from './orders.routes.js';
 import { Router } from 'express';
 
@@ -13,8 +14,10 @@ router.use('/auth', authRoutes);
 router.use('/bank-accounts', bankAccountsRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/giveaways', giveawaysRoutes);
+router.use('/health', healthRoutes);
 router.use('/orders', ordersRoutes);
 
 export default router;
+
 
 
