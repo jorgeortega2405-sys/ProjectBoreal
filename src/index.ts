@@ -1,3 +1,4 @@
+import { checkCassandraConnection } from './config/cassandra.config.js';
 import { checkDbConnection } from './config/database.config.js';
 import { config } from './config/env.config.js';
 import { acquireDistributedLock, checkRedisConnection, releaseDistributedLock } from './config/redis.config.js';
@@ -206,6 +207,7 @@ async function startWorkerServer(): Promise<void> {
 
   await checkDbConnection();
   await checkRedisConnection();
+  await checkCassandraConnection();
 
   const server = http.createServer(app);
   await setupClient(app, server);

@@ -2,7 +2,7 @@ import { ADMIN_COOKIE_NAME, createSessionToken, logAdminAudit, revokeSession, SE
 import { AdminSafeUser, AdminUser, AuthenticatedAdminRequest } from '../types/auth.types.js';
 import { config } from '../config/env.config.js';
 import { logger } from '../services/logger.service.js';
-import { pool } from '../config/database.config.js';
+import { poolIdentity } from '../config/database.config.js';
 import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
 
@@ -20,7 +20,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    const [rows] = await pool.query<RowDataPacket[]>(
+    const [rows] = await poolIdentity.query<RowDataPacket[]>(
       'SELECT id, uuid, email, password_hash, name, is_active FROM admin_users WHERE email = ? LIMIT 1',
       [cleanEmail]
     );

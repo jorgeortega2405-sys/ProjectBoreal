@@ -1,4 +1,5 @@
 import apiRoutes from './routes/api.routes.js';
+import { checkCassandraConnection } from './config/cassandra.config.js';
 import { checkDbConnection } from './config/database.config.js';
 import { checkRedisConnection } from './config/redis.config.js';
 import { config } from './config/env.config.js';
@@ -124,6 +125,7 @@ async function startServer(): Promise<void> {
   try {
     await checkDbConnection();
     await checkRedisConnection();
+    await checkCassandraConnection();
 
     const app = createExpressApp();
     const server = http.createServer(app);

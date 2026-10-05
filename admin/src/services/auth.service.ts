@@ -1,10 +1,11 @@
+import bcrypt from 'bcryptjs';
+import cassandra, { types } from 'cassandra-driver';
+import crypto from 'crypto';
 import { AdminSafeUser, AdminSessionPayload } from '../types/auth.types.js';
+import { cassandraClient, isCassandraConnected } from '../config/cassandra.config.js';
 import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
-import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
-import bcrypt from 'bcryptjs';
-import crypto from 'crypto';
 
 export const ADMIN_COOKIE_NAME = 'boreal_admin_session';
 export const SESSION_TTL_SECONDS = 24 * 60 * 60;
@@ -97,22 +98,81 @@ export async function logAdminAudit(params: {
   ipAddress: string;
   userAgent: string;
 }): Promise<void> {
+  const auditUuid = crypto.randomUUID();
+  const timeId = types.TimeUuid.now();
+  const now = new Date();
+  const bucketMonth = now.toISOString().slice(0, 7);
+  const adminName = params.adminUser?.name || params.adminUser?.email || 'Admin';
+  const detailsJson = params.details ? JSON.stringify(params.details) : null;
+  const ip = params.ipAddress.slice(0, 45);
+  const ua = params.userAgent.slice(0, 500);
+
   try {
-    const auditUuid = crypto.randomUUID();
-    const query = `
-      INSERT INTO \`user_audit_logs\` (
-        \`uuid\`, \`customer_name\`, \`action\`, \`actor_type\`, \`ip_address\`, \`user_agent\`, \`details\`
-      ) VALUES (?, ?, ?, 'admin', ?, ?, ?)
-    `;
-    await pool.query(query, [
-      auditUuid,
-      params.adminUser?.name || params.adminUser?.email || 'Admin',
-      params.action,
-      params.ipAddress.slice(0, 45),
-      params.userAgent.slice(0, 500),
-      params.details ? JSON.stringify(params.details) : null,
-    ]);
+    if (isCassandraConnected) {
+      const queries = [
+        {
+          params: [
+            auditUuid,
+            timeId,
+            null,
+            null,
+            null,
+            adminName,
+            params.action,
+            'admin',
+            ip,
+            ua,
+            null,
+            null,
+            null,
+            null,
+            detailsJson,
+            now,
+          ],
+          query: `INSERT INTO audit_logs (
+            uuid, id, order_id, order_uuid, customer_phone, customer_name,
+            action, actor_type, ip_address, user_agent,
+            previous_status, new_status, amount, currency, details, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        },
+        {
+          params: [
+            bucketMonth,
+            now,
+            timeId,
+            auditUuid,
+            null,
+            null,
+            null,
+            adminName,
+            params.action,
+            'admin',
+            ip,
+            ua,
+            null,
+            null,
+            null,
+            null,
+            detailsJson,
+          ],
+          query: `INSERT INTO audit_logs_timeline (
+            bucket_month, created_at, id, uuid, order_id, order_uuid,
+            customer_phone, customer_name, action, actor_type, ip_address, user_agent,
+            previous_status, new_status, amount, currency, details
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        },
+      ];
+      await cassandraClient.batch(queries, { prepare: true });
+    }
+
+    logger.security.info(`ADMIN AUDIT: [${params.action}] User: ${adminName}`, {
+      action: params.action,
+      adminUser: params.adminUser?.email,
+      details: params.details,
+      ipAddress: ip,
+      uuid: auditUuid,
+    });
   } catch (err) {
-    logger.security.error('Fallo al registrar log de auditoría para Admin', err);
+    logger.security.error('Fallo al registrar log de auditoría para Admin en Cassandra', err);
   }
 }
