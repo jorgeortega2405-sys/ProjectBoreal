@@ -1,10 +1,11 @@
+import crypto from 'crypto';
+import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
+import { config } from '../config/env.config.js';
 import { deleteCache, deleteCachePattern, publishGiveawayEvent } from '../config/redis.config.js';
 import { AdminOrder, OrderStatus, SpeiQueueItem } from '../types/order.types.js';
 import { logAdminAudit } from './auth.service.js';
 import { logger } from './logger.service.js';
-import crypto from 'crypto';
-import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 interface OrderRow extends RowDataPacket {
   bank_reference: string | null;
@@ -181,6 +182,11 @@ export async function approveAdminOrder(
       return { giveawayTitle: order.giveaway_title, success: true, ticketCount: order.ticket_count };
     }
 
+    if (order.status === 'expired') {
+      await conn.rollback();
+      throw new Error('No se puede aprobar una orden expirada. Los boletos ya fueron liberados.');
+    }
+
     if (order.status === 'cancelled') {
       await conn.rollback();
       throw new Error('No se puede aprobar una orden cancelada.');
@@ -268,7 +274,6 @@ export async function approveAdminOrder(
     await publishGiveawayEvent('boreal:giveaways', {
       giveaway_id: order.giveaway_id,
       giveaway_uuid: order.giveaway_uuid,
-      order_uuid: order.uuid,
       ticket_count: order.ticket_count,
       ticket_numbers: tickets,
       type: 'TICKETS_PAID',
@@ -385,12 +390,15 @@ export async function cancelAdminOrder(
       [order.id]
     );
 
-    await conn.query(
-      `UPDATE giveaways
-       SET available_tickets = LEAST(total_tickets, available_tickets + ?)
-       WHERE id = ?`,
-      [order.ticket_count, order.giveaway_id]
-    );
+    const shouldRestoreTickets = order.status === 'pending_payment' || order.status === 'in_review';
+    if (shouldRestoreTickets) {
+      await conn.query(
+        `UPDATE giveaways
+         SET available_tickets = LEAST(total_tickets, available_tickets + ?)
+         WHERE id = ?`,
+        [order.ticket_count, order.giveaway_id]
+      );
+    }
 
     await conn.query(
       `UPDATE spei_validation_queue
@@ -456,7 +464,6 @@ export async function cancelAdminOrder(
     await publishGiveawayEvent('boreal:giveaways', {
       giveaway_id: order.giveaway_id,
       giveaway_uuid: order.giveaway_uuid,
-      order_uuid: order.uuid,
       ticket_count: order.ticket_count,
       ticket_numbers: tickets,
       type: 'TICKETS_RELEASED',
@@ -536,10 +543,11 @@ export async function triggerSpeiValidationBatch(): Promise<{ processed: number 
     let processed = 0;
 
     for (const item of queueRows) {
+      const isSandbox = config.nodeEnv !== 'production' && process.env.BANXICO_SANDBOX === 'true';
       const cleanKey = String(item.tracking_key || '').trim().toUpperCase();
       const amount = Number(item.expected_amount || 0);
 
-      if (cleanKey.length >= 8 && amount > 0) {
+      if (isSandbox && cleanKey.length >= 8 && amount > 0) {
         await approveAdminOrder(item.order_uuid, {
           email: 'spei-system@projectboreal.internal',
           id: 0,

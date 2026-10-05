@@ -93,6 +93,28 @@ function createExpressApp(): express.Express {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const method = req.method.toUpperCase();
+    if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      return next();
+    }
+    const origin = (req.headers['origin'] || req.headers['referer']) as string | undefined;
+    if (origin && typeof origin === 'string') {
+      const isAllowed = origin.startsWith('http://localhost:')
+        || origin.startsWith('https://localhost:')
+        || origin.startsWith('http://127.0.0.1:')
+        || origin.endsWith('.projectboreal.internal')
+        || origin.includes('projectboreal.com');
+      if (!isAllowed) {
+        res.status(403).json({ error: 'Acceso denegado por verificación de origen (CSRF).' });
+        return;
+      }
+    }
     next();
   });
 

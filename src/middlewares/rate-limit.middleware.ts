@@ -1,6 +1,6 @@
+import { NextFunction, Request, Response } from 'express';
 import { redis } from '../config/redis.config.js';
 import { logger } from '../services/logger.service.js';
-import { NextFunction, Request, Response } from 'express';
 
 interface RateLimitOptions {
   keyPrefix: string;
@@ -19,6 +19,7 @@ export function createRateLimiter(options: RateLimitOptions) {
       const redisKey = `boreal:ratelimit:${keyPrefix}:${cleanIp}`;
 
       if (redis.status !== 'ready' && redis.status !== 'connect') {
+        logger.app.warn(`Rate limiter para ${keyPrefix} degradado: Redis no disponible.`);
         return next();
       }
 

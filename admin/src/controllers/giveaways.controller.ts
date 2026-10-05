@@ -107,7 +107,7 @@ export async function createGiveawayHandler(req: AuthenticatedAdminRequest, res:
 
     const created = await createAdminGiveaway({
       countdown_hours: Number(countdown_hours) || 48,
-      currency: currency || 'USD',
+      currency: currency || 'MXN',
       description: description || null,
       end_date: String(end_date),
       image_urls: Array.isArray(image_urls) ? image_urls : null,

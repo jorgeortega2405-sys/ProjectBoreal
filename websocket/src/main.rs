@@ -3,6 +3,7 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         State,
     },
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
     Router,
@@ -91,9 +92,22 @@ async fn health_check() -> impl IntoResponse {
 }
 
 async fn ws_handler(
+    headers: HeaderMap,
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
 ) -> Response {
+    if let Some(origin) = headers.get("origin").and_then(|v| v.to_str().ok()) {
+        let is_allowed = origin.starts_with("http://localhost:")
+            || origin.starts_with("https://localhost:")
+            || origin.starts_with("http://127.0.0.1:")
+            || origin.ends_with(".projectboreal.internal")
+            || origin == "https://projectboreal.com"
+            || origin == "https://admin.projectboreal.com";
+        if !is_allowed {
+            return (StatusCode::FORBIDDEN, "Origen no autorizado").into_response();
+        }
+    }
+
     ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 

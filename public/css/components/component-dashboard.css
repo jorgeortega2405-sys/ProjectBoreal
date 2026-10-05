@@ -309,28 +309,33 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
 
 .canvas-card__btn-sync {
   position: absolute;
-  bottom: 8px;
-  left: 8px;
+  top: 8px;
+  right: 8px;
+  bottom: auto;
+  left: auto;
   font-size: 11px;
   font-weight: 600;
   gap: 4px;
   padding: 0 10px;
   border-radius: 20px;
   height: 26px;
-  background: rgba(255, 255, 255, 0.95);
-  color: #000000;
-  border: none;
+  background: rgba(0, 0, 0, 0.65);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  transition: background-color var(--sl-transition-fast), transform var(--sl-transition-x-fast);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast);
   z-index: 10;
   display: inline-flex;
   align-items: center;
 }
 
 .canvas-card__btn-sync:hover {
-  background: #ffffff;
-  transform: scale(1.03);
+  background: rgba(0, 0, 0, 0.85);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
 }
 
 .canvas-card__btn-sync .component-icon,
@@ -338,6 +343,56 @@ html.dark-theme .canvas-card.is-selected:hover .canvas-card__thumbnail {
   font-size: 15px;
   width: 15px;
   height: 15px;
+}
+
+.canvas-card__category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
+
+.canvas-card__category-icon svg,
+.canvas-card__category-icon .component-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.giveaway-card__meta-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.giveaway-card__timer-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 2;
+  white-space: nowrap;
 }
 
 .canvas-card__info {

@@ -30,7 +30,9 @@ pnpm-debug.log*
 
 storage/receipts/*
 !storage/receipts/.gitkeep
+public/uploads/
 
+.agents/
 .vscode/
 .idea/
 *.suo

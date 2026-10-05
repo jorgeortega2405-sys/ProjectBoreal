@@ -66,9 +66,7 @@ export class ValidatePaymentController {
                 <span>🏆</span>
                 <span>${t('validate_payment.winner_banner_title')}</span>
               </div>
-              <div style="font-size: 13.5px; color: var(--text-primary); font-weight: 600;">
-                ${t('validate_payment.winner_banner_desc', { ticket: order.winner_ticket_number || '', title: order.giveaway_title || '' })}
-              </div>
+                ${escapeHtml(t('validate_payment.winner_banner_desc', { ticket: String(order.winner_ticket_number || ''), title: order.giveaway_title || '' }))}
               <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
                 ${t('validate_payment.winner_contact_info')}
               </div>

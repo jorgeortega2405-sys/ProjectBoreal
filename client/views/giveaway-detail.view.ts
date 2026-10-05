@@ -9,6 +9,16 @@ import { onWebSocketEvent } from '../services/websocket.service.js';
 import { Giveaway } from '../types/giveaway.types.js';
 import { BankAccount, Order } from '../types/order.types.js';
 
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export class GiveawayDetailController {
   private abortController: AbortController | null = null;
   private activeImageUrl: string = '';
@@ -309,7 +319,7 @@ export class GiveawayDetailController {
     if (descEl) descEl.textContent = g.description || '';
 
     const priceEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-price-value"]');
-    if (priceEl) priceEl.textContent = `$${g.ticket_price.toFixed(2)} ${g.currency}`;
+    if (priceEl) priceEl.textContent = `$${g.ticket_price.toFixed(2)} ${g.currency || 'MXN'}`;
 
     const dateTextEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-draw-date-text"]');
     if (dateTextEl && g.draw_date) {
@@ -519,7 +529,7 @@ export class GiveawayDetailController {
     if (!this.giveaway) return;
     const count = this.selectedTickets.size;
     const total = (count * this.giveaway.ticket_price).toFixed(2);
-    const currency = this.giveaway.currency;
+    const currency = this.giveaway.currency || 'MXN';
 
     const countEl = this.container.querySelector<HTMLElement>('[data-ref="summary-selected-count"]');
     if (countEl) {
@@ -771,24 +781,6 @@ export class GiveawayDetailController {
       },
       { signal }
     );
-
-    const jumpInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-jump-ticket"]');
-    jumpInput?.addEventListener(
-      'keydown',
-      (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          const val = parseInt(jumpInput.value.trim(), 10);
-          const total = this.giveaway?.total_tickets || 100;
-          if (!isNaN(val) && val >= 1 && val <= total) {
-            this.goToPage(Math.ceil(val / this.pageSize));
-          } else {
-            showToast(`Ingresa un boleto válido entre 1 y ${total}.`, 'warning');
-          }
-        }
-      },
-      { signal }
-    );
   }
 
   private openReservationModal(): void {
@@ -803,7 +795,7 @@ export class GiveawayDetailController {
 
     const count = this.selectedTickets.size;
     const total = (count * this.giveaway.ticket_price).toFixed(2);
-    const currency = this.giveaway.currency;
+    const currency = this.giveaway.currency || 'MXN';
     const ticketList = Array.from(this.selectedTickets)
       .map((n) => `<span class="giveaway-ticket is-selected" style="height: 30px; width: 50px; font-size: 11px; cursor: default;">#${n.toString().padStart(3, '0')}</span>`)
       .join('');
@@ -911,20 +903,20 @@ export class GiveawayDetailController {
               (acc) => `
             <div style="display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 14px; background: var(--bg-surface-elevated); border: 1px solid var(--border-color);">
               <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 14px; font-weight: 700; color: var(--text-primary);">${acc.bank_name}</span>
-                <span style="font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-secondary);">${acc.currency}</span>
+                <span style="font-size: 14px; font-weight: 700; color: var(--text-primary);">${escapeHtml(acc.bank_name)}</span>
+                <span style="font-size: 11px; padding: 2px 8px; border-radius: 9999px; background: var(--bg-surface); border: 1px solid var(--border-color); color: var(--text-secondary);">${escapeHtml(acc.currency)}</span>
               </div>
               <div style="font-size: 12.5px; color: var(--text-secondary);">
                 <span>${t('orders.beneficiary_label')}: </span>
-                <strong style="color: var(--text-primary);">${acc.account_holder}</strong>
+                <strong style="color: var(--text-primary);">${escapeHtml(acc.account_holder)}</strong>
               </div>
               ${acc.clabe ? `
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-color);">
                 <div>
                   <span style="font-size: 11px; color: var(--text-tertiary); display: block;">${t('orders.clabe_label')}</span>
-                  <span style="font-size: 14px; font-weight: 800; letter-spacing: 0.5px; color: var(--text-primary);">${acc.clabe}</span>
+                  <span style="font-size: 14px; font-weight: 800; letter-spacing: 0.5px; color: var(--text-primary);">${escapeHtml(acc.clabe)}</span>
                 </div>
-                <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-copy-clabe-${acc.id}" data-copy-val="${acc.clabe}">
+                <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-copy-clabe-${acc.id}" data-copy-val="${escapeHtml(acc.clabe)}">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#share"></use></svg>
                   <span>${t('orders.copy_clabe')}</span>
                 </button>
@@ -933,9 +925,9 @@ export class GiveawayDetailController {
               <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--bg-surface); border: 1px solid var(--border-color);">
                 <div>
                   <span style="font-size: 11px; color: var(--text-tertiary); display: block;">${t('orders.card_number_label')}</span>
-                  <span style="font-size: 14px; font-weight: 800; letter-spacing: 1px; color: var(--text-primary);">${acc.card_number}</span>
+                  <span style="font-size: 14px; font-weight: 800; letter-spacing: 1px; color: var(--text-primary);">${escapeHtml(acc.card_number)}</span>
                 </div>
-                <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-copy-card-${acc.id}" data-copy-val="${acc.card_number}">
+                <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-copy-card-${acc.id}" data-copy-val="${escapeHtml(acc.card_number)}">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
                   <span>${t('orders.copy_card')}</span>
                 </button>

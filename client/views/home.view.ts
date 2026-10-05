@@ -1,4 +1,5 @@
 import { navigate } from '../app-router.js';
+import { getGiveawayCategory, renderPrizeCategoryBadgesHtml } from '../config/prize-categories.config.js';
 import { fetchActiveGiveaways } from '../services/giveaways.service.js';
 import { t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -16,26 +17,24 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/'/g, '&#039;');
 }
 
-function computeTimerInfo(item: Giveaway): { isEnded: boolean; style: string; text: string } {
+function computeThresholdBadge(item: Giveaway): string | null {
+  if (item.min_threshold_pct > 0 && !item.threshold_reached_at && item.status !== 'completed') {
+    const total = item.total_tickets || 100;
+    const sold = total - (item.available_tickets ?? total);
+    const currentPct = Math.min(100, Math.round((sold / total) * 100));
+    return t('home.threshold_badge', { current: currentPct, target: item.min_threshold_pct });
+  }
+  return null;
+}
+
+function computeTimerInfo(item: Giveaway): { isEnded: boolean; text: string } {
   if (item.status === 'completed') {
     const winnerText = item.winner_name && item.winner_name !== 'Sin participantes'
       ? t('home.winner_announced', { name: item.winner_name, ticket: item.winner_ticket_number ?? 'N/A' })
       : t('home.completed_badge');
     return {
       isEnded: true,
-      style: 'background: rgba(16, 185, 129, 0.88); color: #ffffff;',
       text: `🏆 ${winnerText}`,
-    };
-  }
-
-  if (item.min_threshold_pct > 0 && !item.threshold_reached_at) {
-    const total = item.total_tickets || 100;
-    const sold = total - (item.available_tickets ?? total);
-    const currentPct = Math.min(100, Math.round((sold / total) * 100));
-    return {
-      isEnded: false,
-      style: 'background: rgba(15, 23, 42, 0.88); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35);',
-      text: t('home.threshold_badge', { current: currentPct, target: item.min_threshold_pct }),
     };
   }
 
@@ -45,7 +44,6 @@ function computeTimerInfo(item: Giveaway): { isEnded: boolean; style: string; te
   if (diff <= 0) {
     return {
       isEnded: true,
-      style: 'background: rgba(245, 158, 11, 0.9); color: #ffffff;',
       text: t('home.drawing_now'),
     };
   }
@@ -61,7 +59,6 @@ function computeTimerInfo(item: Giveaway): { isEnded: boolean; style: string; te
     const padSec = String(seconds).padStart(2, '0');
     return {
       isEnded: false,
-      style: 'background: rgba(239, 68, 68, 0.92); color: #ffffff;',
       text: t('home.time_left_soon', { minutes: padMin, seconds: padSec }),
     };
   }
@@ -69,23 +66,23 @@ function computeTimerInfo(item: Giveaway): { isEnded: boolean; style: string; te
   if (days > 0) {
     return {
       isEnded: false,
-      style: 'background: rgba(0, 0, 0, 0.75); color: #ffffff;',
       text: t('home.time_left_days', { days, hours, minutes, seconds }),
     };
   }
 
   return {
     isEnded: false,
-    style: 'background: rgba(0, 0, 0, 0.75); color: #ffffff;',
     text: t('home.time_left_hours', { hours, minutes, seconds }),
   };
 }
 
 export class HomeController {
   private abortController: AbortController | null = null;
+  private activeCategory = 'all';
   private container: HTMLElement;
   private filteredGiveaways: Giveaway[] = [];
   private giveaways: Giveaway[] = [];
+  private searchQuery = '';
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private unsubscribeWs: (() => void)[] = [];
 
@@ -95,16 +92,99 @@ export class HomeController {
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
+    this.initCategoryBadges();
     this.bindEvents(this.container);
     await this.loadData();
     this.startCountdownLoop();
     this.subscribeWebSocketEvents();
   }
 
+  private initCategoryBadges(): void {
+    const badgesContainer = this.container.querySelector<HTMLElement>('[data-ref="home-categories-badges"]');
+    if (!badgesContainer) return;
+    badgesContainer.innerHTML = renderPrizeCategoryBadgesHtml(this.activeCategory);
+
+    const btnLeft = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tags-scroll-left"]');
+    const btnRight = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tags-scroll-right"]');
+
+    const updateNavBtns = () => {
+      if (btnLeft) {
+        btnLeft.classList.toggle('is-disabled', badgesContainer.scrollLeft <= 4);
+      }
+      if (btnRight) {
+        const maxScroll = badgesContainer.scrollWidth - badgesContainer.clientWidth - 4;
+        btnRight.classList.toggle('is-disabled', badgesContainer.scrollLeft >= maxScroll);
+      }
+    };
+
+    badgesContainer.addEventListener('scroll', updateNavBtns, { passive: true });
+    updateNavBtns();
+
+    btnLeft?.addEventListener('click', () => {
+      badgesContainer.scrollBy({ left: -220, behavior: 'smooth' });
+    });
+
+    btnRight?.addEventListener('click', () => {
+      badgesContainer.scrollBy({ left: 220, behavior: 'smooth' });
+    });
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+
+    badgesContainer.addEventListener('mousedown', (e) => {
+      isDown = true;
+      badgesContainer.classList.add('is-dragging');
+      startX = e.pageX - badgesContainer.offsetLeft;
+      scrollLeft = badgesContainer.scrollLeft;
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (!isDown) return;
+      isDown = false;
+      badgesContainer.classList.remove('is-dragging');
+    });
+
+    badgesContainer.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - badgesContainer.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      badgesContainer.scrollLeft = scrollLeft - walk;
+    });
+
+    badgesContainer.addEventListener('click', (e) => {
+      const badgeBtn = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>('.component-badge');
+      if (!badgeBtn) return;
+      const categoryId = badgeBtn.getAttribute('data-category');
+      if (!categoryId) return;
+
+      this.activeCategory = categoryId;
+      badgesContainer.querySelectorAll('.component-badge').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.getAttribute('data-category') === this.activeCategory);
+      });
+      this.filterGiveaways();
+    });
+  }
+
+  private filterGiveaways(): void {
+    const query = this.searchQuery.trim().toLowerCase();
+    this.filteredGiveaways = this.giveaways.filter((g) => {
+      const matchesSearch = !query ||
+        g.title.toLowerCase().includes(query) ||
+        Boolean(g.description && g.description.toLowerCase().includes(query));
+
+      const category = getGiveawayCategory(g);
+      const matchesCategory = this.activeCategory === 'all' || category.id === this.activeCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+    this.renderGiveaways(this.filteredGiveaways);
+  }
+
   private async loadData(): Promise<void> {
     this.giveaways = await fetchActiveGiveaways();
-    this.filteredGiveaways = [...this.giveaways];
-    this.renderGiveaways(this.filteredGiveaways);
+    this.filterGiveaways();
   }
 
   private startCountdownLoop(): void {
@@ -123,7 +203,7 @@ export class HomeController {
           match.winner_name = data.winner_name;
           match.winner_ticket_number = data.winner_ticket_number;
           match.winner_announced_at = data.winner_announced_at;
-          this.renderGiveaways(this.filteredGiveaways);
+          this.filterGiveaways();
         }
       })
     );
@@ -135,7 +215,7 @@ export class HomeController {
           match.threshold_reached_at = data.threshold_reached_at;
           match.end_date = data.end_date;
           match.countdown_hours = data.countdown_hours;
-          this.renderGiveaways(this.filteredGiveaways);
+          this.filterGiveaways();
           showToast(t('giveaway.toast_threshold_reached'), 'success');
         }
       })
@@ -146,7 +226,7 @@ export class HomeController {
         const match = this.giveaways.find((g) => g.id === data.giveaway_id || g.uuid === data.giveaway_uuid);
         if (match && typeof data.ticket_count === 'number') {
           match.available_tickets = Math.max(0, match.available_tickets - data.ticket_count);
-          this.renderGiveaways(this.filteredGiveaways);
+          this.filterGiveaways();
         }
       })
     );
@@ -158,7 +238,6 @@ export class HomeController {
       if (!badge) continue;
       const info = computeTimerInfo(item);
       badge.textContent = info.text;
-      badge.setAttribute('style', `position: absolute; bottom: 8px; left: 8px; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; backdrop-filter: blur(4px); z-index: 2; ${info.style}`);
     }
   }
 
@@ -181,21 +260,31 @@ export class HomeController {
           ? t('home.completed_badge')
           : t('home.tickets_left', { count: item.available_tickets });
         const timerInfo = computeTimerInfo(item);
-        const actionLabel = item.status === 'completed' ? t('home.view_winner_btn') : `$${item.ticket_price.toFixed(2)} ${item.currency}`;
+        const thresholdText = computeThresholdBadge(item);
+        const category = getGiveawayCategory(item);
+        const currency = item.currency || 'MXN';
+        const actionLabel = item.status === 'completed' ? t('home.view_winner_btn') : `$${item.ticket_price.toFixed(2)} ${currency}`;
+
+        const thresholdBadgeHtml = thresholdText
+          ? `<div class="giveaway-card__meta-badge" data-ref="card-meta-${item.uuid}">${escapeHtml(thresholdText)}</div>`
+          : '';
 
         return `
           <div class="canvas-card" data-ref="card-giveaway-${item.uuid}" data-uuid="${item.uuid}">
             <div class="canvas-card__thumbnail">
               <img class="canvas-card__image" src="${escapeHtml(item.primary_image_url)}" alt="${escapeHtml(item.title)}" loading="lazy" />
+              ${thresholdBadgeHtml}
               <span class="canvas-card__btn-sync">${escapeHtml(actionLabel)}</span>
-              <div class="giveaway-card__timer-badge" data-ref="card-timer-${item.uuid}" style="position: absolute; bottom: 8px; left: 8px; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 6px; backdrop-filter: blur(4px); z-index: 2; ${timerInfo.style}">
+              <div class="giveaway-card__timer-badge" data-ref="card-timer-${item.uuid}">
                 ${escapeHtml(timerInfo.text)}
               </div>
             </div>
             <div class="canvas-card__info">
               <h3 class="canvas-card__name" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
               <div class="canvas-card__meta">
-                <span class="canvas-card__types-more">${item.available_tickets}/${item.total_tickets}</span>
+                <span class="canvas-card__category-icon" title="${escapeHtml(category.label)}" aria-label="${escapeHtml(category.label)}">
+                  ${category.iconSvg}
+                </span>
                 <span>• ${escapeHtml(ticketsLeft)}</span>
               </div>
             </div>
@@ -215,18 +304,11 @@ export class HomeController {
       searchInput.addEventListener(
         'input',
         () => {
-          const query = searchInput.value.trim().toLowerCase();
+          this.searchQuery = searchInput.value;
           if (clearBtn) {
-            clearBtn.style.display = query.length > 0 ? 'inline-flex' : 'none';
+            clearBtn.style.display = this.searchQuery.trim().length > 0 ? 'inline-flex' : 'none';
           }
-          this.filteredGiveaways = query.length === 0
-            ? [...this.giveaways]
-            : this.giveaways.filter(
-                (g) =>
-                  g.title.toLowerCase().includes(query) ||
-                  (g.description && g.description.toLowerCase().includes(query))
-              );
-          this.renderGiveaways(this.filteredGiveaways);
+          this.filterGiveaways();
         },
         { signal }
       );
@@ -254,9 +336,9 @@ export class HomeController {
           searchInput.value = '';
           searchInput.focus();
         }
+        this.searchQuery = '';
         clearBtn.style.display = 'none';
-        this.filteredGiveaways = [...this.giveaways];
-        this.renderGiveaways(this.filteredGiveaways);
+        this.filterGiveaways();
       },
       { signal }
     );
@@ -277,7 +359,8 @@ export class HomeController {
     window.addEventListener(
       'languagechange',
       () => {
-        this.renderGiveaways(this.filteredGiveaways);
+        this.initCategoryBadges();
+        this.filterGiveaways();
       },
       { signal }
     );

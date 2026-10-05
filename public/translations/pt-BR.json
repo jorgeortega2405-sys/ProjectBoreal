@@ -26,7 +26,7 @@
     "search_placeholder": "Buscar sorteios, prêmios, marcas...",
     "searching": "Buscando: {query}",
     "sold_out": "Esgotado",
-    "ticket_price": " USD por bilhete",
+    "ticket_price": "${price} MXN por bilhete",
     "tickets_left": "{count} disponíveis",
     "time_left_days": "⏳ {days}d {hours}h {minutes}m {seconds}s",
     "time_left_hours": "⏳ {hours}h {minutes}m {seconds}s",

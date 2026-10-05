@@ -142,8 +142,7 @@ export async function checkAndTriggerGiveawayThreshold(
 
     if (row.min_threshold_pct > 0 && !row.threshold_reached_at) {
       const totalTickets = Number(row.total_tickets || 100);
-      const availableTickets = Number(row.available_tickets ?? totalTickets);
-      const paidCount = Math.max(Number(row.paid_count || 0), totalTickets - availableTickets);
+      const paidCount = Number(row.paid_count || 0);
       const pctSold = (paidCount / totalTickets) * 100;
 
       if (pctSold >= row.min_threshold_pct) {

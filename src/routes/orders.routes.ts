@@ -1,6 +1,6 @@
-import { getBankAccountsHandler, getOrderDetailHandler, lookupOrdersHandler, reserveOrderHandler, uploadReceiptHandler } from '../controllers/orders.controller.js';
-import { createRateLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
+import { getBankAccountsHandler, getOrderDetailHandler, getOrderReceiptHandler, lookupOrdersHandler, reserveOrderHandler, uploadReceiptHandler } from '../controllers/orders.controller.js';
+import { createRateLimiter } from '../middlewares/rate-limit.middleware.js';
 
 const router = Router();
 
@@ -27,6 +27,7 @@ router.post('/lookup', lookupLimiter, lookupOrdersHandler);
 router.post('/upload-receipt', uploadLimiter, uploadReceiptHandler);
 router.get('/bank-accounts', getBankAccountsHandler);
 router.get('/:uuid', getOrderDetailHandler);
+router.get('/:uuid/receipt', getOrderReceiptHandler);
 
 export default router;
 

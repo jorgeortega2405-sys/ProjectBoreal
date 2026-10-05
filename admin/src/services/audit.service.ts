@@ -1,5 +1,5 @@
-import { AuditActorType, AuditLogRecord, AuditLogsResponse } from '../types/audit.types.js';
 import { cassandraClient, isCassandraConnected } from '../config/cassandra.config.js';
+import { AuditActorType, AuditLogRecord, AuditLogsResponse } from '../types/audit.types.js';
 import { logger } from './logger.service.js';
 
 function parseAuditDetails(raw: unknown): Record<string, unknown> | null {
@@ -64,7 +64,7 @@ export async function getAdminAuditLogs(options: {
       WHERE bucket_month = ?
     `;
 
-    const result = await cassandraClient.execute(query, [bucketMonth], { prepare: true });
+    const result = await cassandraClient.execute(query, [bucketMonth], { fetchSize: 200, prepare: true });
     let mapped = result.rows.map(mapCassandraRow);
 
     if (options.actorType && options.actorType !== 'all') {

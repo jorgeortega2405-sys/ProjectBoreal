@@ -73,7 +73,7 @@ const FALLBACK_TRANSLATIONS: Record<string, unknown> = {
     search_placeholder: 'Search giveaways, prizes, brands...',
     searching: 'Searching: {query}',
     sold_out: 'Sold out',
-    ticket_price: '${price} USD per ticket',
+    ticket_price: '${price} MXN per ticket',
     tickets_left: '{count} left',
     time_left_days: '⏳ {days}d {hours}h {minutes}m {seconds}s',
     time_left_hours: '⏳ {hours}h {minutes}m {seconds}s',

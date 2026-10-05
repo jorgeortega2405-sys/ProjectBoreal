@@ -1,10 +1,10 @@
+import crypto from 'crypto';
+import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { deleteCache, deleteCachePattern, getCache, publishGiveawayEvent, setCache } from '../config/redis.config.js';
 import { BankAccount, Order } from '../types/order.types.js';
 import { recordAudit } from './audit.service.js';
 import { logger } from './logger.service.js';
-import crypto from 'crypto';
-import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 interface OrderRow extends RowDataPacket, Omit<Order, 'ticket_numbers'> {
   ticket_numbers: string | number[];
@@ -375,38 +375,84 @@ export async function attachReceipt(data: {
   trackingKey?: string;
   userAgent?: string;
 }): Promise<Order | null> {
+  const conn = await pool.getConnection();
   try {
-    const order = await getOrderByUuid(data.orderUuid);
-    if (!order) return null;
+    await conn.beginTransaction();
 
+    const [rows] = await conn.query<RowDataPacket[]>(
+      `SELECT id, uuid, giveaway_id, giveaway_uuid, customer_name, customer_phone,
+              ticket_count, ticket_numbers, total_amount, currency, status, expires_at
+       FROM orders
+       WHERE uuid = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [data.orderUuid]
+    );
+
+    if (rows.length === 0) {
+      await conn.rollback();
+      return null;
+    }
+
+    const order = rows[0] as OrderRow;
     if (order.status === 'completed' || order.status === 'cancelled') {
-      return order;
+      await conn.rollback();
+      return await getOrderByUuid(data.orderUuid);
     }
 
     const now = new Date();
     const isExpired = order.status === 'expired' || (order.status === 'pending_payment' && new Date(order.expires_at) < now);
     if (isExpired) {
+      await conn.rollback();
       throw new Error('ORDER_EXPIRED');
     }
 
-    const trackingKey = data.trackingKey?.trim() || `TRK-${Date.now().toString(36).toUpperCase()}`;
-    const bankRef = data.bankReference?.trim() || null;
+    const trackingKey = data.trackingKey?.trim() || null;
+    if (trackingKey) {
+      const [existingOrder] = await conn.query<RowDataPacket[]>(
+        `SELECT id FROM orders WHERE tracking_key = ? AND id != ? AND status IN ('completed', 'in_review') LIMIT 1`,
+        [trackingKey, order.id]
+      );
+      if (existingOrder.length > 0) {
+        await conn.rollback();
+        throw new Error('DUPLICATE_TRACKING_KEY');
+      }
+    }
 
-    await pool.query(
+    const bankRef = data.bankReference?.trim() || null;
+    const reviewGracePeriod = new Date(Date.now() + 48 * 3600 * 1000);
+
+    await conn.query(
       `UPDATE orders
        SET status = 'in_review', receipt_url = ?, receipt_filename = ?, tracking_key = ?, bank_reference = ?
-       WHERE uuid = ?`,
-      [data.receiptUrl, data.receiptFilename || null, trackingKey, bankRef, data.orderUuid]
+       WHERE id = ?`,
+      [data.receiptUrl, data.receiptFilename || null, trackingKey, bankRef, order.id]
     );
 
-    const nextRetry = new Date();
-    await pool.query(
-      `INSERT INTO spei_validation_queue (
-        order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status
-      ) VALUES (?, ?, ?, 0, 6, ?, 'pending')
-      ON DUPLICATE KEY UPDATE tracking_key = VALUES(tracking_key), next_retry_at = VALUES(next_retry_at), status = 'pending'`,
-      [order.id, trackingKey, order.total_amount, nextRetry]
-    );
+    const tickets: number[] = typeof order.ticket_numbers === 'string'
+      ? JSON.parse(order.ticket_numbers)
+      : order.ticket_numbers;
+
+    if (tickets && tickets.length > 0) {
+      await conn.query(
+        `UPDATE giveaway_tickets
+         SET reserved_until = ?
+         WHERE order_id = ? AND status = 'reserved'`,
+        [reviewGracePeriod, order.id]
+      );
+    }
+
+    if (trackingKey) {
+      await conn.query(
+        `INSERT INTO spei_validation_queue (
+          order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status
+        ) VALUES (?, ?, ?, 0, 6, NOW(), 'pending')
+        ON DUPLICATE KEY UPDATE tracking_key = VALUES(tracking_key), next_retry_at = NOW(), status = 'pending'`,
+        [order.id, trackingKey, order.total_amount]
+      );
+    }
+
+    await conn.commit();
 
     if (order.giveaway_uuid) {
       await deleteCache(`giveaway:${order.giveaway_uuid}:tickets`);
@@ -433,7 +479,7 @@ export async function attachReceipt(data: {
       user_agent: data.userAgent,
     });
 
-    if (data.trackingKey?.trim()) {
+    if (trackingKey) {
       await recordAudit({
         action: 'SPEI_KEY_SUBMITTED',
         actor_type: 'customer',
@@ -442,7 +488,7 @@ export async function attachReceipt(data: {
         customer_name: order.customer_name,
         customer_phone: order.customer_phone,
         details: {
-          tracking_key: data.trackingKey.trim(),
+          tracking_key: trackingKey,
         },
         ip_address: data.ipAddress,
         new_status: 'in_review',
@@ -455,32 +501,64 @@ export async function attachReceipt(data: {
 
     return await getOrderByUuid(data.orderUuid);
   } catch (error) {
-    if ((error as Error).message === 'ORDER_EXPIRED') {
+    await conn.rollback();
+    if ((error as Error).message === 'ORDER_EXPIRED' || (error as Error).message === 'DUPLICATE_TRACKING_KEY') {
       throw error;
     }
     logger.db.error('Error al asociar comprobante a la orden', error);
     throw new Error('Error al registrar el comprobante de pago');
+  } finally {
+    conn.release();
   }
 }
 
 export async function releaseExpiredReservations(): Promise<number> {
+  const conn = await pool.getConnection();
   try {
-    const [expiredOrders] = await pool.query<RowDataPacket[]>(
+    await conn.beginTransaction();
+
+    const [expiredOrders] = await conn.query<RowDataPacket[]>(
       `SELECT id, uuid, giveaway_id, customer_name, customer_phone, ticket_count, ticket_numbers, total_amount, currency
        FROM orders
-       WHERE status = 'pending_payment' AND expires_at < NOW() AND receipt_url IS NULL`
+       WHERE status = 'pending_payment' AND expires_at < NOW() AND receipt_url IS NULL
+       FOR UPDATE`
     );
 
-    if (expiredOrders.length === 0) return 0;
+    if (expiredOrders.length === 0) {
+      await conn.rollback();
+      return 0;
+    }
 
     const orderIds = expiredOrders.map((o) => o.id);
 
-    await pool.query(
+    await conn.query(
       `UPDATE orders
        SET status = 'expired'
        WHERE id IN (?)`,
       [orderIds]
     );
+
+    const [ticketResult] = await conn.query<ResultSetHeader>(
+      `UPDATE giveaway_tickets
+       SET status = 'available', order_id = NULL, reserved_until = NULL
+       WHERE order_id IN (?) AND status = 'reserved'`,
+      [orderIds]
+    );
+
+    const giveawayCounts = new Map<number, number>();
+    for (const order of expiredOrders) {
+      const gId = order.giveaway_id;
+      const count = order.ticket_count || 1;
+      giveawayCounts.set(gId, (giveawayCounts.get(gId) || 0) + count);
+    }
+    for (const [giveawayId, count] of giveawayCounts.entries()) {
+      await conn.query(
+        `UPDATE giveaways SET available_tickets = LEAST(total_tickets, available_tickets + ?) WHERE id = ?`,
+        [count, giveawayId]
+      );
+    }
+
+    await conn.commit();
 
     for (const expOrder of expiredOrders) {
       const tickets: number[] = typeof expOrder.ticket_numbers === 'string'
@@ -506,26 +584,6 @@ export async function releaseExpiredReservations(): Promise<number> {
       });
     }
 
-    const [ticketResult] = await pool.query<ResultSetHeader>(
-      `UPDATE giveaway_tickets
-       SET status = 'available', order_id = NULL, reserved_until = NULL
-       WHERE order_id IN (?) AND status = 'reserved'`,
-      [orderIds]
-    );
-
-    const giveawayCounts = new Map<number, number>();
-    for (const order of expiredOrders) {
-      const gId = order.giveaway_id;
-      const count = order.ticket_count || 1;
-      giveawayCounts.set(gId, (giveawayCounts.get(gId) || 0) + count);
-    }
-    for (const [giveawayId, count] of giveawayCounts.entries()) {
-      await pool.query(
-        `UPDATE giveaways SET available_tickets = LEAST(total_tickets, available_tickets + ?) WHERE id = ?`,
-        [count, giveawayId]
-      );
-    }
-
     const released = ticketResult.affectedRows || 0;
     if (released > 0) {
       await deleteCachePattern('giveaway:*:tickets');
@@ -537,7 +595,10 @@ export async function releaseExpiredReservations(): Promise<number> {
     }
     return released;
   } catch (error) {
+    await conn.rollback();
     logger.db.error('Error al liberar reservaciones expiradas', error);
     return 0;
+  } finally {
+    conn.release();
   }
 }

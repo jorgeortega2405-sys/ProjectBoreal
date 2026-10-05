@@ -1,9 +1,9 @@
-import { approveAdminOrder, cancelAdminOrder, getAdminOrderReceiptFilename, getAdminOrders, getAdminSpeiQueue, triggerSpeiValidationBatch } from '../services/orders.service.js';
-import { AuthenticatedAdminRequest } from '../types/auth.types.js';
-import { logger } from '../services/logger.service.js';
 import { Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { logger } from '../services/logger.service.js';
+import { approveAdminOrder, cancelAdminOrder, getAdminOrderReceiptFilename, getAdminOrders, getAdminSpeiQueue, triggerSpeiValidationBatch } from '../services/orders.service.js';
+import { AuthenticatedAdminRequest } from '../types/auth.types.js';
 
 export async function getOrdersHandler(req: AuthenticatedAdminRequest, res: Response): Promise<void> {
   try {
@@ -16,7 +16,7 @@ export async function getOrdersHandler(req: AuthenticatedAdminRequest, res: Resp
     res.status(200).json(result);
   } catch (error) {
     logger.app.error('Error en getOrdersHandler', error);
-    res.status(500).json({ error: 'Ha ocurrido un error al obtener las órdenes.' });
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 
@@ -27,12 +27,11 @@ export async function approveOrderHandler(req: AuthenticatedAdminRequest, res: R
     return;
   }
 
-  const adminUser = req.adminUser || {
-    email: 'admin@projectboreal.internal',
-    id: 1,
-    name: 'Administrador',
-    uuid: 'admin',
-  };
+  if (!req.adminUser) {
+    res.status(401).json({ error: 'No autorizado. Sesión de administrador requerida.' });
+    return;
+  }
+  const adminUser = req.adminUser;
 
   try {
     const result = await approveAdminOrder(uuid, adminUser);
@@ -54,12 +53,11 @@ export async function cancelOrderHandler(req: AuthenticatedAdminRequest, res: Re
     return;
   }
 
-  const adminUser = req.adminUser || {
-    email: 'admin@projectboreal.internal',
-    id: 1,
-    name: 'Administrador',
-    uuid: 'admin',
-  };
+  if (!req.adminUser) {
+    res.status(401).json({ error: 'No autorizado. Sesión de administrador requerida.' });
+    return;
+  }
+  const adminUser = req.adminUser;
 
   const reason = typeof req.body?.reason === 'string' ? req.body.reason : undefined;
 

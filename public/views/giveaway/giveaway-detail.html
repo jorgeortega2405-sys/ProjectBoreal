@@ -74,7 +74,7 @@
             <div class="giveaway-info__summary-box" data-ref="tickets-summary">
               <div class="giveaway-tickets__summary-info">
                 <div class="giveaway-tickets__summary-count" data-ref="summary-selected-count">0 boletos seleccionados</div>
-                <div class="giveaway-tickets__summary-subtotal" data-ref="summary-subtotal-price">Total: $0.00 USD</div>
+                <div class="giveaway-tickets__summary-subtotal" data-ref="summary-subtotal-price">Total: $0.00 MXN</div>
               </div>
             </div>
 
@@ -127,13 +127,11 @@
             </div>
 
             <div class="giveaway-tickets__actions">
-              <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-lucky-pick">
+              <button type="button" class="component-button component-button--ghost component-button--h36 component-button--icon-only" data-ref="btn-lucky-pick" data-i18n-tooltip="giveaway.lucky_pick" data-i18n-aria="giveaway.lucky_pick" data-tooltip="Al azar" aria-label="Al azar">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
-                <span data-i18n="giveaway.lucky_pick"></span>
               </button>
-              <button type="button" class="component-button component-button--ghost component-button--h36" data-ref="btn-clear-selection">
+              <button type="button" class="component-button component-button--ghost component-button--h36 component-button--icon-only" data-ref="btn-clear-selection" data-i18n-tooltip="giveaway.clear_selection" data-i18n-aria="giveaway.clear_selection" data-tooltip="Limpiar selección" aria-label="Limpiar selección">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#restart_alt"></use></svg>
-                <span data-i18n="giveaway.clear_selection"></span>
               </button>
             </div>
           </div>
@@ -150,10 +148,6 @@
             <button type="button" class="giveaway-pagination__btn" data-ref="btn-page-next" aria-label="Página siguiente">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
             </button>
-            <div class="giveaway-pagination__jump">
-              <span class="giveaway-pagination__jump-label" data-i18n="giveaway.jump_to_ticket">Ir al boleto:</span>
-              <input class="giveaway-pagination__jump-input" data-ref="input-jump-ticket" type="number" min="1" placeholder="#..." />
-            </div>
           </div>
         </section>
       </div>

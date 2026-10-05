@@ -1,13 +1,30 @@
+import { NextFunction, Response } from 'express';
+import { RowDataPacket } from 'mysql2/promise';
 import { poolIdentity } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { ADMIN_COOKIE_NAME, isSessionRevoked, verifySessionToken } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
 import { AuthenticatedAdminRequest } from '../types/auth.types.js';
-import { NextFunction, Response } from 'express';
-import { RowDataPacket } from 'mysql2/promise';
 
 interface PermissionRow extends RowDataPacket {
   slug: string;
+}
+
+export async function invalidateUserPermissionsCache(adminUserId?: number): Promise<void> {
+  try {
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      if (adminUserId) {
+        await redis.del(`boreal:admin_perms:${adminUserId}`);
+      } else {
+        const keys = await redis.keys('boreal:admin_perms:*');
+        if (keys.length > 0) {
+          await redis.del(...keys);
+        }
+      }
+    }
+  } catch (err) {
+    logger.app.warn('Error al invalidar caché de permisos en Redis', err);
+  }
 }
 
 export async function getUserPermissions(adminUserId: number): Promise<string[]> {
@@ -34,7 +51,7 @@ export async function getUserPermissions(adminUserId: number): Promise<string[]>
 
   try {
     if (redis.status === 'ready' || redis.status === 'connect') {
-      await redis.set(cacheKey, JSON.stringify(permissions), 'EX', 300);
+      await redis.set(cacheKey, JSON.stringify(permissions), 'EX', 60);
     }
   } catch {}
 
@@ -57,6 +74,15 @@ export async function requireAdminAuth(req: AuthenticatedAdminRequest, res: Resp
   const revoked = await isSessionRevoked(token);
   if (revoked) {
     res.status(401).json({ error: 'La sesión ha sido revocada.' });
+    return;
+  }
+
+  const [userRows] = await poolIdentity.query<RowDataPacket[]>(
+    'SELECT is_active FROM admin_users WHERE id = ? LIMIT 1',
+    [payload.id]
+  );
+  if (userRows.length === 0 || !userRows[0].is_active) {
+    res.status(401).json({ error: 'La cuenta ha sido deshabilitada por el administrador.' });
     return;
   }
 

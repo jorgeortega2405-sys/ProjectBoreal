@@ -7,26 +7,28 @@ export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 export type LogCategory = 'app' | 'database' | 'security';
 
 const SENSITIVE_KEYS = new Set([
-  'access_token',
-  'api_key',
+  'access',
+  'accesstoken',
   'apikey',
   'authorization',
-  'card_number',
+  'bearer',
+  'cardnumber',
   'cookie',
   'csrf',
   'csrftoken',
   'cvv',
   'password',
-  'password_hash',
   'passwordhash',
-  'private_key',
-  'refresh_token',
+  'privatekey',
+  'refreshtoken',
   'secret',
-  'secret_key',
+  'secretkey',
   'session',
-  'smtp_pass',
+  'smtppass',
   'token',
 ]);
+
+const SENSITIVE_PATTERN = /(password|secret|token|auth|credential|card_?number|cvv|private_?key|cookie|session|smtp_?pass)/i;
 
 function sanitize(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
@@ -36,11 +38,22 @@ function sanitize(obj: unknown): unknown {
   }
 
   if (obj instanceof Error) {
-    return {
+    const errorDetails: Record<string, unknown> = {
       message: obj.message,
       name: obj.name,
       stack: obj.stack,
     };
+    for (const [key, value] of Object.entries(obj)) {
+      const normalizedKey = key.toLowerCase().replace(/[-_]/g, '');
+      if (SENSITIVE_KEYS.has(normalizedKey) || SENSITIVE_PATTERN.test(key)) {
+        errorDetails[key] = '[REDACTED]';
+      } else if (typeof value === 'object' && value !== null) {
+        errorDetails[key] = sanitize(value);
+      } else {
+        errorDetails[key] = value;
+      }
+    }
+    return errorDetails;
   }
 
   if (Array.isArray(obj)) {
@@ -50,8 +63,8 @@ function sanitize(obj: unknown): unknown {
   if (typeof obj === 'object') {
     const sanitized: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      const lowerKey = key.toLowerCase();
-      if (SENSITIVE_KEYS.has(lowerKey)) {
+      const normalizedKey = key.toLowerCase().replace(/[-_]/g, '');
+      if (SENSITIVE_KEYS.has(normalizedKey) || SENSITIVE_PATTERN.test(key)) {
         sanitized[key] = '[REDACTED]';
       } else if (typeof value === 'object' && value !== null) {
         sanitized[key] = sanitize(value);

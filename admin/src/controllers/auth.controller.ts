@@ -1,10 +1,10 @@
-import { ADMIN_COOKIE_NAME, createSessionToken, logAdminAudit, revokeSession, SESSION_TTL_SECONDS, storeSession, verifyPassword, verifySessionToken } from '../services/auth.service.js';
-import { AdminSafeUser, AdminUser, AuthenticatedAdminRequest } from '../types/auth.types.js';
-import { config } from '../config/env.config.js';
-import { logger } from '../services/logger.service.js';
-import { poolIdentity } from '../config/database.config.js';
 import { Request, Response } from 'express';
 import { RowDataPacket } from 'mysql2';
+import { poolIdentity } from '../config/database.config.js';
+import { config } from '../config/env.config.js';
+import { ADMIN_COOKIE_NAME, createSessionToken, isSessionRevoked, logAdminAudit, revokeSession, SESSION_TTL_SECONDS, storeSession, verifyPassword, verifySessionToken } from '../services/auth.service.js';
+import { logger } from '../services/logger.service.js';
+import { AdminSafeUser, AdminUser, AuthenticatedAdminRequest } from '../types/auth.types.js';
 
 export async function login(req: Request, res: Response): Promise<void> {
   const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || '';
@@ -82,7 +82,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       httpOnly: true,
       maxAge: SESSION_TTL_SECONDS * 1000,
       path: '/',
-      sameSite: 'lax',
+      sameSite: 'strict',
       secure: config.nodeEnv === 'production',
     });
 
@@ -108,6 +108,21 @@ export async function me(req: AuthenticatedAdminRequest, res: Response): Promise
 
     const payload = verifySessionToken(token);
     if (!payload) {
+      res.status(200).json({ authenticated: false, user: null });
+      return;
+    }
+
+    const revoked = await isSessionRevoked(token);
+    if (revoked) {
+      res.status(200).json({ authenticated: false, user: null });
+      return;
+    }
+
+    const [userRows] = await poolIdentity.query<RowDataPacket[]>(
+      'SELECT is_active FROM admin_users WHERE id = ? LIMIT 1',
+      [payload.id]
+    );
+    if (userRows.length === 0 || !userRows[0].is_active) {
       res.status(200).json({ authenticated: false, user: null });
       return;
     }
@@ -149,7 +164,7 @@ export async function logout(req: AuthenticatedAdminRequest, res: Response): Pro
     res.clearCookie(ADMIN_COOKIE_NAME, {
       httpOnly: true,
       path: '/',
-      sameSite: 'lax',
+      sameSite: 'strict',
       secure: config.nodeEnv === 'production',
     });
 

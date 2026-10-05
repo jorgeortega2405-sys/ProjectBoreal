@@ -1,10 +1,10 @@
+import { Request, Response } from 'express';
+import fs from 'fs';
+import path from 'path';
 import { recordAudit } from '../services/audit.service.js';
 import { logger } from '../services/logger.service.js';
 import { attachReceipt, getActiveBankAccounts, getOrderByUuid, getOrdersByPhone, reserveTickets } from '../services/orders.service.js';
 import { Order } from '../types/order.types.js';
-import { Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
 
 function getClientIp(req: Request): string {
   const forwarded = req.headers['x-forwarded-for'];
@@ -171,15 +171,16 @@ function maskOrder(order: Order): Order {
 export async function lookupOrdersHandler(req: Request, res: Response): Promise<void> {
   try {
     const { phone } = req.body;
-    if (!phone || typeof phone !== 'string' || phone.trim().length < 6) {
+    const cleanPhone = String(phone || '').replace(/[^0-9]/g, '');
+    if (cleanPhone.length < 10) {
       res.status(400).json({
-        error: 'Debes proporcionar un número de teléfono válido para consultar.',
+        error: 'Debes proporcionar un número de teléfono válido de al menos 10 dígitos.',
         success: false,
       });
       return;
     }
 
-    const orders = await getOrdersByPhone(phone);
+    const orders = await getOrdersByPhone(phone.trim());
 
     await recordAudit({
       action: 'ORDER_LOOKUP',
@@ -279,9 +280,10 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
   try {
     const { bankReference, imageBase64, orderUuid, trackingKey } = req.body;
 
-    if (!orderUuid || typeof orderUuid !== 'string') {
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!orderUuid || typeof orderUuid !== 'string' || !UUID_REGEX.test(orderUuid)) {
       res.status(400).json({
-        error: 'El identificador de la orden es requerido.',
+        error: 'El identificador de la orden es requerido y debe tener un formato válido.',
         success: false,
       });
       return;
@@ -367,7 +369,7 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     }
 
     res.status(200).json({
-      data: updatedOrder,
+      data: maskOrder(updatedOrder),
       message: 'Comprobante registrado exitosamente. Tu pago pasará a validación Banxico.',
       success: true,
     });
@@ -380,6 +382,13 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     if ((error as Error).message === 'ORDER_EXPIRED') {
       res.status(400).json({
         error: 'El tiempo límite de 30 minutos para subir el comprobante ha expirado. Por favor aparta tus boletos nuevamente.',
+        success: false,
+      });
+      return;
+    }
+    if ((error as Error).message === 'DUPLICATE_TRACKING_KEY') {
+      res.status(400).json({
+        error: 'Esta clave de rastreo SPEI ya fue registrada previamente en otra orden.',
         success: false,
       });
       return;
