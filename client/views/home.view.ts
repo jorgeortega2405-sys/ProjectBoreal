@@ -6,6 +6,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { onWebSocketEvent } from '../services/websocket.service.js';
 import { Giveaway } from '../types/giveaway.types.js';
+import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { formatCurrency, formatNumber } from '../utils/number.util.js';
 
 function sortGiveaways(list: Giveaway[]): Giveaway[] {
@@ -394,13 +395,29 @@ export class HomeController {
     if (!grid) return;
 
     if (list.length === 0) {
-      grid.innerHTML = `
-        <div class="empty-state" data-ref="empty-giveaways" style="grid-column: 1 / -1; text-align: center; padding: 48px 16px;">
-          <p class="empty-state__text" style="color: var(--text-secondary); font-size: 15px;">${t('home.empty_giveaways')}</p>
-        </div>
-      `;
+      grid.innerHTML = '';
+      const isFiltered = Boolean(this.searchQuery.trim() || this.activeCategory !== 'all');
+      if (isFiltered) {
+        renderEmptyState({
+          container: grid,
+          dataRef: 'empty-giveaways-search',
+          desc: t('home.search_no_results_desc') || 'No se encontraron sorteos que coincidan con tu búsqueda o categoría seleccionada.',
+          graphicType: 'search',
+          title: t('home.search_no_results') || 'Sin resultados',
+        });
+      } else {
+        renderEmptyState({
+          container: grid,
+          dataRef: 'empty-giveaways',
+          desc: t('home.empty_giveaways_desc') || t('home.empty_giveaways') || 'Actualmente no hay sorteos activos. ¡Vuelve pronto para nuevas oportunidades!',
+          graphicType: 'giveaway',
+          title: t('home.empty_giveaways_title') || 'No hay sorteos disponibles',
+        });
+      }
       return;
     }
+
+    removeEmptyState(grid);
 
     grid.innerHTML = list
       .map((item) => {

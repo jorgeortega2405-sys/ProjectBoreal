@@ -8,6 +8,7 @@ import { showToast } from '../services/toast.service.js';
 import { onWebSocketEvent } from '../services/websocket.service.js';
 import { Giveaway } from '../types/giveaway.types.js';
 import { BankAccount, Order } from '../types/order.types.js';
+import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { formatCurrency, formatNumber } from '../utils/number.util.js';
 import { formatMexicanPhone, normalizeMexicanPhone } from '../utils/phone.util.js';
 
@@ -855,6 +856,19 @@ export class GiveawayDetailController {
     if (!grid) return;
 
     const visibleNumbers = this.getVisibleTicketNumbers();
+    if (visibleNumbers.length === 0) {
+      grid.innerHTML = '';
+      renderEmptyState({
+        container: grid,
+        dataRef: 'tickets-empty-state',
+        desc: t('giveaway.ticket_not_found_desc') || 'No se encontraron boletos que coincidan con la numeración ingresada.',
+        graphicType: 'search',
+        title: t('giveaway.ticket_not_found_title') || 'Boleto no encontrado',
+      });
+      return;
+    }
+
+    removeEmptyState(grid, 'tickets-empty-state');
     const isClosed = this.isSalesClosed();
 
     grid.innerHTML = visibleNumbers

@@ -38,6 +38,11 @@
     "completed_badge": "Ended",
     "drawing_now": "Drawing in progress!",
     "empty_giveaways": "No giveaways available at the moment.",
+    "empty_giveaways_title": "No giveaways available",
+    "empty_giveaways_desc": "There are currently no active giveaways. Check back soon for new opportunities!",
+    "search_no_results": "No results found",
+    "search_no_results_desc": "No giveaways match your search criteria or selected category.",
+    "clear_filters": "Reset filters",
     "hero_title": "What would you like to win today?",
     "sales_closed_badge": "Sales closed",
     "scroll_categories_left": "Scroll categories left",
@@ -63,7 +68,8 @@
   "drawing": {
     "title": "Giveaway Space",
     "desc": "Drawing canvas and interactive winner selection.",
-    "workspace_placeholder": "The interactive giveaway module will be rendered here."
+    "no_active_drawing_title": "Giveaway Space",
+    "workspace_placeholder": "There is currently no live extraction or drawing in progress."
   },
   "settings": {
     "title": "Settings",
@@ -128,6 +134,8 @@
     "sales_closed_alert": "Sales closed: Ticket sales close 1 hour before the drawing. Drawing starts shortly!",
     "sales_closed_btn": "Sales ended",
     "search_ticket_placeholder": "Search ticket number...",
+    "ticket_not_found_title": "Ticket not found",
+    "ticket_not_found_desc": "No tickets match the entered number.",
     "seconds_short": "sec",
     "select_tickets_subtitle": "Click the tickets you want or use random selection",
     "select_tickets_title": "Choose your lucky numbers",
@@ -192,6 +200,7 @@
     "modal_upload_desc": "Upload your transfer receipt to extract the tracking key and begin Banxico verification.",
     "modal_upload_title": "Validate SPEI Payment",
     "no_orders_found": "No purchases or reservations found for this phone number.",
+    "no_orders_title": "No tickets found",
     "order_card_giveaway": "Giveaway",
     "order_card_status": "Status",
     "order_card_tickets": "Tickets",
@@ -250,6 +259,29 @@
     "prizes_desc": "Deadlines, required identification documents, and procedures for secure prize handover.",
     "responsible_gaming_title": "Responsible Gaming Policy",
     "responsible_gaming_desc": "Commitment to mindful participation, prevention, and control of gaming habits."
+  },
+  "winners": {
+    "clear_search": "Clear search",
+    "delivery_guarantee": "100% Guaranteed Delivery",
+    "delivery_location": "Delivery Location",
+    "draw_date_label": "Draw Date",
+    "empty_desc": "Winners of our active giveaways will appear here immediately after the official draw and delivery.",
+    "empty_title": "No concluded giveaways yet",
+    "hero_subtitle": "Total transparency. Review completed draws, winning tickets, and delivery proof.",
+    "hero_title": "Official Winners & Deliveries",
+    "no_results": "No giveaways or winners match your search.",
+    "search_no_results_title": "No results found",
+    "search_no_results_desc": "No giveaways or winners match your search query.",
+    "official_winner": "Official Winner",
+    "search_aria": "Search winners and deliveries",
+    "search_placeholder": "Search by giveaway, winner, or ticket number...",
+    "stat_guarantee": "Legality & Public Faith",
+    "stat_prizes_awarded": "Total in Prizes",
+    "stat_total_winners": "Official Winners",
+    "ticket_label": "Winning Ticket",
+    "verified_badge": "Verified Delivery",
+    "view_giveaway": "View Giveaway",
+    "winner_label": "Winner"
   },
   "error": {
     "back_to_home": "Back to Home",

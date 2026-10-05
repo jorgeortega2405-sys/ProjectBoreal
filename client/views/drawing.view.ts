@@ -1,4 +1,6 @@
+import { t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
+import { renderEmptyState } from '../utils/dom.util.js';
 
 export class DrawingController {
   private abortController: AbortController | null = null;
@@ -10,6 +12,16 @@ export class DrawingController {
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
+    const workspace = this.container.querySelector<HTMLElement>('[data-ref="drawing-workspace"]');
+    if (workspace) {
+      renderEmptyState({
+        container: workspace,
+        dataRef: 'drawing-empty-state',
+        desc: t('drawing.workspace_placeholder') || 'Actualmente no hay ninguna extracción o sorteo en vivo.',
+        graphicType: 'drawing',
+        title: t('drawing.no_active_drawing_title') || 'Espacio de Sorteo',
+      });
+    }
   }
 
   destroy(): void {

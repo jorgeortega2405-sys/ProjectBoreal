@@ -40,6 +40,11 @@
     "completed_badge": "Finalizado",
     "drawing_now": "¡Sorteo en curso!",
     "empty_giveaways": "No se encontraron sorteos disponibles.",
+    "empty_giveaways_title": "No hay sorteos disponibles",
+    "empty_giveaways_desc": "Actualmente no hay sorteos activos. ¡Vuelve pronto para nuevas oportunidades!",
+    "search_no_results": "Sin resultados",
+    "search_no_results_desc": "No se encontraron sorteos que coincidan con tu búsqueda o categoría seleccionada.",
+    "clear_filters": "Restablecer filtros",
     "hero_title": "¿Qué te gustaría ganar hoy?",
     "sales_closed_badge": "Venta cerrada",
     "scroll_categories_left": "Desplazar categorías a la izquierda",
@@ -65,7 +70,8 @@
   "drawing": {
     "title": "Espacio de Sorteo",
     "desc": "Lienzo de dibujo y selección interactiva de ganadores.",
-    "workspace_placeholder": "Aquí se renderizará el módulo interactivo de sorteos."
+    "no_active_drawing_title": "Espacio de Sorteo",
+    "workspace_placeholder": "Actualmente no hay ninguna extracción o sorteo en vivo."
   },
   "settings": {
     "title": "Configuración",
@@ -130,6 +136,8 @@
     "sales_closed_alert": "Venta cerrada: La compra de boletos se cierra 1 hora antes del sorteo. ¡El sorteo comenzará en breve!",
     "sales_closed_btn": "Venta finalizada",
     "search_ticket_placeholder": "Buscar número de boleto...",
+    "ticket_not_found_title": "Boleto no encontrado",
+    "ticket_not_found_desc": "No se encontraron boletos que coincidan con la numeración ingresada.",
     "seconds_short": "seg",
     "select_tickets_subtitle": "Haz clic en los números que desees o utiliza la selección al azar",
     "select_tickets_title": "Elige tus números de la suerte",
@@ -194,6 +202,7 @@
     "modal_upload_desc": "Sube el comprobante de tu transferencia para extraer la clave de rastreo e iniciar la validación con Banxico.",
     "modal_upload_title": "Validar Pago SPEI",
     "no_orders_found": "No se encontraron apartados ni compras con este número de teléfono.",
+    "no_orders_title": "Sin boletos registrados",
     "order_card_giveaway": "Sorteo",
     "order_card_status": "Estado",
     "order_card_tickets": "Boletos",
@@ -400,6 +409,8 @@
     "hero_subtitle": "Transparencia total. Consulta los sorteos concluidos, números de boletos premiados y evidencia de entrega de premios.",
     "hero_title": "Ganadores y Entregas Oficiales",
     "no_results": "No se encontraron sorteos o ganadores que coincidan con tu búsqueda.",
+    "search_no_results_title": "Sin resultados",
+    "search_no_results_desc": "No se encontraron sorteos o ganadores que coincidan con tu búsqueda.",
     "official_winner": "Ganador Oficial",
     "search_aria": "Buscar entre los ganadores y entregas",
     "search_placeholder": "Buscar por sorteo, ganador o número de boleto...",

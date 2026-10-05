@@ -40,14 +40,20 @@
     "tickets_left": "{count} disponibles",
     "time_left_days": "{days}j {hours}h {minutes}m {seconds}s",
     "time_left_hours": "{hours}h {minutes}m {seconds}s",
-    "time_left_soon": "Tirage dans {minutes}:{seconds}",
+    "empty_giveaways": "Aucun tirage disponible pour le moment.",
+    "empty_giveaways_title": "Aucun tirage disponible",
+    "empty_giveaways_desc": "Il n'y a actuellement aucun tirage actif. Revenez bientôt !",
+    "search_no_results": "Aucun résultat",
+    "search_no_results_desc": "Aucun tirage ne correspond à vos critères de recherche ou à la catégorie sélectionnée.",
+    "clear_filters": "Réinitialiser les filtres",
     "view_winner_btn": "Voir le Gagnant",
     "winner_announced": "Gagnant : {name} (Billet #{ticket})"
   },
   "drawing": {
     "title": "Espace de Tirage",
     "desc": "Canevas de dessin et sélection interactive des gagnants.",
-    "workspace_placeholder": "Le module interactif de tirage sera affiché ici."
+    "no_active_drawing_title": "Espace de Tirage",
+    "workspace_placeholder": "Il n'y a actuellement aucun tirage en direct en cours."
   },
   "settings": {
     "title": "Paramètres",
@@ -166,6 +172,7 @@
     "modal_upload_desc": "Téléversez le reçu pour extraire la clé de suivi et démarrer la validation Banxico.",
     "modal_upload_title": "Valider le Paiement SPEI",
     "no_orders_found": "Aucun achat ni réservation trouvé pour ce numéro.",
+    "no_orders_title": "Aucun billet trouvé",
     "order_card_giveaway": "Tirage",
     "order_card_status": "Statut",
     "order_card_tickets": "Billets",
@@ -224,6 +231,29 @@
     "prizes_desc": "Délais, documents requis et étapes sécurisées de livraison des prix.",
     "responsible_gaming_title": "Politique de Jeu Responsable",
     "responsible_gaming_desc": "Engagement envers la prévention, l'information et le contrôle de l'activité de jeu."
+  },
+  "winners": {
+    "clear_search": "Effacer la recherche",
+    "delivery_guarantee": "100% Livraisons Garanties",
+    "delivery_location": "Lieu de Livraison",
+    "draw_date_label": "Date du Tirage",
+    "empty_desc": "Les gagnants de nos tirages actifs apparaîtront ici immédiatement après la sélection officielle et la livraison.",
+    "empty_title": "Aucun tirage terminé pour le moment",
+    "hero_subtitle": "Transparence totale. Consultez les tirages terminés, les billets gagnants et les preuves de livraison.",
+    "hero_title": "Gagnants et Remises Officielles",
+    "no_results": "Aucun tirage ou gagnant ne correspond à votre recherche.",
+    "search_no_results_title": "Aucun résultat",
+    "search_no_results_desc": "Aucun tirage ou gagnant ne correspond à votre recherche.",
+    "official_winner": "Gagnant Officiel",
+    "search_aria": "Rechercher parmi les gagnants et remises",
+    "search_placeholder": "Rechercher par tirage, gagnant ou numéro de billet...",
+    "stat_guarantee": "Légalité et Foi Publique",
+    "stat_prizes_awarded": "Total des Lots",
+    "stat_total_winners": "Gagnants Officiels",
+    "ticket_label": "Billet Gagnant",
+    "verified_badge": "Remise Vérifiée",
+    "view_giveaway": "Voir le Tirage",
+    "winner_label": "Gagnant(e)"
   },
   "error": {
     "back_to_home": "Retour à l'accueil",

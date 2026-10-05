@@ -4,6 +4,7 @@ import { lookupOrdersApi, uploadReceiptApi } from '../services/orders.service.js
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { Order } from '../types/order.types.js';
+import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { formatCurrency, formatNumber } from '../utils/number.util.js';
 import { formatMexicanPhone, normalizeMexicanPhone } from '../utils/phone.util.js';
 
@@ -57,16 +58,21 @@ export class ValidatePaymentController {
 
   private renderOrders(): void {
     const listContainer = this.container.querySelector<HTMLElement>('[data-ref="orders-list-container"]');
-    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="orders-empty-state"]');
-    if (!listContainer || !emptyState) return;
+    if (!listContainer) return;
 
     if (this.orders.length === 0) {
       listContainer.innerHTML = '';
-      emptyState.classList.remove('is-hidden');
+      renderEmptyState({
+        container: listContainer,
+        dataRef: 'orders-empty-state',
+        desc: t('validate_payment.no_orders_found') || 'No se encontraron apartados ni compras con este número de teléfono.',
+        graphicType: 'receipt',
+        title: t('validate_payment.no_orders_title') || 'Sin boletos registrados',
+      });
       return;
     }
 
-    emptyState.classList.add('is-hidden');
+    removeEmptyState(listContainer, 'orders-empty-state');
     const sortedOrders = [...this.orders].sort((a, b) => {
       const aWinner = a.is_winner === 1 ? 1 : 0;
       const bWinner = b.is_winner === 1 ? 1 : 0;

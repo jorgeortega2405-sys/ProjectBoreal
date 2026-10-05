@@ -4,6 +4,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { WinnerGiveawayItem } from '../types/giveaway.types.js';
+import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { formatNumber } from '../utils/number.util.js';
 
 function escapeHtml(str: string | null | undefined): string {
@@ -145,29 +146,31 @@ export class WinnersView {
     if (!this.root) return;
 
     const grid = this.root.querySelector<HTMLElement>('[data-ref="winners-grid"]');
-    const emptyEl = this.root.querySelector<HTMLElement>('[data-ref="winners-empty"]');
-    const emptyTitleEl = this.root.querySelector<HTMLElement>('[data-ref="winners-empty-title"]');
-    const emptyDescEl = this.root.querySelector<HTMLElement>('[data-ref="winners-empty-desc"]');
-
-    if (!grid || !emptyEl) return;
+    if (!grid) return;
 
     if (this.filteredWinners.length === 0) {
       grid.innerHTML = '';
-      emptyEl.removeAttribute('hidden');
-      emptyEl.classList.remove('is-hidden');
-
       if (this.searchQuery) {
-        if (emptyTitleEl) emptyTitleEl.textContent = t('winners.no_results');
-        if (emptyDescEl) emptyDescEl.textContent = '';
+        renderEmptyState({
+          container: grid,
+          dataRef: 'winners-empty-state',
+          desc: t('winners.search_no_results_desc') || t('winners.no_results') || 'No se encontraron sorteos o ganadores que coincidan con tu búsqueda.',
+          graphicType: 'search',
+          title: t('winners.search_no_results_title') || 'Sin resultados',
+        });
       } else {
-        if (emptyTitleEl) emptyTitleEl.textContent = t('winners.empty_title');
-        if (emptyDescEl) emptyDescEl.textContent = t('winners.empty_desc');
+        renderEmptyState({
+          container: grid,
+          dataRef: 'winners-empty-state',
+          desc: t('winners.empty_desc') || 'Los ganadores de nuestros sorteos activos aparecerán aquí inmediatamente después de la selección oficial y la entrega.',
+          graphicType: 'trophy',
+          title: t('winners.empty_title') || 'Aún no hay sorteos concluidos',
+        });
       }
       return;
     }
 
-    emptyEl.setAttribute('hidden', '');
-    emptyEl.classList.add('is-hidden');
+    removeEmptyState(grid, 'winners-empty-state');
 
     let html = '';
     for (const item of this.filteredWinners) {

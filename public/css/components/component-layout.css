@@ -1661,6 +1661,15 @@ html.dark-theme .component-top--gradient .design-share-btn:hover {
   min-height: 320px;
 }
 
+.canvas-grid > .component-empty-state,
+.orders-list > .component-empty-state,
+.giveaway-tickets__grid > .component-empty-state,
+.validate-orders-wrapper > .component-empty-state,
+.drawing-workspace > .component-empty-state {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 /* Component Locked State (Paywall / Locked Features) */
 .component-locked-state {
   text-align: center;

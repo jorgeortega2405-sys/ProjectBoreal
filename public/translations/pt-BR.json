@@ -40,14 +40,20 @@
     "tickets_left": "{count} disponíveis",
     "time_left_days": "{days}d {hours}h {minutes}m {seconds}s",
     "time_left_hours": "{hours}h {minutes}m {seconds}s",
-    "time_left_soon": "Sorteio em {minutes}:{seconds}",
+    "empty_giveaways": "Nenhum sorteio disponível no momento.",
+    "empty_giveaways_title": "Nenhum sorteio disponível",
+    "empty_giveaways_desc": "Atualmente não há sorteios ativos. Volte em breve para novas oportunidades!",
+    "search_no_results": "Sem resultados",
+    "search_no_results_desc": "Nenhum sorteio corresponde aos seus critérios de busca ou categoria selecionada.",
+    "clear_filters": "Redefinir filtros",
     "view_winner_btn": "Ver Ganhador",
     "winner_announced": "Ganhador: {name} (Bilhete #{ticket})"
   },
   "drawing": {
     "title": "Espaço de Sorteio",
     "desc": "Quadro de desenho e seleção interativa de ganhadores.",
-    "workspace_placeholder": "O módulo interativo de sorteios será renderizado aqui."
+    "no_active_drawing_title": "Espaço de Sorteio",
+    "workspace_placeholder": "Atualmente não há extração ou sorteio ao vivo em andamento."
   },
   "settings": {
     "title": "Configurações",
@@ -166,6 +172,7 @@
     "modal_upload_desc": "Envie o comprovante da transferência para extrair a chave de rastreio e iniciar validação.",
     "modal_upload_title": "Validar Pagamento SPEI",
     "no_orders_found": "Nenhum pedido ou reserva encontrado para este telefone.",
+    "no_orders_title": "Nenhum bilhete encontrado",
     "order_card_giveaway": "Sorteio",
     "order_card_status": "Status",
     "order_card_tickets": "Bilhetes",
@@ -224,6 +231,29 @@
     "prizes_desc": "Prazos, documentos exigidos e procedimentos de segurança na entrega dos prêmios.",
     "responsible_gaming_title": "Política de Jogo Responsável",
     "responsible_gaming_desc": "Compromisso com a conscientização, prevenção e controle na participação responsável."
+  },
+  "winners": {
+    "clear_search": "Limpar busca",
+    "delivery_guarantee": "100% Entregas Garantidas",
+    "delivery_location": "Local de Entrega",
+    "draw_date_label": "Data do Sorteio",
+    "empty_desc": "Os ganhadores dos nossos sorteios ativos aparecerão aqui imediatamente após a seleção oficial e entrega.",
+    "empty_title": "Ainda não há sorteios concluídos",
+    "hero_subtitle": "Total transparência. Consulte sorteios encerrados, bilhetes premiados e comprovantes de entrega.",
+    "hero_title": "Ganhadores e Entregas Oficiais",
+    "no_results": "Nenhum sorteio ou ganhador corresponde à sua busca.",
+    "search_no_results_title": "Sem resultados",
+    "search_no_results_desc": "Nenhum sorteio ou ganhador corresponde à sua busca.",
+    "official_winner": "Ganhador Oficial",
+    "search_aria": "Buscar entre ganhadores e entregas",
+    "search_placeholder": "Buscar por sorteio, ganhador ou número de bilhete...",
+    "stat_guarantee": "Legalidade e Fé Pública",
+    "stat_prizes_awarded": "Total em Prêmios",
+    "stat_total_winners": "Ganhadores Oficiais",
+    "ticket_label": "Bilhete Premiado",
+    "verified_badge": "Entrega Verificada",
+    "view_giveaway": "Ver Sorteio",
+    "winner_label": "Ganhador(a)"
   },
   "error": {
     "back_to_home": "Voltar ao início",
