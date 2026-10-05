@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   INDEX `idx_orders_concept_reference` (`concept_reference`),
   INDEX `idx_orders_status` (`status`),
   INDEX `idx_orders_expires_at` (`expires_at`),
+  INDEX `idx_orders_status_expires` (`status`, `expires_at`),
   INDEX `idx_orders_tracking_key` (`tracking_key`),
   INDEX `idx_orders_is_winner` (`is_winner`),
   CONSTRAINT `fk_orders_giveaway` FOREIGN KEY (`giveaway_id`) REFERENCES `giveaways` (`id`) ON DELETE CASCADE
@@ -94,6 +95,8 @@ CREATE TABLE IF NOT EXISTS `giveaway_tickets` (
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE INDEX `idx_giveaway_ticket_num` (`giveaway_id`, `ticket_number`),
   INDEX `idx_giveaway_tickets_status` (`status`),
+  INDEX `idx_gt_giveaway_status` (`giveaway_id`, `status`),
+  INDEX `idx_gt_order_status` (`order_id`, `status`),
   INDEX `idx_giveaway_tickets_reserved_until` (`reserved_until`),
   INDEX `idx_giveaway_tickets_is_winner` (`is_winner`),
   CONSTRAINT `fk_tickets_giveaway` FOREIGN KEY (`giveaway_id`) REFERENCES `giveaways` (`id`) ON DELETE CASCADE,

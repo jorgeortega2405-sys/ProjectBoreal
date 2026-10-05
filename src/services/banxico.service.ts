@@ -18,6 +18,7 @@ interface QueueRow extends RowDataPacket {
   order_id: number;
   order_status: string;
   order_uuid: string;
+  receipt_filename: string | null;
   ticket_count: number;
   ticket_numbers: string | number[];
   tracking_key: string;
@@ -57,7 +58,8 @@ export async function processBanxicoBatch(): Promise<number> {
               CAST(q.expected_amount AS DOUBLE) AS expected_amount,
               q.attempts, q.max_attempts,
               o.uuid AS order_uuid, o.giveaway_id, o.ticket_numbers, o.ticket_count,
-              o.customer_name, o.customer_phone, o.currency, o.status AS order_status
+              o.customer_name, o.customer_phone, o.currency, o.status AS order_status,
+              o.receipt_filename
        FROM spei_validation_queue q
        INNER JOIN orders o ON q.order_id = o.id
        WHERE q.status IN ('pending', 'verifying') AND q.next_retry_at <= NOW()
@@ -152,79 +154,96 @@ export async function processBanxicoBatch(): Promise<number> {
         } else {
           const nextAttempts = item.attempts + 1;
           if (nextAttempts >= item.max_attempts) {
-            const failConn = await pool.getConnection();
-            try {
-              await failConn.beginTransaction();
-
-              await failConn.query(
+            if (item.receipt_filename) {
+              await pool.query(
                 `UPDATE spei_validation_queue
                  SET attempts = ?, status = 'failed', last_checked_at = NOW(), banxico_response = ?
                  WHERE id = ?`,
                 [nextAttempts, JSON.stringify(result), item.id]
               );
-
-              await failConn.query(
-                `UPDATE orders
-                 SET status = 'cancelled'
-                 WHERE id = ? AND status = 'in_review'`,
-                [item.order_id]
+              logger.app.info(
+                `Orden ${item.order_uuid} concluyó reintentos automáticos Banxico CEP; permanece en revisión por comprobante adjunto.`
               );
+            } else {
+              const failConn = await pool.getConnection();
+              try {
+                await failConn.beginTransaction();
 
-              await failConn.query(
-                `UPDATE giveaway_tickets
-                 SET status = 'available', order_id = NULL, reserved_until = NULL
-                 WHERE order_id = ? AND status = 'reserved'`,
-                [item.order_id]
-              );
+                await failConn.query(
+                  `UPDATE spei_validation_queue
+                   SET attempts = ?, status = 'failed', last_checked_at = NOW(), banxico_response = ?
+                   WHERE id = ?`,
+                  [nextAttempts, JSON.stringify(result), item.id]
+                );
 
-              await failConn.query(
-                `UPDATE giveaways
-                 SET available_tickets = LEAST(total_tickets, available_tickets + ?)
-                 WHERE id = ?`,
-                [item.ticket_count, item.giveaway_id]
-              );
+                await failConn.query(
+                  `UPDATE orders
+                   SET status = 'cancelled'
+                   WHERE id = ? AND status = 'in_review'`,
+                  [item.order_id]
+                );
 
-              await failConn.commit();
+                await failConn.query(
+                  `UPDATE giveaway_tickets
+                   SET status = 'available', order_id = NULL, reserved_until = NULL
+                   WHERE order_id = ? AND status = 'reserved'`,
+                  [item.order_id]
+                );
 
-              await deleteCache(`giveaway:${item.order_uuid}:tickets`);
-              await deleteCache('giveaways:active');
-              await deleteCachePattern('giveaway:*');
+                await failConn.query(
+                  `UPDATE giveaways
+                   SET available_tickets = LEAST(total_tickets, available_tickets + ?)
+                   WHERE id = ?`,
+                  [item.ticket_count, item.giveaway_id]
+                );
 
-              await publishGiveawayEvent('boreal:giveaways', {
-                giveaway_id: item.giveaway_id,
-                ticket_count: item.ticket_count,
-                type: 'TICKETS_RELEASED',
-              });
+                await failConn.commit();
 
-              await recordAudit({
-                action: 'PAYMENT_REJECTED',
-                actor_type: 'system',
-                amount: item.expected_amount,
-                currency: item.currency || 'MXN',
-                customer_name: item.customer_name,
-                customer_phone: item.customer_phone,
-                details: {
-                  attempts: nextAttempts,
-                  banxico_response: result,
-                  reason: 'MAX_VALIDATION_ATTEMPTS_EXCEEDED',
-                  tracking_key: item.tracking_key,
-                },
-                ip_address: '127.0.0.1',
-                new_status: 'cancelled',
-                order_id: item.order_id,
-                order_uuid: item.order_uuid,
-                previous_status: item.order_status,
-                user_agent: 'ProjectBoreal/BanxicoBatchWorker',
-              });
+                await deleteCache(`giveaway:${item.order_uuid}:tickets`);
+                await deleteCache('giveaways:active');
+                await deleteCachePattern('giveaway:*');
 
-              logger.app.warn(
-                `Orden ${item.order_uuid} superó los intentos de validación Banxico. Boletos liberados y orden cancelada.`
-              );
-            } catch (failTxError) {
-              await failConn.rollback();
-              logger.db.error(`Error al cancelar orden y liberar boletos por límite SPEI ${item.order_uuid}`, failTxError);
-            } finally {
-              failConn.release();
+                const tickets: number[] = typeof item.ticket_numbers === 'string'
+                  ? JSON.parse(item.ticket_numbers)
+                  : item.ticket_numbers;
+
+                await publishGiveawayEvent('boreal:giveaways', {
+                  giveaway_id: item.giveaway_id,
+                  released_count: item.ticket_count,
+                  ticket_numbers: tickets,
+                  type: 'TICKETS_RELEASED',
+                });
+
+                await recordAudit({
+                  action: 'PAYMENT_REJECTED',
+                  actor_type: 'system',
+                  amount: item.expected_amount,
+                  currency: item.currency || 'MXN',
+                  customer_name: item.customer_name,
+                  customer_phone: item.customer_phone,
+                  details: {
+                    attempts: nextAttempts,
+                    banxico_response: result,
+                    reason: 'MAX_VALIDATION_ATTEMPTS_EXCEEDED',
+                    tracking_key: item.tracking_key,
+                  },
+                  ip_address: '127.0.0.1',
+                  new_status: 'cancelled',
+                  order_id: item.order_id,
+                  order_uuid: item.order_uuid,
+                  previous_status: item.order_status,
+                  user_agent: 'ProjectBoreal/BanxicoBatchWorker',
+                });
+
+                logger.app.warn(
+                  `Orden ${item.order_uuid} superó los intentos de validación Banxico. Boletos liberados y orden cancelada.`
+                );
+              } catch (failTxError) {
+                await failConn.rollback();
+                logger.db.error(`Error al cancelar orden y liberar boletos por límite SPEI ${item.order_uuid}`, failTxError);
+              } finally {
+                failConn.release();
+              }
             }
           } else {
             await pool.query(

@@ -15,11 +15,19 @@ export async function fetchActiveGiveaways(): Promise<Giveaway[]> {
 
 export async function fetchWinnersGiveaways(): Promise<WinnerGiveawayItem[]> {
   try {
-    const res = await fetch('/api/giveaways');
+    const res = await fetch('/api/giveaways/winners');
     if (res.ok) {
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
-        const completed: WinnerGiveawayItem[] = json.data
+        return json.data as WinnerGiveawayItem[];
+      }
+    }
+
+    const fallbackRes = await fetch('/api/giveaways');
+    if (fallbackRes.ok) {
+      const json = await fallbackRes.json();
+      if (json.success && Array.isArray(json.data)) {
+        return json.data
           .filter((g: Giveaway) => g.status === 'completed' && g.winner_ticket_number !== null && g.winner_ticket_number !== undefined)
           .map((g: Giveaway) => ({
             currency: g.currency,
@@ -37,9 +45,6 @@ export async function fetchWinnersGiveaways(): Promise<WinnerGiveawayItem[]> {
             winner_name: g.winner_name || null,
             winner_ticket_number: g.winner_ticket_number || null,
           }));
-        if (completed.length > 0) {
-          return completed;
-        }
       }
     }
 

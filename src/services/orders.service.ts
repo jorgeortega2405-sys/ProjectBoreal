@@ -89,8 +89,7 @@ export async function reserveTickets(data: {
               (start_date IS NOT NULL AND NOW() < start_date) AS is_not_started
        FROM giveaways
        WHERE uuid = ?
-       LIMIT 1
-       FOR UPDATE`,
+       LIMIT 1`,
       [data.giveawayUuid]
     );
 
@@ -143,13 +142,15 @@ export async function reserveTickets(data: {
     }
 
     const normalizedPhone = normalizeMexicanPhone(data.customerPhone) || data.customerPhone.trim();
+    const rawPhoneDigits = data.customerPhone.replace(/\D/g, '');
+    const phoneCandidates = Array.from(new Set([normalizedPhone, rawPhoneDigits, data.customerPhone.trim()])).filter(Boolean);
 
     const [pendingOrders] = await conn.query<RowDataPacket[]>(
       `SELECT COUNT(*) AS active_count
        FROM orders
-       WHERE (customer_phone = ? OR REPLACE(REPLACE(REPLACE(REPLACE(customer_phone, '+521', ''), '+52', ''), ' ', ''), '-', '') = ?)
+       WHERE customer_phone IN (?)
          AND status = 'pending_payment' AND expires_at > NOW()`,
-      [normalizedPhone, normalizedPhone]
+      [phoneCandidates]
     );
 
     if (pendingOrders.length > 0 && pendingOrders[0].active_count >= 2) {
@@ -159,26 +160,6 @@ export async function reserveTickets(data: {
         error: 'Ya tienes órdenes pendientes de pago activas. Por favor liquídalas o espera a que concluyan antes de apartar nuevos boletos.',
         success: false,
       };
-    }
-
-    const [countRows] = await conn.query<RowDataPacket[]>(
-      `SELECT COUNT(*) AS total FROM giveaway_tickets WHERE giveaway_id = ?`,
-      [giveaway.id]
-    );
-
-    if (countRows[0].total === 0) {
-      const CHUNK_SIZE = 2000;
-      for (let i = 1; i <= giveaway.total_tickets; i += CHUNK_SIZE) {
-        const chunkEnd = Math.min(i + CHUNK_SIZE - 1, giveaway.total_tickets);
-        const ticketValues: [number, number, string][] = [];
-        for (let j = i; j <= chunkEnd; j++) {
-          ticketValues.push([giveaway.id, j, 'available']);
-        }
-        await conn.query(
-          `INSERT IGNORE INTO giveaway_tickets (giveaway_id, ticket_number, status) VALUES ?`,
-          [ticketValues]
-        );
-      }
     }
 
     const [existingTickets] = await conn.query<TicketRow[]>(
@@ -255,12 +236,21 @@ export async function reserveTickets(data: {
       [ticketValues]
     );
 
-    await conn.query(
+    const [updateRes] = await conn.query<ResultSetHeader>(
       `UPDATE giveaways
        SET available_tickets = GREATEST(0, available_tickets - ?)
-       WHERE id = ?`,
-      [ticketCount, giveaway.id]
+       WHERE id = ? AND available_tickets >= ?`,
+      [ticketCount, giveaway.id, ticketCount]
     );
+
+    if (updateRes.affectedRows === 0) {
+      await conn.rollback();
+      return {
+        bankAccounts: [],
+        error: 'No hay suficientes boletos disponibles para completar esta orden.',
+        success: false,
+      };
+    }
 
     await conn.commit();
 
@@ -338,6 +328,9 @@ export async function reserveTickets(data: {
 export async function getOrdersByPhone(phone: string): Promise<Order[]> {
   try {
     const cleanPhone = normalizeMexicanPhone(phone) || phone.trim();
+    const rawDigits = phone.replace(/\D/g, '');
+    const phoneCandidates = Array.from(new Set([cleanPhone, rawDigits, phone.trim()])).filter(Boolean);
+
     const [rows] = await pool.query<OrderRow[]>(
       `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
               o.ticket_count, o.ticket_numbers,
@@ -348,10 +341,9 @@ export async function getOrdersByPhone(phone: string): Promise<Order[]> {
               g.winner_ticket_number, g.winner_name
        FROM orders o
        INNER JOIN giveaways g ON o.giveaway_id = g.id
-       WHERE o.customer_phone = ?
-          OR REPLACE(REPLACE(REPLACE(REPLACE(o.customer_phone, '+521', ''), '+52', ''), ' ', ''), '-', '') = ?
+       WHERE o.customer_phone IN (?)
        ORDER BY o.created_at DESC`,
-      [cleanPhone, cleanPhone]
+      [phoneCandidates]
     );
 
     return rows.map((r) => ({
@@ -617,7 +609,18 @@ export async function releaseExpiredReservations(): Promise<number> {
     if (released > 0) {
       await deleteCachePattern('giveaway:*:tickets');
       await deleteCache('giveaways:active');
+      const allReleasedTicketNumbers: number[] = [];
+      for (const expOrder of expiredOrders) {
+        const tickets: number[] = typeof expOrder.ticket_numbers === 'string'
+          ? JSON.parse(expOrder.ticket_numbers)
+          : expOrder.ticket_numbers;
+        if (Array.isArray(tickets)) {
+          allReleasedTicketNumbers.push(...tickets);
+        }
+      }
       await publishGiveawayEvent('boreal:giveaways', {
+        released_count: released,
+        ticket_numbers: allReleasedTicketNumbers,
         type: 'TICKETS_RELEASED',
       });
       logger.db.info(`Se liberaron ${released} boletos de órdenes expiradas.`);

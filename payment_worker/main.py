@@ -292,20 +292,65 @@ class ReceiptWorker:
                 "banxico": banxico_res
             }), order_id))
 
+            cur.execute("""
+                SELECT total_tickets, min_threshold_pct, countdown_hours, threshold_reached_at, uuid
+                FROM giveaways
+                WHERE id = %s
+            """, (order["giveaway_id"],))
+            g_row = cur.fetchone()
+
+            threshold_event_payload = None
+            if g_row and g_row["min_threshold_pct"] > 0 and not g_row["threshold_reached_at"]:
+                cur.execute("""
+                    SELECT COUNT(*) AS paid_count
+                    FROM giveaway_tickets
+                    WHERE giveaway_id = %s AND status = 'paid'
+                """, (order["giveaway_id"],))
+                cnt = cur.fetchone()
+                paid_cnt = cnt["paid_count"] if cnt else 0
+                total_tkts = g_row["total_tickets"] or 100
+                pct_sold = (paid_cnt / total_tkts) * 100
+
+                if pct_sold >= g_row["min_threshold_pct"]:
+                    cd_hours = g_row["countdown_hours"] or 48
+                    cur.execute("""
+                        UPDATE giveaways
+                        SET threshold_reached_at = NOW(),
+                            end_date = DATE_ADD(NOW(), INTERVAL %s HOUR)
+                        WHERE id = %s AND threshold_reached_at IS NULL
+                    """, (cd_hours, order["giveaway_id"]))
+
+                    if cur.rowcount > 0:
+                        cur.execute("SELECT end_date, threshold_reached_at FROM giveaways WHERE id = %s", (order["giveaway_id"],))
+                        updated_g = cur.fetchone()
+                        threshold_event_payload = {
+                            "type": "GIVEAWAY_THRESHOLD_REACHED",
+                            "giveaway_uuid": g_row["uuid"],
+                            "threshold_reached_at": updated_g["threshold_reached_at"].isoformat() if hasattr(updated_g["threshold_reached_at"], "isoformat") else str(updated_g["threshold_reached_at"]),
+                            "end_date": updated_g["end_date"].isoformat() if hasattr(updated_g["end_date"], "isoformat") else str(updated_g["end_date"]),
+                            "countdown_hours": cd_hours
+                        }
+                        logger.info(f"[{order_uuid}] Umbral alcanzado para sorteo {g_row['uuid']} ({pct_sold:.1f}% >= {g_row['min_threshold_pct']}%). Cronometro de {cd_hours}h activado.")
+
             conn.commit()
 
         try:
-            self.redis.delete("giveaways:active")
-            keys = self.redis.keys("giveaway:*")
-            if keys:
-                self.redis.delete(*keys)
+            g_uuid = order.get("giveaway_uuid")
+            to_delete = ["giveaways:active", "giveaways:winners"]
+            if g_uuid:
+                to_delete.extend([f"giveaway:{g_uuid}", f"giveaway:{g_uuid}:tickets"])
+            self.redis.delete(*to_delete)
 
             self.redis.publish("boreal:giveaways", json.dumps({
                 "type": "TICKETS_PAID",
                 "giveaway_id": order["giveaway_id"],
+                "giveaway_uuid": order.get("giveaway_uuid"),
                 "ticket_count": order["ticket_count"],
                 "ticket_numbers": tickets
             }))
+
+            if threshold_event_payload:
+                self.redis.publish("boreal:giveaways", json.dumps(threshold_event_payload))
 
             self.redis.publish("boreal:orders", json.dumps({
                 "type": "ORDER_APPROVED",
@@ -366,15 +411,19 @@ class ReceiptWorker:
             conn.commit()
 
         try:
-            self.redis.delete("giveaways:active")
-            keys = self.redis.keys("giveaway:*")
-            if keys:
-                self.redis.delete(*keys)
+            g_uuid = order.get("giveaway_uuid")
+            to_delete = ["giveaways:active", "giveaways:winners"]
+            if g_uuid:
+                to_delete.extend([f"giveaway:{g_uuid}", f"giveaway:{g_uuid}:tickets"])
+            self.redis.delete(*to_delete)
 
             self.redis.publish("boreal:giveaways", json.dumps({
                 "type": "TICKETS_RELEASED",
                 "giveaway_id": order["giveaway_id"],
-                "ticket_count": order["ticket_count"]
+                "giveaway_uuid": order.get("giveaway_uuid"),
+                "ticket_count": order["ticket_count"],
+                "ticket_numbers": tickets,
+                "released_count": len(tickets)
             }))
 
             self.redis.publish("boreal:orders", json.dumps({
@@ -428,10 +477,11 @@ class ReceiptWorker:
         try:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT id, uuid, giveaway_id, ticket_count, ticket_numbers
-                    FROM orders
-                    WHERE status = 'pending_payment' AND expires_at < NOW()
-                    ORDER BY expires_at ASC
+                    SELECT o.id, o.uuid, o.giveaway_id, o.ticket_count, o.ticket_numbers, g.uuid AS giveaway_uuid
+                    FROM orders o
+                    INNER JOIN giveaways g ON o.giveaway_id = g.id
+                    WHERE o.status = 'pending_payment' AND o.expires_at < NOW()
+                    ORDER BY o.expires_at ASC
                     LIMIT 20
                     FOR UPDATE SKIP LOCKED
                 """)
@@ -472,15 +522,19 @@ class ReceiptWorker:
                     conn.commit()
 
                     try:
-                        self.redis.delete("giveaways:active")
-                        keys = self.redis.keys("giveaway:*")
-                        if keys:
-                            self.redis.delete(*keys)
+                        g_uuid = exp_order.get("giveaway_uuid")
+                        to_delete = ["giveaways:active"]
+                        if g_uuid:
+                            to_delete.extend([f"giveaway:{g_uuid}", f"giveaway:{g_uuid}:tickets"])
+                        self.redis.delete(*to_delete)
 
                         self.redis.publish("boreal:giveaways", json.dumps({
                             "type": "TICKETS_RELEASED",
                             "giveaway_id": exp_order["giveaway_id"],
-                            "ticket_count": exp_order["ticket_count"]
+                            "giveaway_uuid": g_uuid,
+                            "ticket_count": exp_order["ticket_count"],
+                            "ticket_numbers": tickets,
+                            "released_count": len(tickets)
                         }))
                     except Exception:
                         pass

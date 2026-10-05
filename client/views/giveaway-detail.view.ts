@@ -220,7 +220,9 @@ export class GiveawayDetailController {
 
     this.unsubscribeWs.push(
       onWebSocketEvent('TICKETS_RELEASED', (data) => {
-        if (!this.giveaway || this.giveaway.uuid !== data.giveaway_uuid) return;
+        if (!this.giveaway) return;
+        if (data.giveaway_uuid && this.giveaway.uuid !== data.giveaway_uuid) return;
+        if (data.giveaway_id && this.giveaway.id !== data.giveaway_id) return;
         const releasedNumbers = data.ticket_numbers || [];
         for (const num of releasedNumbers) {
           this.reservedSet.delete(num);
