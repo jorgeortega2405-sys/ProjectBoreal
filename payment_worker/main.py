@@ -312,7 +312,7 @@ class ReceiptWorker:
                 pct_sold = (paid_cnt / total_tkts) * 100
 
                 if pct_sold >= g_row["min_threshold_pct"]:
-                    cd_hours = g_row["countdown_hours"] or 48
+                    cd_hours = g_row["countdown_hours"] or 72
                     cur.execute("""
                         UPDATE giveaways
                         SET threshold_reached_at = NOW(),

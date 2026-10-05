@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS `giveaways` (
   `end_date` DATETIME NOT NULL,
   `draw_date` DATETIME NULL,
   `min_threshold_pct` TINYINT UNSIGNED NOT NULL DEFAULT 0,
-  `countdown_hours` INT UNSIGNED NOT NULL DEFAULT 48,
+  `countdown_hours` INT UNSIGNED NOT NULL DEFAULT 72,
   `threshold_reached_at` DATETIME NULL,
   `winner_ticket_number` INT UNSIGNED NULL,
   `winner_name` VARCHAR(150) NULL,

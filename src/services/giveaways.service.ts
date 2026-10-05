@@ -228,7 +228,7 @@ export async function checkAndTriggerGiveawayThreshold(
       const pctSold = (paidCount / totalTickets) * 100;
 
       if (pctSold >= row.min_threshold_pct) {
-        const countdownHours = Number(row.countdown_hours || 48);
+        const countdownHours = Number(row.countdown_hours || 72);
         const computedEndDate = new Date(Date.now() + countdownHours * 3600 * 1000);
 
         const [updateRes] = await clientOrPool.query<ResultSetHeader>(

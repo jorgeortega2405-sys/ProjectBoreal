@@ -641,7 +641,7 @@ export class GiveawayDetailController {
       if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
         thresholdHintEl.style.display = 'block';
         thresholdHintEl.textContent = t('giveaway.threshold_waiting_desc', {
-          hours: g.countdown_hours || 48,
+          hours: g.countdown_hours || 72,
           target: g.min_threshold_pct,
         });
       } else {
