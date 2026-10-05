@@ -49,7 +49,7 @@ export function initWebSocket(): void {
         if (ws?.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({ type: 'PING' }));
         }
-      }, 30000);
+      }, 15000);
     };
 
     ws.onmessage = (event: MessageEvent) => {

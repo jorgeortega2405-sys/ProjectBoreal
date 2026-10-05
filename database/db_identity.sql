@@ -125,7 +125,7 @@ VALUES (
   1,
   'c0a80101-0000-4000-8000-000000000001',
   'admin@projectboreal.com',
-  '$2a$10$JMUr6kdrTUakrOuj/ECUr.N/rOzN53jkw5mqDI4nRuxdpCs2EFbL.',
+  '$2b$10$ykT5Ttwek2ptnK8nCLhp/unyJf46bIIzGwR/yx1HpekXgXxXIq8rS',
   'Administrador General',
   1
 )

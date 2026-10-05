@@ -83,6 +83,7 @@ export class GiveawayDetailController {
   private container: HTMLElement;
   private countdownTimer: ReturnType<typeof setInterval> | null = null;
   private currentPage: number = 1;
+  private drawingPollTimer: ReturnType<typeof setInterval> | null = null;
   private giveaway: Giveaway | null = null;
   private isGalleryHovered: boolean = false;
   private pageSize: number = 100;
@@ -175,11 +176,14 @@ export class GiveawayDetailController {
     this.unsubscribeWs.push(
       onWebSocketEvent('GIVEAWAY_WINNER_DRAWN', (data) => {
         if (!this.giveaway || this.giveaway.uuid !== data.giveaway_uuid) return;
+        this.stopDrawingPoll();
         this.giveaway.status = 'completed';
         this.giveaway.winner_name = data.winner_name;
         this.giveaway.winner_ticket_number = data.winner_ticket_number;
         this.giveaway.winner_announced_at = data.winner_announced_at;
+        this.renderInfo();
         this.updateCountdownDisplay();
+        this.renderTickets();
         this.updateSummary();
         this.showWinnerModal(data.winner_name, data.winner_ticket_number);
       })
@@ -268,17 +272,23 @@ export class GiveawayDetailController {
         timerBadge.classList.add('giveaway-badge--danger');
         timerBadge.classList.remove('giveaway-badge--warning');
       }
-      if (closedBanner) closedBanner.style.display = 'none';
+      if (closedBanner) {
+        closedBanner.classList.add('is-hidden');
+        closedBanner.style.display = 'none';
+      }
       if (winnerBanner) {
+        winnerBanner.classList.remove('is-hidden');
         winnerBanner.style.display = 'block';
         if (winnerNameEl) winnerNameEl.textContent = g.winner_name || 'Sin participantes';
         if (winnerTicketEl) winnerTicketEl.textContent = g.winner_ticket_number ? `#${g.winner_ticket_number}` : 'N/A';
       }
       if (buyBtn) {
         buyBtn.disabled = true;
+        buyBtn.classList.add('is-disabled');
         const text = buyBtn.querySelector('span');
         if (text) text.textContent = t('giveaway.sales_closed_btn');
       }
+      this.disablePurchaseControls(true);
       return;
     }
 
@@ -292,8 +302,14 @@ export class GiveawayDetailController {
       if (timerBadge) {
         timerBadge.classList.remove('giveaway-badge--warning', 'giveaway-badge--danger');
       }
-      if (closedBanner) closedBanner.style.display = 'none';
-      if (winnerBanner) winnerBanner.style.display = 'none';
+      if (closedBanner) {
+        closedBanner.classList.add('is-hidden');
+        closedBanner.style.display = 'none';
+      }
+      if (winnerBanner) {
+        winnerBanner.classList.add('is-hidden');
+        winnerBanner.style.display = 'none';
+      }
       return;
     }
 
@@ -301,8 +317,23 @@ export class GiveawayDetailController {
     const diff = endMs - Date.now();
 
     if (diff <= 0) {
-      if (timerText) timerText.textContent = '00:00:00';
-      if (closedBanner) closedBanner.style.display = 'none';
+      if (timerText) timerText.textContent = `00:00:00 • ${t('home.drawing_now')}`;
+      if (timerBadge) {
+        timerBadge.classList.add('giveaway-badge--danger');
+        timerBadge.classList.remove('giveaway-badge--warning');
+      }
+      if (closedBanner) {
+        closedBanner.classList.add('is-hidden');
+        closedBanner.style.display = 'none';
+      }
+      if (buyBtn) {
+        buyBtn.disabled = true;
+        buyBtn.classList.add('is-disabled');
+        const text = buyBtn.querySelector('span');
+        if (text) text.textContent = t('home.drawing_now');
+      }
+      this.disablePurchaseControls(true);
+      this.startDrawingPoll();
       return;
     }
 
@@ -318,17 +349,98 @@ export class GiveawayDetailController {
 
     if (timerText) timerText.textContent = formattedTime;
 
-    if (diff <= 3600 * 1000) {
+    const isUnder1Hour = diff <= 3600 * 1000;
+    if (isUnder1Hour) {
       if (timerBadge) timerBadge.classList.add('giveaway-badge--warning');
-      if (closedBanner) closedBanner.style.display = 'block';
+      if (closedBanner) {
+        closedBanner.classList.remove('is-hidden');
+        closedBanner.style.display = 'block';
+      }
       if (buyBtn) {
         buyBtn.disabled = true;
+        buyBtn.classList.add('is-disabled');
         const text = buyBtn.querySelector('span');
         if (text) text.textContent = t('giveaway.sales_closed_btn');
       }
+      this.disablePurchaseControls(true);
     } else {
       if (timerBadge) timerBadge.classList.remove('giveaway-badge--warning');
-      if (closedBanner) closedBanner.style.display = 'none';
+      if (closedBanner) {
+        closedBanner.classList.add('is-hidden');
+        closedBanner.style.display = 'none';
+      }
+      this.disablePurchaseControls(false);
+      if (buyBtn) {
+        buyBtn.disabled = this.selectedTickets.size === 0;
+        buyBtn.classList.toggle('is-disabled', this.selectedTickets.size === 0);
+        const text = buyBtn.querySelector('span');
+        if (text) text.textContent = t('giveaway.buy_now');
+      }
+    }
+  }
+
+  private disablePurchaseControls(disabled: boolean): void {
+    const triggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-quantity"]');
+    if (triggerBtn) {
+      triggerBtn.disabled = disabled;
+      triggerBtn.classList.toggle('is-disabled', disabled);
+    }
+    const luckyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-lucky-pick"]');
+    if (luckyBtn) {
+      luckyBtn.disabled = disabled;
+      luckyBtn.classList.toggle('is-disabled', disabled);
+    }
+    const clearBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-selection"]');
+    if (clearBtn && disabled) {
+      clearBtn.disabled = true;
+      clearBtn.classList.add('is-disabled');
+    }
+    const ticketsGrid = this.container.querySelector<HTMLElement>('[data-ref="tickets-grid"]');
+    if (ticketsGrid) {
+      ticketsGrid.classList.toggle('is-disabled', disabled);
+      const ticketButtons = ticketsGrid.querySelectorAll<HTMLButtonElement>('.giveaway-ticket');
+      ticketButtons.forEach((btn) => {
+        if (disabled) {
+          btn.disabled = true;
+          btn.classList.add('is-disabled');
+        } else {
+          const numStr = btn.getAttribute('data-number');
+          const num = numStr ? parseInt(numStr, 10) : 0;
+          const isTaken = this.paidSet.has(num) || this.reservedSet.has(num);
+          btn.disabled = isTaken;
+          btn.classList.remove('is-disabled');
+        }
+      });
+    }
+    if (disabled && this.selectedTickets.size > 0) {
+      this.selectedTickets.clear();
+      this.renderTickets();
+      this.updateSummary();
+    }
+  }
+
+  private startDrawingPoll(): void {
+    if (this.drawingPollTimer) return;
+    this.drawingPollTimer = setInterval(async () => {
+      try {
+        const fresh = await fetchGiveawayDetail(this.uuid);
+        if (fresh && fresh.status === 'completed') {
+          this.stopDrawingPoll();
+          this.giveaway = fresh;
+          this.renderInfo();
+          this.updateCountdownDisplay();
+          this.renderTickets();
+          this.updateSummary();
+          this.showWinnerModal(fresh.winner_name || 'Sin participantes', fresh.winner_ticket_number ?? null);
+        }
+      } catch (_) {}
+    }, 2000);
+  }
+
+  private stopDrawingPoll(): void {
+    if (this.drawingPollTimer) {
+      clearInterval(this.drawingPollTimer);
+      this.drawingPollTimer = null;
     }
   }
 
@@ -650,20 +762,24 @@ export class GiveawayDetailController {
     if (!grid) return;
 
     const visibleNumbers = this.getVisibleTicketNumbers();
+    const isClosed = this.isSalesClosed();
 
     grid.innerHTML = visibleNumbers
       .map((num) => {
         const isSelected = this.selectedTickets.has(num);
         const isPaid = this.paidSet.has(num);
         const isReserved = this.reservedSet.has(num);
+        const isTaken = isPaid || isReserved;
         const stateClass = isSelected
           ? 'is-selected'
-          : isPaid || isReserved
+          : isTaken
             ? 'is-taken'
             : 'is-available';
         const formattedNumber = num.toString().padStart(3, '0');
+        const isDisabled = isClosed || isTaken ? 'disabled' : '';
+        const disabledClass = isClosed ? 'is-disabled' : '';
         return `
-          <button type="button" class="giveaway-ticket ${stateClass}" data-ref="ticket-${num}" data-number="${num}">
+          <button type="button" class="giveaway-ticket ${stateClass} ${disabledClass}" ${isDisabled} data-ref="ticket-${num}" data-number="${num}">
             <span>#${formattedNumber}</span>
           </button>
         `;
@@ -801,12 +917,16 @@ export class GiveawayDetailController {
     const currency = this.giveaway.currency || 'MXN';
     const price = this.giveaway.ticket_price || 0;
 
+    const isClosed = this.isSalesClosed();
+
     listEl.innerHTML = options
       .map((qty) => {
         const subtotal = (qty * price).toFixed(2);
         const qtyLabel = qty === 1 ? '1 boleto' : `${qty} boletos`;
+        const disabledAttr = isClosed ? 'disabled' : '';
+        const disabledClass = isClosed ? 'is-disabled' : '';
         return `
-          <button type="button" class="menu-item" data-ref="option-qty-${qty}" data-qty="${qty}">
+          <button type="button" class="menu-item ${disabledClass}" ${disabledAttr} data-ref="option-qty-${qty}" data-qty="${qty}">
             <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
             <span class="menu-item__text">${qtyLabel}</span>
             <span class="menu-item__subtext">$${subtotal} ${currency}</span>
@@ -845,6 +965,10 @@ export class GiveawayDetailController {
       (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (this.isSalesClosed()) {
+          showToast(t('giveaway.toast_sales_closed'), 'warning');
+          return;
+        }
         if (wrapper?.classList.contains('is-open')) {
           closeDropdown();
         } else {
@@ -1613,6 +1737,7 @@ export class GiveawayDetailController {
   }
 
   destroy(): void {
+    this.stopDrawingPoll();
     this.stopPendingOrderTimer();
     this.stopGallerySlideshow();
     if (this.countdownTimer) {

@@ -1,9 +1,11 @@
+import concurrent.futures
 import json
 import logging
 import os
+import signal
 import sys
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional
 import dotenv
 import pymysql
 import redis
@@ -34,6 +36,12 @@ STORAGE_RECEIPTS_DIR = os.getenv(
 )
 os.makedirs(STORAGE_RECEIPTS_DIR, exist_ok=True)
 
+MAX_WORKERS = int(os.getenv("PAYMENT_WORKER_CONCURRENCY", "5"))
+BATCH_SIZE = int(os.getenv("PAYMENT_WORKER_BATCH_SIZE", "5"))
+CYCLE_SLEEP_SECONDS = float(os.getenv("PAYMENT_WORKER_SLEEP", "2.5"))
+LOCK_TTL_SECONDS = 180
+BACKOFF_INTERVALS = [30, 120, 300, 600, 900, 1800]
+
 def get_db_connection():
     return pymysql.connect(
         host=os.getenv("DB_HOST", "127.0.0.1"),
@@ -58,173 +66,466 @@ class ReceiptWorker:
     def __init__(self):
         self.ocr = OCREngine(lang="es-MX")
         self.redis = get_redis_client()
-        logger.info("Worker Python inicializado exitosamente.")
+        self.worker_id = f"worker-{os.getpid()}-{int(time.time())}"
+        self.running = True
+        self.last_sweep_time = 0
+        self.executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=MAX_WORKERS,
+            thread_name_prefix="PaymentWorkerThread"
+        )
+        logger.info(f"Payment Worker inicializado. ID: {self.worker_id}. Concurrencia: {MAX_WORKERS} hilos.")
 
-    def process_order(self, order: Dict[str, Any], conn) -> bool:
-        order_uuid = order["uuid"]
-        receipt_filename = order.get("receipt_filename")
-        if not receipt_filename:
-            return False
+    def handle_shutdown(self, signum, frame):
+        logger.info(f"Señal de terminación recibida ({signum}). Apagando worker de forma segura...")
+        self.running = False
 
-        file_path = os.path.join(STORAGE_RECEIPTS_DIR, receipt_filename)
-        if not os.path.exists(file_path):
-            logger.warning(f"Archivo de comprobante no existe: {file_path}")
-            return False
-
-        logger.info(f"Procesando orden {order_uuid} - Archivo: {receipt_filename}")
-
-        # 1. Obtener cuenta bancaria del sorteo
-        with conn.cursor() as cur:
-            cur.execute("""
-                SELECT ba.id, ba.bank_name, ba.account_holder, ba.clabe, ba.account_number, ba.card_number
-                FROM giveaway_bank_accounts gba
-                INNER JOIN bank_accounts ba ON gba.bank_account_id = ba.id
-                WHERE gba.giveaway_id = %s AND gba.is_active = 1 AND ba.is_active = 1
-                LIMIT 1
-            """, (order["giveaway_id"],))
-            bank_account = cur.fetchone()
-
-        if not bank_account:
-            logger.error(f"No se encontró cuenta bancaria activa para el sorteo {order['giveaway_id']}")
-            return False
-
-        # 2. Extracción OCR
-        try:
-            raw_text = self.ocr.extract_text(file_path)
-            parsed = ReceiptParser.parse(raw_text)
-        except Exception as e:
-            logger.error(f"Fallo al ejecutar OCR en {file_path}: {e}")
-            return False
-
-        # 3. Validación de Reglas Financieras
-        validation = ReceiptParser.validate_against_order(parsed, order, bank_account)
-        tracking_key = validation.get("tracking_key") or order.get("tracking_key")
-
-        # 4. Chequeo Anti-Replay si se detectó clave de rastreo
-        if tracking_key:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id FROM orders
-                    WHERE tracking_key = %s AND id != %s AND status = 'completed'
-                    LIMIT 1
-                """, (tracking_key, order["id"]))
-                duplicate = cur.fetchone()
-                if duplicate:
-                    validation["valid"] = False
-                    validation["errors"].append(f"Clave de rastreo {tracking_key} ya fue liquidada en otra orden (Replay Attack prevenido).")
-
-        # 5. Consulta a Banxico CEP
-        banxico_res = None
-        if tracking_key:
-            try:
-                banxico_res = BanxicoClient.query_cep(
-                    tracking_key=tracking_key,
-                    amount=float(order["total_amount"]),
-                    beneficiary_clabe=bank_account.get("clabe")
-                )
-            except Exception as b_err:
-                banxico_res = {"verified": False, "status": "error", "message": str(b_err)}
-
-        # 6. Decisión de Liquidación
-        with conn.cursor() as cur:
-            if validation["valid"]:
-                logger.info(f"Comprobante VÁLIDO para orden {order_uuid}. Clave: {tracking_key}. Aprobando...")
-                cur.execute("""
-                    UPDATE orders
-                    SET status = 'completed', tracking_key = %s
-                    WHERE id = %s
-                """, (tracking_key, order["id"]))
-
-                tickets = json.loads(order["ticket_numbers"]) if isinstance(order["ticket_numbers"], str) else order["ticket_numbers"]
-                if tickets:
-                    format_strings = ','.join(['%s'] * len(tickets))
-                    cur.execute(f"""
-                        UPDATE giveaway_tickets
-                        SET status = 'paid', reserved_until = NULL
-                        WHERE order_id = %s AND ticket_number IN ({format_strings})
-                    """, [order["id"]] + tickets)
-
-                cur.execute("""
-                    UPDATE spei_validation_queue
-                    SET status = 'matched', last_checked_at = NOW(),
-                        banxico_response = %s
-                    WHERE order_id = %s
-                """, (json.dumps({
-                    "ocr_parsed": parsed,
-                    "validation": validation,
-                    "banxico": banxico_res
-                }), order["id"]))
-
-                conn.commit()
-
-                # Limpieza de caché e invalidación en Redis
-                try:
-                    self.redis.delete("giveaways:active")
-                    keys = self.redis.keys("giveaway:*")
-                    if keys:
-                        self.redis.delete(*keys)
-                    self.redis.publish("boreal:giveaways", json.dumps({
-                        "type": "TICKETS_PAID",
-                        "giveaway_id": order["giveaway_id"],
-                        "ticket_count": order["ticket_count"],
-                        "ticket_numbers": tickets
-                    }))
-                except Exception as r_err:
-                    logger.warning(f"Error al notificar a Redis: {r_err}")
-
-                logger.info(f"Orden {order_uuid} LIQUIDADA Y PAGADA con éxito.")
-                return True
-            else:
-                logger.warning(f"Comprobante RECHAZADO o pendiente de revisión para orden {order_uuid}: {validation['errors']}")
-                cur.execute("""
-                    UPDATE spei_validation_queue
-                    SET status = 'failed', last_checked_at = NOW(),
-                        banxico_response = %s
-                    WHERE order_id = %s
-                """, (json.dumps({
-                    "ocr_parsed": parsed,
-                    "validation": validation,
-                    "banxico": banxico_res
-                }), order["id"]))
-                conn.commit()
-                return False
-
-    def run_cycle(self):
+    def fetch_and_reserve_batch(self) -> List[Dict[str, Any]]:
         conn = get_db_connection()
+        reserved_orders: List[Dict[str, Any]] = []
         try:
             with conn.cursor() as cur:
                 cur.execute("""
                     SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
                            o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) as total_amount,
                            o.currency, o.concept_reference, o.status, o.receipt_url, o.receipt_filename, o.tracking_key,
-                           g.uuid AS giveaway_uuid
+                           g.uuid AS giveaway_uuid,
+                           COALESCE(q.attempts, 0) AS queue_attempts,
+                           COALESCE(q.max_attempts, 6) AS queue_max_attempts
                     FROM orders o
                     INNER JOIN giveaways g ON o.giveaway_id = g.id
                     LEFT JOIN spei_validation_queue q ON q.order_id = o.id
-                    WHERE o.status = 'in_review' AND o.receipt_filename IS NOT NULL
+                    WHERE o.status = 'in_review'
+                      AND o.receipt_filename IS NOT NULL
                       AND (q.status IS NULL OR q.status IN ('pending', 'verifying'))
+                      AND (q.next_retry_at IS NULL OR q.next_retry_at <= NOW())
                     ORDER BY o.created_at ASC
-                    LIMIT 10
-                """)
-                pending_orders = cur.fetchall()
+                    LIMIT %s
+                    FOR UPDATE SKIP LOCKED
+                """, (BATCH_SIZE,))
+                candidates = cur.fetchall()
 
-            for order in pending_orders:
-                try:
-                    self.process_order(order, conn)
-                except Exception as e:
+                if not candidates:
                     conn.rollback()
-                    logger.error(f"Error procesando orden {order.get('uuid')}: {e}", exc_info=True)
+                    return []
+
+                for order in candidates:
+                    cur.execute("""
+                        INSERT INTO spei_validation_queue (
+                            order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status
+                        ) VALUES (%s, %s, %s, %s, %s, DATE_ADD(NOW(), INTERVAL 3 MINUTE), 'verifying')
+                        ON DUPLICATE KEY UPDATE
+                            status = 'verifying',
+                            next_retry_at = DATE_ADD(NOW(), INTERVAL 3 MINUTE),
+                            last_checked_at = NOW()
+                    """, (
+                        order["id"],
+                        order.get("tracking_key") or "PENDING_OCR",
+                        order["total_amount"],
+                        order.get("queue_attempts", 0),
+                        order.get("queue_max_attempts", 6)
+                    ))
+
+                conn.commit()
+
+            for order in candidates:
+                lock_key = f"boreal:lock:order:{order['id']}"
+                acquired = self.redis.set(lock_key, self.worker_id, nx=True, ex=LOCK_TTL_SECONDS)
+                if acquired:
+                    reserved_orders.append(order)
+                else:
+                    logger.warning(f"Orden {order['uuid']} ya tiene lock activo en Redis. Omitiendo.")
+
+            return reserved_orders
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Error al reservar lote con FOR UPDATE SKIP LOCKED: {e}", exc_info=True)
+            return []
         finally:
             conn.close()
 
+    def process_order(self, order: Dict[str, Any]) -> bool:
+        order_uuid = order["uuid"]
+        order_id = order["id"]
+        receipt_filename = order.get("receipt_filename")
+        lock_key = f"boreal:lock:order:{order_id}"
+
+        conn = get_db_connection()
+        try:
+            if not receipt_filename:
+                logger.warning(f"Orden {order_uuid} no tiene comprobante adjunto. Cancelando...")
+                self._cancel_and_release_order(order, conn, ["Comprobante ausente o nulo"])
+                return False
+
+            file_path = os.path.join(STORAGE_RECEIPTS_DIR, receipt_filename)
+            if not os.path.exists(file_path):
+                logger.warning(f"Archivo de comprobante no existe en disco: {file_path}")
+                self._cancel_and_release_order(order, conn, [f"Archivo físico {receipt_filename} no encontrado"])
+                return False
+
+            logger.info(f"[{order_uuid}] Procesando comprobante: {receipt_filename}")
+
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT ba.id, ba.bank_name, ba.account_holder, ba.clabe, ba.account_number, ba.card_number
+                    FROM giveaway_bank_accounts gba
+                    INNER JOIN bank_accounts ba ON gba.bank_account_id = ba.id
+                    WHERE gba.giveaway_id = %s AND gba.is_active = 1 AND ba.is_active = 1
+                    LIMIT 1
+                """, (order["giveaway_id"],))
+                bank_account = cur.fetchone()
+
+            if not bank_account:
+                logger.error(f"[{order_uuid}] No se encontró cuenta bancaria activa para sorteo {order['giveaway_id']}")
+                self._schedule_retry(order, conn, {"error": "Cuenta bancaria no configurada"}, is_transient=True)
+                return False
+
+            try:
+                raw_text = self.ocr.extract_text(file_path)
+                parsed = ReceiptParser.parse(raw_text)
+            except Exception as ocr_err:
+                logger.error(f"[{order_uuid}] Error en motor OCR ({file_path}): {ocr_err}")
+                self._schedule_retry(order, conn, {"error": f"Fallo motor OCR: {str(ocr_err)}"}, is_transient=True)
+                return False
+
+            validation = ReceiptParser.validate_against_order(parsed, order, bank_account)
+            tracking_key = validation.get("tracking_key") or order.get("tracking_key")
+
+            if tracking_key:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT id, uuid FROM orders
+                        WHERE tracking_key = %s AND id != %s AND status = 'completed'
+                        LIMIT 1
+                    """, (tracking_key, order_id))
+                    duplicate = cur.fetchone()
+                    if duplicate:
+                        validation["valid"] = False
+                        validation["fatal_error"] = True
+                        validation["errors"].append(
+                            f"Clave de rastreo {tracking_key} ya fue liquidada en la orden {duplicate['uuid']} (Replay Attack prevenido)."
+                        )
+
+            if validation.get("fatal_error"):
+                logger.warning(f"[{order_uuid}] RECHAZO FATAL: {validation['errors']}")
+                self._cancel_and_release_order(order, conn, validation["errors"], parsed=parsed)
+                return False
+
+            banxico_res = None
+            if tracking_key:
+                try:
+                    banxico_res = BanxicoClient.query_cep(
+                        tracking_key=tracking_key,
+                        amount=float(order["total_amount"]),
+                        beneficiary_clabe=bank_account.get("clabe")
+                    )
+                except Exception as b_err:
+                    banxico_res = {
+                        "verified": False,
+                        "status": "unreachable",
+                        "retryable": True,
+                        "message": str(b_err)
+                    }
+
+            if validation["valid"]:
+                is_liquidated_by_banxico = banxico_res and banxico_res.get("status") == "liquidated"
+                is_banxico_pending = banxico_res and banxico_res.get("status") in ("pending", "offline", "unreachable")
+
+                if is_liquidated_by_banxico or not is_banxico_pending:
+                    self._approve_and_liquidate_order(order, conn, tracking_key, parsed, validation, banxico_res)
+                    return True
+                else:
+                    logger.info(f"[{order_uuid}] Comprobante válido pero Banxico en tránsito/offline ({banxico_res.get('status')}). Programando reintento...")
+                    self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res})
+                    return False
+            else:
+                current_attempts = order.get("queue_attempts", 0) + 1
+                max_attempts = order.get("queue_max_attempts", 6)
+
+                if current_attempts >= max_attempts:
+                    logger.warning(f"[{order_uuid}] Superó intentos máximos ({current_attempts}/{max_attempts}). Cancelando y liberando boletos.")
+                    self._cancel_and_release_order(order, conn, validation["errors"], parsed=parsed, banxico_res=banxico_res)
+                    return False
+                else:
+                    logger.info(f"[{order_uuid}] Comprobante no concluyente (Intento {current_attempts}/{max_attempts}). Programando reintento...")
+                    self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res})
+                    return False
+
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"[{order_uuid}] Error no controlado al procesar orden: {e}", exc_info=True)
+            return False
+        finally:
+            conn.close()
+            try:
+                self.redis.delete(lock_key)
+            except Exception:
+                pass
+
+    def _approve_and_liquidate_order(self, order: Dict[str, Any], conn, tracking_key: Optional[str], parsed: Any, validation: Any, banxico_res: Any):
+        order_uuid = order["uuid"]
+        order_id = order["id"]
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE orders
+                SET status = 'completed', tracking_key = %s, updated_at = NOW()
+                WHERE id = %s
+            """, (tracking_key, order_id))
+
+            tickets = json.loads(order["ticket_numbers"]) if isinstance(order["ticket_numbers"], str) else order["ticket_numbers"]
+            if tickets:
+                format_strings = ','.join(['%s'] * len(tickets))
+                cur.execute(f"""
+                    UPDATE giveaway_tickets
+                    SET status = 'paid', reserved_until = NULL, updated_at = NOW()
+                    WHERE order_id = %s AND ticket_number IN ({format_strings})
+                """, [order_id] + tickets)
+
+            cur.execute("""
+                UPDATE spei_validation_queue
+                SET status = 'matched', last_checked_at = NOW(),
+                    banxico_response = %s
+                WHERE order_id = %s
+            """, (json.dumps({
+                "ocr_parsed": parsed,
+                "validation": validation,
+                "banxico": banxico_res
+            }), order_id))
+
+            conn.commit()
+
+        try:
+            self.redis.delete("giveaways:active")
+            keys = self.redis.keys("giveaway:*")
+            if keys:
+                self.redis.delete(*keys)
+
+            self.redis.publish("boreal:giveaways", json.dumps({
+                "type": "TICKETS_PAID",
+                "giveaway_id": order["giveaway_id"],
+                "ticket_count": order["ticket_count"],
+                "ticket_numbers": tickets
+            }))
+
+            self.redis.publish("boreal:orders", json.dumps({
+                "type": "ORDER_APPROVED",
+                "order_uuid": order_uuid,
+                "order_id": order_id,
+                "ticket_count": order["ticket_count"],
+                "ticket_numbers": tickets
+            }))
+        except Exception as r_err:
+            logger.warning(f"[{order_uuid}] Error al notificar a Redis: {r_err}")
+
+        logger.info(f"[{order_uuid}] Orden LIQUIDADA Y PAGADA exitosamente.")
+
+    def _cancel_and_release_order(self, order: Dict[str, Any], conn, errors: List[str], parsed: Any = None, banxico_res: Any = None):
+        order_uuid = order["uuid"]
+        order_id = order["id"]
+
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE orders
+                SET status = 'cancelled', updated_at = NOW()
+                WHERE id = %s AND status = 'in_review'
+            """, (order_id,))
+
+            tickets = json.loads(order["ticket_numbers"]) if isinstance(order["ticket_numbers"], str) else order.get("ticket_numbers", [])
+            if tickets:
+                format_strings = ','.join(['%s'] * len(tickets))
+                cur.execute(f"""
+                    UPDATE giveaway_tickets
+                    SET status = 'available', order_id = NULL, reserved_until = NULL, updated_at = NOW()
+                    WHERE (order_id = %s OR (giveaway_id = %s AND ticket_number IN ({format_strings})))
+                      AND status = 'reserved'
+                """, [order_id, order["giveaway_id"]] + tickets)
+            else:
+                cur.execute("""
+                    UPDATE giveaway_tickets
+                    SET status = 'available', order_id = NULL, reserved_until = NULL, updated_at = NOW()
+                    WHERE order_id = %s AND status = 'reserved'
+                """, (order_id,))
+
+            cur.execute("""
+                UPDATE giveaways
+                SET available_tickets = LEAST(total_tickets, available_tickets + %s)
+                WHERE id = %s
+            """, (order["ticket_count"], order["giveaway_id"]))
+
+            cur.execute("""
+                UPDATE spei_validation_queue
+                SET status = 'failed', last_checked_at = NOW(),
+                    banxico_response = %s
+                WHERE order_id = %s
+            """, (json.dumps({
+                "errors": errors,
+                "ocr_parsed": parsed,
+                "banxico": banxico_res
+            }), order_id))
+
+            conn.commit()
+
+        try:
+            self.redis.delete("giveaways:active")
+            keys = self.redis.keys("giveaway:*")
+            if keys:
+                self.redis.delete(*keys)
+
+            self.redis.publish("boreal:giveaways", json.dumps({
+                "type": "TICKETS_RELEASED",
+                "giveaway_id": order["giveaway_id"],
+                "ticket_count": order["ticket_count"]
+            }))
+
+            self.redis.publish("boreal:orders", json.dumps({
+                "type": "ORDER_REJECTED",
+                "order_uuid": order_uuid,
+                "order_id": order_id,
+                "errors": errors
+            }))
+        except Exception as r_err:
+            logger.warning(f"[{order_uuid}] Error al notificar cancelación en Redis: {r_err}")
+
+        logger.info(f"[{order_uuid}] Orden CANCELADA y boletos LIBERADOS. Motivo: {errors}")
+
+    def _schedule_retry(self, order: Dict[str, Any], conn, response_payload: Dict[str, Any], is_transient: bool = False):
+        order_uuid = order["uuid"]
+        order_id = order["id"]
+        current_attempts = order.get("queue_attempts", 0) + 1
+        max_attempts = order.get("queue_max_attempts", 6)
+
+        idx = min(current_attempts - 1, len(BACKOFF_INTERVALS) - 1)
+        delay_seconds = BACKOFF_INTERVALS[idx]
+
+        with conn.cursor() as cur:
+            cur.execute(f"""
+                UPDATE spei_validation_queue
+                SET attempts = %s,
+                    status = 'verifying',
+                    last_checked_at = NOW(),
+                    next_retry_at = DATE_ADD(NOW(), INTERVAL {delay_seconds} SECOND),
+                    banxico_response = %s
+                WHERE order_id = %s
+            """, (current_attempts, json.dumps(response_payload), order_id))
+
+            cur.execute("""
+                UPDATE giveaway_tickets
+                SET reserved_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE)
+                WHERE order_id = %s AND status = 'reserved'
+            """, (order_id,))
+
+            conn.commit()
+
+        logger.info(f"[{order_uuid}] Reintento #{current_attempts}/{max_attempts} programado en {delay_seconds}s.")
+
+    def sweep_expired_orders(self):
+        now = time.time()
+        if now - self.last_sweep_time < 30:
+            return
+        self.last_sweep_time = now
+
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, uuid, giveaway_id, ticket_count, ticket_numbers
+                    FROM orders
+                    WHERE status = 'pending_payment' AND expires_at < NOW()
+                    ORDER BY expires_at ASC
+                    LIMIT 20
+                    FOR UPDATE SKIP LOCKED
+                """)
+                expired_orders = cur.fetchall()
+
+                for exp_order in expired_orders:
+                    order_id = exp_order["id"]
+                    order_uuid = exp_order["uuid"]
+
+                    cur.execute("""
+                        UPDATE orders
+                        SET status = 'expired', updated_at = NOW()
+                        WHERE id = %s AND status = 'pending_payment'
+                    """, (order_id,))
+
+                    tickets = json.loads(exp_order["ticket_numbers"]) if isinstance(exp_order["ticket_numbers"], str) else exp_order.get("ticket_numbers", [])
+                    if tickets:
+                        format_strings = ','.join(['%s'] * len(tickets))
+                        cur.execute(f"""
+                            UPDATE giveaway_tickets
+                            SET status = 'available', order_id = NULL, reserved_until = NULL, updated_at = NOW()
+                            WHERE (order_id = %s OR (giveaway_id = %s AND ticket_number IN ({format_strings})))
+                              AND status = 'reserved'
+                        """, [order_id, exp_order["giveaway_id"]] + tickets)
+                    else:
+                        cur.execute("""
+                            UPDATE giveaway_tickets
+                            SET status = 'available', order_id = NULL, reserved_until = NULL, updated_at = NOW()
+                            WHERE order_id = %s AND status = 'reserved'
+                        """, (order_id,))
+
+                    cur.execute("""
+                        UPDATE giveaways
+                        SET available_tickets = LEAST(total_tickets, available_tickets + %s)
+                        WHERE id = %s
+                    """, (exp_order["ticket_count"], exp_order["giveaway_id"]))
+
+                    conn.commit()
+
+                    try:
+                        self.redis.delete("giveaways:active")
+                        keys = self.redis.keys("giveaway:*")
+                        if keys:
+                            self.redis.delete(*keys)
+
+                        self.redis.publish("boreal:giveaways", json.dumps({
+                            "type": "TICKETS_RELEASED",
+                            "giveaway_id": exp_order["giveaway_id"],
+                            "ticket_count": exp_order["ticket_count"]
+                        }))
+                    except Exception:
+                        pass
+
+                    logger.info(f"[SWEEP] Orden expirada {order_uuid} cancelada. Boletos liberados a disponible.")
+
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"[SWEEP] Error al barrer órdenes expiradas: {e}")
+        finally:
+            conn.close()
+
+    def run_cycle(self):
+        self.sweep_expired_orders()
+
+        batch = self.fetch_and_reserve_batch()
+        if not batch:
+            return
+
+        logger.info(f"Lote reservado de {len(batch)} órdenes. Distribuyendo a {MAX_WORKERS} hilos...")
+
+        futures = {self.executor.submit(self.process_order, order): order["uuid"] for order in batch}
+        for future in concurrent.futures.as_completed(futures):
+            order_uuid = futures[future]
+            try:
+                result = future.result()
+                logger.info(f"Hilo finalizó orden {order_uuid} con estado: {'EXITOSO' if result else 'NO_LIQUIDADO'}")
+            except Exception as thread_err:
+                logger.error(f"Excepción no controlada en hilo para orden {order_uuid}: {thread_err}", exc_info=True)
+
     def run_forever(self):
-        logger.info("Worker en ejecución. Esperando comprobantes...")
-        while True:
+        signal.signal(signal.SIGINT, self.handle_shutdown)
+        signal.signal(signal.SIGTERM, self.handle_shutdown)
+
+        logger.info("Worker Python en ejecución multi-hilo. Esperando comprobantes...")
+        while self.running:
             try:
                 self.run_cycle()
             except Exception as e:
-                logger.error(f"Error inesperado en ciclo del worker: {e}", exc_info=True)
-            time.sleep(3)
+                logger.error(f"Error inesperado en ciclo principal del worker: {e}", exc_info=True)
+            time.sleep(CYCLE_SLEEP_SECONDS)
+
+        logger.info("Apagando ThreadPoolExecutor...")
+        self.executor.shutdown(wait=True, cancel_futures=False)
+        logger.info("Worker terminado limpiamente.")
 
 if __name__ == "__main__":
     worker = ReceiptWorker()

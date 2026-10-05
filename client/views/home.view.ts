@@ -87,6 +87,7 @@ export class HomeController {
   private container: HTMLElement;
   private filteredGiveaways: Giveaway[] = [];
   private giveaways: Giveaway[] = [];
+  private isCheckingEndingGiveaways = false;
   private searchQuery = '';
   private timerInterval: ReturnType<typeof setInterval> | null = null;
   private unsubscribeWs: (() => void)[] = [];
@@ -267,11 +268,38 @@ export class HomeController {
   }
 
   private updateTimers(): void {
+    let hasEndingGiveaways = false;
     for (const item of this.filteredGiveaways) {
       const badge = this.container.querySelector<HTMLElement>(`[data-ref="card-timer-${item.uuid}"]`);
       if (!badge) continue;
       const info = computeTimerInfo(item);
       badge.textContent = info.text;
+      if (item.status === 'active' && new Date(item.end_date).getTime() <= Date.now()) {
+        hasEndingGiveaways = true;
+      }
+    }
+    if (hasEndingGiveaways) {
+      this.checkEndingGiveaways();
+    }
+  }
+
+  private async checkEndingGiveaways(): Promise<void> {
+    if (this.isCheckingEndingGiveaways) return;
+    this.isCheckingEndingGiveaways = true;
+    try {
+      const fresh = await fetchActiveGiveaways();
+      const hasStatusChange = fresh.some((f) => {
+        const local = this.giveaways.find((g) => g.uuid === f.uuid);
+        return local && local.status !== f.status;
+      });
+      if (hasStatusChange) {
+        this.giveaways = fresh;
+        this.populateCardImagesMap();
+        this.filterGiveaways();
+      }
+    } catch (_) {
+    } finally {
+      this.isCheckingEndingGiveaways = false;
     }
   }
 
@@ -298,7 +326,12 @@ export class HomeController {
         const thresholdText = computeThresholdBadge(item);
         const category = getGiveawayCategory(item);
         const currency = item.currency || 'MXN';
-        const actionLabel = item.status === 'completed' ? t('home.view_winner_btn') : `$${item.ticket_price.toFixed(2)} ${currency}`;
+        const isSalesClosed = item.status === 'completed' || (new Date(item.end_date).getTime() - Date.now() <= 3600 * 1000 && (item.min_threshold_pct === 0 || !!item.threshold_reached_at));
+        const actionLabel = item.status === 'completed'
+          ? t('home.view_winner_btn')
+          : isSalesClosed
+            ? t('giveaway.sales_closed_btn')
+            : `$${item.ticket_price.toFixed(2)} ${currency}`;
 
         const thresholdBadgeHtml = thresholdText
           ? `<div class="giveaway-card__meta-badge" data-ref="card-meta-${item.uuid}">${escapeHtml(thresholdText)}</div>`

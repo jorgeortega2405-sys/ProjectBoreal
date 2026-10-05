@@ -82,8 +82,11 @@ class ReceiptParser:
     def validate_against_order(cls, parsed: Dict[str, Any], order: Dict[str, Any], bank_account: Dict[str, Any]) -> Dict[str, Any]:
         errors = []
 
+        fatal_error = False
+
         if parsed.get("is_failed"):
             errors.append("El comprobante indica una transferencia fallida, cancelada o devuelta.")
+            fatal_error = True
 
         # 1. Validar Monto
         extracted_amount = parsed.get("amount")
@@ -92,6 +95,7 @@ class ReceiptParser:
             errors.append("No se pudo detectar el monto transferido en el comprobante.")
         elif abs(extracted_amount - expected_amount) > 0.01:
             errors.append(f"El monto en el comprobante (${extracted_amount:.2f}) no coincide con el total de la orden (${expected_amount:.2f}).")
+            fatal_error = True
 
         # 2. Validar Concepto
         expected_concept = str(order.get("concept_reference") or "").strip().lower()
@@ -118,9 +122,12 @@ class ReceiptParser:
 
         if not has_clabe_digits and not has_bank_name:
             errors.append(f"El destinatario no corresponde a la cuenta de depósito activa ({bank_account.get('bank_name')} CLABE ...{clabe_last4}).")
+            if parsed.get("destination"):
+                fatal_error = True
 
         return {
             "valid": len(errors) == 0,
+            "fatal_error": fatal_error,
             "errors": errors,
             "tracking_key": parsed.get("tracking_key")
         }

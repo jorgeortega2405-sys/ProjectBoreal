@@ -26,30 +26,34 @@ class BanxicoClient:
         }
 
         try:
-            resp = requests.post(cls.BANXICO_URL, data=payload, headers=headers, timeout=5)
+            resp = requests.post(cls.BANXICO_URL, data=payload, headers=headers, timeout=8)
             if resp.status_code == 200:
                 text = resp.text
                 if "Comprobante" in text or "sello" in text or "LIQUIDADO" in text.upper():
                     return {
                         "verified": True,
                         "status": "liquidated",
+                        "retryable": False,
                         "message": "Comprobante validado exitosamente en Banxico CEP.",
                         "raw_snippet": text[:300]
                     }
                 return {
                     "verified": False,
                     "status": "pending",
-                    "message": "El comprobante no arrojó confirmación inmediata en Banxico CEP (puede estar en tránsito o requerir sesión).",
+                    "retryable": True,
+                    "message": "El comprobante no arrojó confirmación inmediata en Banxico CEP (puede estar en tránsito en SPEI).",
                     "raw_snippet": text[:300]
                 }
             return {
                 "verified": False,
                 "status": "offline",
+                "retryable": True,
                 "message": f"Servicio Banxico respondió con código HTTP {resp.status_code}."
             }
         except Exception as e:
             return {
                 "verified": False,
                 "status": "unreachable",
+                "retryable": True,
                 "message": f"No se pudo contactar a Banxico CEP directamente ({type(e).__name__})."
             }

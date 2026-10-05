@@ -206,6 +206,7 @@ function configureWebSocketUpgrade(server: http.Server): void {
       }
 
       const proxySocket = net.connect(config.websocket.port, config.websocket.host, () => {
+        proxySocket.setTimeout(0);
         proxySocket.setNoDelay(true);
         proxySocket.setKeepAlive(true, 30000);
         proxySocket.write(`${req.method} ${req.url} HTTP/${req.httpVersion}\r\n`);

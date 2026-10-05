@@ -675,6 +675,20 @@ html.dark-theme .giveaway-ticket.is-selected {
   border-style: dashed;
 }
 
+.giveaway-ticket:disabled,
+.giveaway-ticket.is-disabled {
+  opacity: 0.38 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.giveaway-tickets__grid.is-disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
 /* Barra Flotante / Resumen */
 .giveaway-tickets__summary {
   display: flex;
