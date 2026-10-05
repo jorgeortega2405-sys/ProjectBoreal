@@ -11,12 +11,19 @@ export const cassandraClient = new cassandra.Client({
   contactPoints: config.cassandra.contactPoints,
   keyspace: config.cassandra.keyspace,
   localDataCenter: config.cassandra.localDataCenter,
+  policies: {
+    reconnection: new cassandra.policies.reconnection.ExponentialReconnectionPolicy(1000, 30000),
+  },
   protocolOptions: {
     port: config.cassandra.port,
   },
 });
 
 export let isCassandraConnected = false;
+
+export function markCassandraDisconnected(): void {
+  isCassandraConnected = false;
+}
 
 export async function checkCassandraConnection(): Promise<boolean> {
   try {
@@ -32,6 +39,12 @@ export async function checkCassandraConnection(): Promise<boolean> {
     return false;
   }
 }
+
+setInterval(() => {
+  if (!isCassandraConnected) {
+    checkCassandraConnection().catch(() => {});
+  }
+}, 60000).unref();
 
 export async function closeCassandraConnection(): Promise<void> {
   try {

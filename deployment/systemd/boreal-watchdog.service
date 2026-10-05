@@ -1,0 +1,15 @@
+[Unit]
+Description=Project Boreal - Servicio de Levante y Auto-Recuperación (Watchdog Daemon)
+After=network.target docker.service boreal.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/project-boreal
+ExecStart=/usr/bin/python3 deployment/scripts/boreal_watchdog.py
+Restart=always
+RestartSec=10
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target

@@ -129,6 +129,22 @@ class ReceiptWorker:
         logger.info(f"Señal de terminación recibida ({signum}). Apagando worker de forma segura...")
         self.running = False
 
+    def emit_heartbeat(self):
+        payload = json.dumps({
+            "timestamp": time.time(),
+            "worker_id": self.worker_id,
+            "pid": os.getpid(),
+            "status": "running"
+        })
+        try:
+            self.redis.set("boreal:worker:heartbeat", payload, ex=35)
+        except Exception:
+            try:
+                self.redis = get_redis_client()
+                self.redis.set("boreal:worker:heartbeat", payload, ex=35)
+            except Exception as e:
+                logger.warning(f"No se pudo emitir heartbeat a Redis: {e}")
+
     def fetch_and_reserve_batch(self) -> List[Dict[str, Any]]:
         conn = get_db_connection()
         reserved_orders: List[Dict[str, Any]] = []
@@ -681,6 +697,7 @@ class ReceiptWorker:
         logger.info("Worker Python en ejecución multi-hilo. Escuchando cola de comprobantes...")
         consecutive_db_errors = 0
         while self.running:
+            self.emit_heartbeat()
             try:
                 self.run_cycle()
                 consecutive_db_errors = 0

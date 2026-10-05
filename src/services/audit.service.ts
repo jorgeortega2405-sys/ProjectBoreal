@@ -1,6 +1,6 @@
 import cassandra, { types } from 'cassandra-driver';
 import crypto from 'crypto';
-import { cassandraClient, isCassandraConnected } from '../config/cassandra.config.js';
+import { cassandraClient, isCassandraConnected, markCassandraDisconnected } from '../config/cassandra.config.js';
 import { logger } from './logger.service.js';
 import { AuditLogRecord, CreateAuditLogInput } from '../types/audit.types.js';
 
@@ -178,6 +178,7 @@ export async function recordAudit(input: CreateAuditLogInput): Promise<void> {
       uuid: auditUuid,
     });
   } catch (error) {
+    markCassandraDisconnected();
     logger.db.error(`Fallo crítico al registrar auditoría [${input.action}] en Cassandra`, error);
   }
 }
@@ -195,6 +196,7 @@ export async function getOrderAuditTrail(orderUuid: string): Promise<AuditLogRec
     const result = await cassandraClient.execute(query, [orderUuid], { prepare: true });
     return result.rows.map(mapCassandraRow);
   } catch (error) {
+    markCassandraDisconnected();
     logger.db.error(`Fallo al consultar pista de auditoría en Cassandra para orden ${orderUuid}`, error);
     return [];
   }
@@ -214,6 +216,7 @@ export async function getCustomerAuditHistory(phone: string): Promise<AuditLogRe
     const result = await cassandraClient.execute(query, [phone], { prepare: true });
     return result.rows.map(mapCassandraRow);
   } catch (error) {
+    markCassandraDisconnected();
     logger.db.error(`Fallo al consultar historial de cliente en Cassandra para ${phone}`, error);
     return [];
   }

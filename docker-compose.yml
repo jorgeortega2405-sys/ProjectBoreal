@@ -110,6 +110,12 @@ services:
       options:
         max-size: "50m"
         max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/3008; echo -e \"GET /health HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n\" >&3; grep -q \"healthy\" <&3' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   payment-worker:
     build:
@@ -143,6 +149,59 @@ services:
       options:
         max-size: "50m"
         max-file: "5"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import redis, os, sys; r = redis.Redis(host='redis', port=6379, password=os.getenv('REDIS_PASSWORD')); sys.exit(0 if r.exists('boreal:worker:heartbeat') else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: boreal-app
+    restart: unless-stopped
+    profiles: ["full", "app"]
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER:-sprite_user}
+      DB_PASSWORD: ${DB_PASSWORD:-sprite_password}
+      DB_LOTTERY_NAME: ${DB_LOTTERY_NAME:-db_lottery}
+      DB_IDENTITY_NAME: ${DB_IDENTITY_NAME:-db_identity}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-boreal_redis_auth_key_2026!}
+      CASSANDRA_CONTACT_POINTS: cassandra
+      CASSANDRA_PORT: 9042
+      CASSANDRA_KEYSPACE: boreal_audit
+      WEBSOCKET_HOST: websocket
+      WEBSOCKET_PORT: 3008
+    volumes:
+      - ./storage/receipts:/app/storage/receipts
+      - ./logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 1024m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3000/api/health | grep -q '\"status\":\"healthy\"\\|\"status\":\"degraded\"' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
 volumes:
   mysql_data:

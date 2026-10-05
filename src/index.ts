@@ -19,38 +19,58 @@ import net from 'net';
 import os from 'os';
 import path from 'path';
 
+process.on('uncaughtException', (err: Error) => {
+  logger.app.error('Excepción no controlada capturada en proceso Node.js', err);
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.app.error('Promesa rechazada no controlada en proceso Node.js', reason);
+});
+
 function startScheduledTasks(): void {
-  setInterval(async () => {
-    const lockToken = crypto.randomUUID();
-    const hasLock = await acquireDistributedLock('cron:release_expired', 55, lockToken);
-    if (!hasLock) return;
-    try {
-      await releaseExpiredReservations();
-    } finally {
-      await releaseDistributedLock('cron:release_expired', lockToken);
-    }
+  setInterval(() => {
+    (async () => {
+      const lockToken = crypto.randomUUID();
+      const hasLock = await acquireDistributedLock('cron:release_expired', 55, lockToken);
+      if (!hasLock) return;
+      try {
+        await releaseExpiredReservations();
+      } finally {
+        await releaseDistributedLock('cron:release_expired', lockToken);
+      }
+    })().catch((err) => {
+      logger.app.error('Error en tarea cron:release_expired', err);
+    });
   }, 60 * 1000);
 
-  setInterval(async () => {
-    const lockToken = crypto.randomUUID();
-    const hasLock = await acquireDistributedLock('cron:banxico_batch', 290, lockToken);
-    if (!hasLock) return;
-    try {
-      await processBanxicoBatch();
-    } finally {
-      await releaseDistributedLock('cron:banxico_batch', lockToken);
-    }
+  setInterval(() => {
+    (async () => {
+      const lockToken = crypto.randomUUID();
+      const hasLock = await acquireDistributedLock('cron:banxico_batch', 290, lockToken);
+      if (!hasLock) return;
+      try {
+        await processBanxicoBatch();
+      } finally {
+        await releaseDistributedLock('cron:banxico_batch', lockToken);
+      }
+    })().catch((err) => {
+      logger.app.error('Error en tarea cron:banxico_batch', err);
+    });
   }, 5 * 60 * 1000);
 
-  setInterval(async () => {
-    const lockToken = crypto.randomUUID();
-    const hasLock = await acquireDistributedLock('cron:draw_winners', 14, lockToken);
-    if (!hasLock) return;
-    try {
-      await drawGiveawayWinners();
-    } finally {
-      await releaseDistributedLock('cron:draw_winners', lockToken);
-    }
+  setInterval(() => {
+    (async () => {
+      const lockToken = crypto.randomUUID();
+      const hasLock = await acquireDistributedLock('cron:draw_winners', 14, lockToken);
+      if (!hasLock) return;
+      try {
+        await drawGiveawayWinners();
+      } finally {
+        await releaseDistributedLock('cron:draw_winners', lockToken);
+      }
+    })().catch((err) => {
+      logger.app.error('Error en tarea cron:draw_winners', err);
+    });
   }, 15 * 1000);
 }
 

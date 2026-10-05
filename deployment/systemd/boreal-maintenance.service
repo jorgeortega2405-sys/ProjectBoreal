@@ -1,0 +1,9 @@
+[Unit]
+Description=Project Boreal - Tarea de Mantenimiento Preventivo (Rotación y Purga de Logs)
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/var/www/project-boreal
+ExecStart=/usr/bin/python3 deployment/scripts/maintenance.py

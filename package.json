@@ -13,6 +13,8 @@
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "typecheck:all": "npm run typecheck",
     "worker:payment": "py payment_worker/main.py",
+    "watchdog": "py deployment/scripts/boreal_watchdog.py",
+    "maintenance": "py deployment/scripts/maintenance.py",
     "start": "node dist/index.js"
   },
   "dependencies": {

@@ -1,0 +1,20 @@
+[Unit]
+Description=Project Boreal - Core Application Server
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=boreal
+WorkingDirectory=/var/www/project-boreal
+ExecStartPre=/usr/bin/npm run build:server
+ExecStart=/usr/bin/node dist/index.js
+Restart=always
+RestartSec=5
+KillMode=process
+Environment=NODE_ENV=production
+Environment=PORT=3000
+LimitNOFILE=65536
+MemoryMax=1.5G
+
+[Install]
+WantedBy=multi-user.target
