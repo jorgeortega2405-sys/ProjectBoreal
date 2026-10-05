@@ -190,6 +190,7 @@ export class GiveawayDetailController {
       onWebSocketEvent('GIVEAWAY_WINNER_DRAWN', (data) => {
         if (!this.giveaway || this.giveaway.uuid !== data.giveaway_uuid) return;
         this.stopDrawingPoll();
+        this.clearPendingOrder();
         this.giveaway.status = 'completed';
         this.giveaway.winner_name = data.winner_name;
         this.giveaway.winner_ticket_number = data.winner_ticket_number;
@@ -259,6 +260,13 @@ export class GiveawayDetailController {
           this.paidSet.add(num);
           this.selectedTickets.delete(num);
         }
+        if (this.activePendingOrder?.order?.ticket_numbers) {
+          const myPendingNums: number[] = this.activePendingOrder.order.ticket_numbers;
+          const allMyNumsPaid = myPendingNums.length > 0 && myPendingNums.every((n) => this.paidSet.has(n));
+          if (allMyNumsPaid) {
+            this.clearPendingOrder();
+          }
+        }
         if (typeof data.ticket_count === 'number' && this.giveaway.available_tickets !== undefined) {
           this.giveaway.available_tickets = Math.max(0, this.giveaway.available_tickets - data.ticket_count);
         }
@@ -285,6 +293,7 @@ export class GiveawayDetailController {
     const upcomingBannerText = this.container.querySelector<HTMLElement>('[data-ref="banner-upcoming-text"]');
 
     if (g.status === 'completed') {
+      this.clearPendingOrder();
       if (timerText) timerText.textContent = t('giveaway.status_completed');
       if (timerBadge) {
         timerBadge.classList.add('giveaway-badge--danger');
@@ -750,21 +759,34 @@ export class GiveawayDetailController {
 
   private checkPendingOrderStorage(): void {
     try {
+      if (this.giveaway?.status === 'completed' || this.giveaway?.status === 'cancelled') {
+        this.clearPendingOrder();
+        return;
+      }
+
       const stored = localStorage.getItem('boreal_pending_order_' + this.uuid);
       if (!stored) return;
       const data = JSON.parse(stored);
       if (data?.order?.expires_at && new Date(data.order.expires_at).getTime() > Date.now()) {
+        const ticketNums: number[] = data.order.ticket_numbers || [];
+        const allPaid = ticketNums.length > 0 && ticketNums.every((num) => this.paidSet.has(num));
+        if (allPaid) {
+          this.clearPendingOrder();
+          return;
+        }
+
         this.activePendingOrder = data;
-        const ticketNums = data.order.ticket_numbers || [];
         for (const num of ticketNums) {
-          this.reservedSet.add(num);
+          if (!this.paidSet.has(num)) {
+            this.reservedSet.add(num);
+          }
         }
         this.renderPendingOrderBanner();
       } else {
-        localStorage.removeItem('boreal_pending_order_' + this.uuid);
+        this.clearPendingOrder();
       }
     } catch (_) {
-      localStorage.removeItem('boreal_pending_order_' + this.uuid);
+      this.clearPendingOrder();
     }
   }
 

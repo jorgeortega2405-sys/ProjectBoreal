@@ -52,6 +52,13 @@ export class ValidatePaymentController {
     }
 
     this.orders = await lookupOrdersApi(cleanPhone);
+    for (const order of this.orders) {
+      if (order.status === 'completed' && order.giveaway_uuid) {
+        try {
+          localStorage.removeItem('boreal_pending_order_' + order.giveaway_uuid);
+        } catch {}
+      }
+    }
     this.renderOrders();
     this.startCountdown();
   }
