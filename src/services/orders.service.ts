@@ -428,7 +428,7 @@ export async function attachReceipt(data: {
       throw new Error('ORDER_EXPIRED');
     }
 
-    const trackingKey = data.trackingKey?.trim() || null;
+    const trackingKey = data.trackingKey?.trim() ? data.trackingKey.trim().toUpperCase() : null;
     if (trackingKey) {
       const [existingOrder] = await conn.query<RowDataPacket[]>(
         `SELECT id FROM orders WHERE tracking_key = ? AND id != ? AND status IN ('completed', 'in_review') LIMIT 1`,
@@ -525,6 +525,9 @@ export async function attachReceipt(data: {
     await conn.rollback();
     if ((error as Error).message === 'ORDER_EXPIRED' || (error as Error).message === 'DUPLICATE_TRACKING_KEY') {
       throw error;
+    }
+    if ((error as any)?.code === 'ER_DUP_ENTRY') {
+      throw new Error('DUPLICATE_TRACKING_KEY');
     }
     logger.db.error('Error al asociar comprobante a la orden', error);
     throw new Error('Error al registrar el comprobante de pago');

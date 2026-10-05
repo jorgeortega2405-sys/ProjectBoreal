@@ -196,13 +196,19 @@ class ReceiptWorker:
                 return False
 
             validation = ReceiptParser.validate_against_order(parsed, order, bank_accounts)
-            tracking_key = validation.get("tracking_key") or order.get("tracking_key")
+            raw_tracking_key = validation.get("tracking_key") or order.get("tracking_key")
+            tracking_key = raw_tracking_key.strip().upper() if (raw_tracking_key and isinstance(raw_tracking_key, str)) else None
 
-            if tracking_key:
+            if not tracking_key:
+                validation["valid"] = False
+                validation["errors"].append(
+                    "Clave de rastreo no detectada en comprobante ni en orden. Se requiere clave de rastreo SPEI válida para certificar la liquidación en Banxico CEP."
+                )
+            else:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT id, uuid FROM orders
-                        WHERE tracking_key = %s AND id != %s AND status = 'completed'
+                        WHERE tracking_key = %s AND id != %s AND status IN ('completed', 'in_review')
                         LIMIT 1
                     """, (tracking_key, order_id))
                     duplicate = cur.fetchone()
@@ -210,7 +216,7 @@ class ReceiptWorker:
                         validation["valid"] = False
                         validation["fatal_error"] = True
                         validation["errors"].append(
-                            f"Clave de rastreo {tracking_key} ya fue liquidada en la orden {duplicate['uuid']} (Replay Attack prevenido)."
+                            f"Clave de rastreo {tracking_key} ya fue registrada o liquidada en la orden {duplicate['uuid']} (Replay Attack prevenido)."
                         )
 
             if validation.get("fatal_error"):
@@ -236,27 +242,36 @@ class ReceiptWorker:
                         "message": str(b_err)
                     }
 
-            if validation["valid"]:
-                is_liquidated_by_banxico = banxico_res and banxico_res.get("status") == "liquidated"
-                is_banxico_pending = banxico_res and banxico_res.get("status") in ("pending", "offline", "unreachable")
+            is_liquidated_by_banxico = bool(
+                banxico_res
+                and banxico_res.get("verified") is True
+                and banxico_res.get("status") == "liquidated"
+            )
 
-                if is_liquidated_by_banxico or not is_banxico_pending:
-                    self._approve_and_liquidate_order(order, conn, tracking_key, parsed, validation, banxico_res)
-                    return True
-                else:
-                    logger.info(f"[{order_uuid}] Comprobante válido pero Banxico en tránsito/offline ({banxico_res.get('status')}). Programando reintento...")
-                    self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res})
-                    return False
+            if validation["valid"] and tracking_key and is_liquidated_by_banxico:
+                self._approve_and_liquidate_order(order, conn, tracking_key, parsed, validation, banxico_res)
+                return True
+            elif validation["valid"] and tracking_key and banxico_res and banxico_res.get("status") in ("pending", "offline", "unreachable"):
+                logger.info(f"[{order_uuid}] Comprobante válido pero Banxico en tránsito/offline ({banxico_res.get('status')}). Programando reintento...")
+                self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res})
+                return False
             else:
                 current_attempts = order.get("queue_attempts", 0) + 1
                 max_attempts = order.get("queue_max_attempts", 6)
 
+                err_list = list(validation.get("errors", []))
+                if banxico_res and not is_liquidated_by_banxico and banxico_res.get("message"):
+                    err_list.append(f"Banxico CEP: {banxico_res.get('message')}")
+                elif not tracking_key:
+                    if not any("clave de rastreo" in e.lower() for e in err_list):
+                        err_list.append("Sin clave de rastreo SPEI válida.")
+
                 if current_attempts >= max_attempts:
-                    logger.warning(f"[{order_uuid}] Superó intentos máximos ({current_attempts}/{max_attempts}). Cancelando y liberando boletos.")
-                    self._cancel_and_release_order(order, conn, validation["errors"], parsed=parsed, banxico_res=banxico_res)
+                    logger.warning(f"[{order_uuid}] Superó intentos máximos ({current_attempts}/{max_attempts}) sin confirmación de liquidación Banxico. Cancelando y liberando boletos.")
+                    self._cancel_and_release_order(order, conn, err_list, parsed=parsed, banxico_res=banxico_res)
                     return False
                 else:
-                    logger.info(f"[{order_uuid}] Comprobante no concluyente (Intento {current_attempts}/{max_attempts}). Programando reintento...")
+                    logger.info(f"[{order_uuid}] Liquidación no confirmada por Banxico CEP (Intento {current_attempts}/{max_attempts}). Programando reintento...")
                     self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res})
                     return False
 
@@ -293,10 +308,10 @@ class ReceiptWorker:
 
             cur.execute("""
                 UPDATE spei_validation_queue
-                SET status = 'matched', last_checked_at = NOW(),
+                SET status = 'matched', tracking_key = %s, last_checked_at = NOW(),
                     banxico_response = %s
                 WHERE order_id = %s
-            """, (json.dumps({
+            """, (tracking_key, json.dumps({
                 "ocr_parsed": parsed,
                 "validation": validation,
                 "banxico": banxico_res

@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
   INDEX `idx_orders_status` (`status`),
   INDEX `idx_orders_expires_at` (`expires_at`),
   INDEX `idx_orders_status_expires` (`status`, `expires_at`),
-  INDEX `idx_orders_tracking_key` (`tracking_key`),
+  UNIQUE INDEX `idx_orders_tracking_key` (`tracking_key`),
   INDEX `idx_orders_is_winner` (`is_winner`),
   CONSTRAINT `fk_orders_giveaway` FOREIGN KEY (`giveaway_id`) REFERENCES `giveaways` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
