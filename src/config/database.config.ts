@@ -12,6 +12,7 @@ export const poolLottery = mysql.createPool({
   password: config.db.lottery.password,
   port: config.db.lottery.port,
   queueLimit: config.db.lottery.queueLimit,
+  timezone: 'Z',
   user: config.db.lottery.user,
   waitForConnections: true,
 });
@@ -26,11 +27,24 @@ export const poolIdentity = mysql.createPool({
   password: config.db.identity.password,
   port: config.db.identity.port,
   queueLimit: config.db.identity.queueLimit,
+  timezone: 'Z',
   user: config.db.identity.user,
   waitForConnections: true,
 });
 
 export const pool = poolLottery;
+
+poolLottery.on('connection', (connection: any) => {
+  connection.on('error', (err: any) => {
+    logger.db.warn('Error en socket de conexión MySQL (Lottery):', err);
+  });
+});
+
+poolIdentity.on('connection', (connection: any) => {
+  connection.on('error', (err: any) => {
+    logger.db.warn('Error en socket de conexión MySQL (Identity):', err);
+  });
+});
 
 export async function checkDbConnection(retries = 10, delayMs = 2000): Promise<void> {
   const poolsToCheck = [

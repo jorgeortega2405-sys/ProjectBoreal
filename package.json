@@ -15,6 +15,7 @@
     "build:admin": "tsc -p admin/tsconfig.server.json && vite build --config admin/vite.config.ts",
     "typecheck:admin": "tsc -p admin/tsconfig.server.json --noEmit && tsc -p admin/tsconfig.client.json --noEmit",
     "typecheck:all": "npm run typecheck && npm run typecheck:admin",
+    "worker:payment": "py payment_worker/main.py",
     "start": "node dist/index.js",
     "start:admin": "node admin/dist/index.js"
   },

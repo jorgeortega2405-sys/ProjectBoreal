@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { recordAudit } from '../services/audit.service.js';
+import { processBanxicoBatch } from '../services/banxico.service.js';
 import { logger } from '../services/logger.service.js';
 import { attachReceipt, getActiveBankAccounts, getOrderByUuid, getOrdersByPhone, reserveTickets } from '../services/orders.service.js';
 import { Order } from '../types/order.types.js';
@@ -381,6 +382,12 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
         success: false,
       });
       return;
+    }
+
+    if (trackingKey) {
+      void processBanxicoBatch().catch((batchErr) => {
+        logger.app.error('Error al procesar lote Banxico tras recepción de comprobante', batchErr);
+      });
     }
 
     res.status(200).json({

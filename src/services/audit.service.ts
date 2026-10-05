@@ -130,7 +130,7 @@ export async function recordAudit(input: CreateAuditLogInput): Promise<void> {
             order_uuid, created_at, id, uuid, order_id, customer_phone, customer_name,
             action, actor_type, ip_address, user_agent,
             previous_status, new_status, amount, currency, details
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         });
       }
 
@@ -158,7 +158,7 @@ export async function recordAudit(input: CreateAuditLogInput): Promise<void> {
             customer_phone, created_at, id, uuid, order_id, order_uuid, customer_name,
             action, actor_type, ip_address, user_agent,
             previous_status, new_status, amount, currency, details
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         });
       }
 

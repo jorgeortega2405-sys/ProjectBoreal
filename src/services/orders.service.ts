@@ -397,10 +397,12 @@ export async function attachReceipt(data: {
     await conn.beginTransaction();
 
     const [rows] = await conn.query<RowDataPacket[]>(
-      `SELECT id, uuid, giveaway_id, giveaway_uuid, customer_name, customer_phone,
-              ticket_count, ticket_numbers, total_amount, currency, status, expires_at
-       FROM orders
-       WHERE uuid = ?
+      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone,
+              o.ticket_count, o.ticket_numbers, o.total_amount, o.currency, o.status, o.expires_at,
+              g.uuid AS giveaway_uuid
+       FROM orders o
+       INNER JOIN giveaways g ON o.giveaway_id = g.id
+       WHERE o.uuid = ?
        LIMIT 1
        FOR UPDATE`,
       [data.orderUuid]

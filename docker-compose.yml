@@ -62,7 +62,19 @@ services:
       MAX_HEAP_SIZE: 512M
       HEAP_NEWSIZE: 128M
     volumes:
+      - ./database/db_cassandra.cql:/docker-entrypoint-initdb.d/db_cassandra.cql:ro
       - cassandra_data:/var/lib/cassandra
+    entrypoint:
+      - sh
+      - -c
+      - |
+        (
+          until cqlsh -e 'describe cluster' > /dev/null 2>&1; do sleep 3; done
+          echo 'Aplicando esquema CQL de auditoria en Cassandra...'
+          cqlsh -f /docker-entrypoint-initdb.d/db_cassandra.cql
+          echo 'Esquema CQL aplicado exitosamente.'
+        ) &
+        exec /usr/local/bin/docker-entrypoint.sh cassandra -f
     mem_limit: 2048m
     logging:
       driver: "json-file"
@@ -75,22 +87,6 @@ services:
       timeout: 10s
       retries: 10
       start_period: 40s
-
-  cassandra-init:
-    image: cassandra:4.1
-    container_name: boreal-cassandra-init
-    depends_on:
-      cassandra:
-        condition: service_healthy
-    volumes:
-      - ./database/db_cassandra.cql:/db_cassandra.cql:ro
-    command: ["sh", "-c", "echo 'Cargando esquema CQL en Cassandra...' && cqlsh cassandra 9042 -f /db_cassandra.cql && echo 'Esquema de auditoria aplicado con exito.'"]
-    restart: "no"
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   websocket:
     build:
@@ -109,6 +105,39 @@ services:
       redis:
         condition: service_healthy
     mem_limit: 256m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  payment-worker:
+    build:
+      context: ./payment_worker
+      dockerfile: Dockerfile
+    container_name: boreal-payment-worker
+    restart: unless-stopped
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: ${DB_LOTTERY_NAME:-db_lottery}
+      DB_USER: ${DB_USER:-sprite_user}
+      DB_PASSWORD: ${DB_PASSWORD:-sprite_password}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-boreal_redis_auth_key_2026!}
+      STORAGE_RECEIPTS_DIR: /app/storage/receipts
+      LOG_DIR: /app/logs/worker
+    volumes:
+      - ./payment_worker:/app
+      - ./storage/receipts:/app/storage/receipts
+      - ./logs/worker:/app/logs/worker
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 512m
     logging:
       driver: "json-file"
       options:

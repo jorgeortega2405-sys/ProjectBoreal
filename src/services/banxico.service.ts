@@ -34,36 +34,18 @@ export async function validateSpeiPayment(
   trackingKey: string,
   amount: number
 ): Promise<BanxicoVerificationResult> {
-  const isSandbox = config.nodeEnv !== 'production' && config.banxicoSandbox === true;
-
-  if (isSandbox) {
-    const cleanKey = trackingKey.trim().toUpperCase();
-    if (cleanKey.length >= 8 && amount > 0) {
-      return {
-        details: {
-          beneficiary: 'ProjectBoreal S.A. de C.V.',
-          checkedAt: new Date().toISOString(),
-          mode: 'sandbox_simulation',
-          receivedAmount: amount,
-          sourceBank: 'SPEI / Banxico',
-          trackingKey: cleanKey,
-        },
-        matched: true,
-        message: 'Transferencia SPEI liquidada y verificada exitosamente en Banxico.',
-        status: 'liquidated',
-      };
-    }
-
+  const cleanKey = trackingKey ? trackingKey.trim().toUpperCase() : '';
+  if (!cleanKey || amount <= 0) {
     return {
       matched: false,
-      message: 'Transferencia aún en tránsito en la red SPEI.',
-      status: 'pending',
+      message: 'Datos de transferencia o clave de rastreo incompletos.',
+      status: 'rejected',
     };
   }
 
   return {
     matched: false,
-    message: 'Servicio CEP Banxico en modo producción en espera de liquidación.',
+    message: 'En espera de verificación por el motor de análisis y Banxico CEP.',
     status: 'pending',
   };
 }
