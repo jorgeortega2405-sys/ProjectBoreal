@@ -67,8 +67,7 @@ export async function createBankAccountHandler(req: AuthenticatedAdminRequest, r
     res.status(201).json({ account: created, message: 'Cuenta bancaria registrada exitosamente.', success: true });
   } catch (error) {
     logger.app.error('Error en createBankAccountHandler', error);
-    const msg = error instanceof Error ? error.message : 'Error al registrar la cuenta bancaria.';
-    res.status(400).json({ error: msg });
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 
@@ -84,8 +83,7 @@ export async function updateBankAccountHandler(req: AuthenticatedAdminRequest, r
     res.status(200).json({ message: 'Cuenta bancaria actualizada exitosamente.', success: true });
   } catch (error) {
     logger.app.error(`Error al actualizar cuenta bancaria ${uuid}`, error);
-    const msg = error instanceof Error ? error.message : 'Error al actualizar la cuenta bancaria.';
-    res.status(400).json({ error: msg });
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 

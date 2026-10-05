@@ -43,8 +43,7 @@ export async function approveOrderHandler(req: AuthenticatedAdminRequest, res: R
     });
   } catch (error) {
     logger.app.error(`Error al aprobar orden ${uuid}`, error);
-    const msg = error instanceof Error ? error.message : 'Error al procesar la aprobación de la orden.';
-    res.status(400).json({ error: msg });
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 
@@ -73,8 +72,7 @@ export async function cancelOrderHandler(req: AuthenticatedAdminRequest, res: Re
     });
   } catch (error) {
     logger.app.error(`Error al cancelar orden ${uuid}`, error);
-    const msg = error instanceof Error ? error.message : 'Error al procesar la cancelación de la orden.';
-    res.status(400).json({ error: msg });
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 

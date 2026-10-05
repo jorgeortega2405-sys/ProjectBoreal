@@ -1,7 +1,8 @@
-import { AdminOrder, OrderStatus, SpeiQueueItem } from '../types/order.types.js';
-import { deleteCache, deleteCachePattern, publishGiveawayEvent } from '../config/redis.config.js';
-import { logger } from './logger.service.js';
 import { pool } from '../config/database.config.js';
+import { deleteCache, deleteCachePattern, publishGiveawayEvent } from '../config/redis.config.js';
+import { AdminOrder, OrderStatus, SpeiQueueItem } from '../types/order.types.js';
+import { logAdminAudit } from './auth.service.js';
+import { logger } from './logger.service.js';
 import crypto from 'crypto';
 import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
@@ -239,6 +240,26 @@ export async function approveAdminOrder(
 
     await conn.commit();
 
+    await logAdminAudit({
+      action: 'ORDER_APPROVED_MANUALLY',
+      adminUser,
+      amount: order.total_amount,
+      currency: order.currency,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      details: {
+        admin_email: adminUser.email,
+        admin_id: adminUser.id,
+        admin_name: adminUser.name,
+        ticket_count: order.ticket_count,
+        ticket_numbers: tickets,
+      },
+      newStatus: 'completed',
+      orderId: order.id,
+      orderUuid: order.uuid,
+      previousStatus: order.status,
+    });
+
     await deleteCache(`giveaway:${order.giveaway_uuid}:tickets`);
     await deleteCache(`giveaway:${order.giveaway_uuid}`);
     await deleteCache('giveaways:active');
@@ -404,8 +425,28 @@ export async function cancelAdminOrder(
         }),
       ]
     );
-
     await conn.commit();
+
+    await logAdminAudit({
+      action: 'ORDER_CANCELLED_MANUALLY',
+      adminUser,
+      amount: order.total_amount,
+      currency: order.currency,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      details: {
+        admin_email: adminUser.email,
+        admin_id: adminUser.id,
+        admin_name: adminUser.name,
+        reason: reason || 'Cancelado por el administrador',
+        ticket_count: order.ticket_count,
+        ticket_numbers: tickets,
+      },
+      newStatus: 'cancelled',
+      orderId: order.id,
+      orderUuid: order.uuid,
+      previousStatus: order.status,
+    });
 
     await deleteCache(`giveaway:${order.giveaway_uuid}:tickets`);
     await deleteCache(`giveaway:${order.giveaway_uuid}`);

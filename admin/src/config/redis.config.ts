@@ -6,6 +6,7 @@ export const redis = new Redis({
   host: config.redis.host,
   lazyConnect: true,
   maxRetriesPerRequest: 3,
+  password: config.redis.password,
   port: config.redis.port,
   retryStrategy(times) {
     return Math.min(times * 100, 2000);

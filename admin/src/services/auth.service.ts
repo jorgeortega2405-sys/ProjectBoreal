@@ -22,6 +22,9 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function createSessionToken(user: AdminSafeUser): string {
+  if (!config.sessionSecret) {
+    throw new Error('SESSION_SECRET no está configurado.');
+  }
   const now = Math.floor(Date.now() / 1000);
   const payload: AdminSessionPayload = {
     email: user.email,
@@ -39,11 +42,15 @@ export function createSessionToken(user: AdminSafeUser): string {
 
 export function verifySessionToken(token: string): AdminSessionPayload | null {
   try {
+    if (!config.sessionSecret) return null;
     const parts = token.split('.');
     if (parts.length !== 2) return null;
     const [payloadBase64, signature] = parts;
     const expectedSignature = crypto.createHmac('sha256', config.sessionSecret).update(payloadBase64).digest('base64url');
-    if (signature !== expectedSignature) return null;
+
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSignature);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return null;
 
     const payloadStr = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
     const payload = JSON.parse(payloadStr) as AdminSessionPayload;
@@ -93,10 +100,18 @@ export async function revokeSession(token: string): Promise<void> {
 
 export async function logAdminAudit(params: {
   action: string;
-  adminUser?: AdminSafeUser | null;
+  adminUser?: { email: string; id?: number; name?: string; uuid?: string } | null;
+  amount?: number | null;
+  currency?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
   details?: Record<string, unknown>;
-  ipAddress: string;
-  userAgent: string;
+  ipAddress?: string;
+  newStatus?: string | null;
+  orderId?: number | null;
+  orderUuid?: string | null;
+  previousStatus?: string | null;
+  userAgent?: string;
 }): Promise<void> {
   const auditUuid = crypto.randomUUID();
   const timeId = types.TimeUuid.now();
@@ -104,28 +119,31 @@ export async function logAdminAudit(params: {
   const bucketMonth = now.toISOString().slice(0, 7);
   const adminName = params.adminUser?.name || params.adminUser?.email || 'Admin';
   const detailsJson = params.details ? JSON.stringify(params.details) : null;
-  const ip = params.ipAddress.slice(0, 45);
-  const ua = params.userAgent.slice(0, 500);
+  const ip = (params.ipAddress || '127.0.0.1').slice(0, 45);
+  const ua = (params.userAgent || 'ProjectBoreal/Admin').slice(0, 500);
 
   try {
     if (isCassandraConnected) {
+      const orderIdVal = params.orderId ? types.Long.fromNumber(params.orderId) : null;
+      const amountVal = params.amount !== null && params.amount !== undefined ? types.BigDecimal.fromString(String(params.amount)) : null;
+
       const queries = [
         {
           params: [
             auditUuid,
             timeId,
-            null,
-            null,
-            null,
-            adminName,
+            orderIdVal,
+            params.orderUuid ?? null,
+            params.customerPhone ?? null,
+            params.customerName ?? null,
             params.action,
             'admin',
             ip,
             ua,
-            null,
-            null,
-            null,
-            null,
+            params.previousStatus ?? null,
+            params.newStatus ?? null,
+            amountVal,
+            params.currency ?? null,
             detailsJson,
             now,
           ],
@@ -141,18 +159,18 @@ export async function logAdminAudit(params: {
             now,
             timeId,
             auditUuid,
-            null,
-            null,
-            null,
-            adminName,
+            orderIdVal,
+            params.orderUuid ?? null,
+            params.customerPhone ?? null,
+            params.customerName ?? null,
             params.action,
             'admin',
             ip,
             ua,
-            null,
-            null,
-            null,
-            null,
+            params.previousStatus ?? null,
+            params.newStatus ?? null,
+            amountVal,
+            params.currency ?? null,
             detailsJson,
           ],
           query: `INSERT INTO audit_logs_timeline (

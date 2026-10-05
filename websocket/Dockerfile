@@ -26,7 +26,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=builder /app/target/release/projectboreal-websocket /app/projectboreal-websocket
 
 ENV PORT=3005
-ENV REDIS_URL=redis://spriteboard-redis:6379
+ENV REDIS_HOST=boreal-redis
+ENV REDIS_PORT=6379
 EXPOSE 3005
 
 CMD ["/app/projectboreal-websocket"]

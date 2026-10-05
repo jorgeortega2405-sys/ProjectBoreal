@@ -15,6 +15,7 @@ export interface AdminSafeUser {
   email: string;
   id: number;
   name: string;
+  permissions?: string[];
   uuid: string;
 }
 

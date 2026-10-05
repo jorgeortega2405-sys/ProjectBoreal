@@ -46,7 +46,14 @@ async fn main() {
         .parse::<u16>()
         .unwrap_or(3005);
 
-    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+    let redis_url = env::var("REDIS_URL").unwrap_or_else(|_| {
+        let host = env::var("REDIS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+        let port = env::var("REDIS_PORT").unwrap_or_else(|_| "6379".to_string());
+        match env::var("REDIS_PASSWORD") {
+            Ok(pass) if !pass.trim().is_empty() => format!("redis://:{}@{}:{}", pass.trim(), host, port),
+            _ => format!("redis://{}:{}", host, port),
+        }
+    });
 
     let state = AppState {
         clients: Arc::new(RwLock::new(HashMap::new())),
