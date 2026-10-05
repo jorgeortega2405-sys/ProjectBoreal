@@ -1,13 +1,14 @@
 import { navigate } from '../app-router.js';
 import { openModal } from '../components/modal.component.js';
 import { fetchGiveawayDetail, fetchGiveawayTickets } from '../services/giveaways.service.js';
-import { t } from '../services/i18n.service.js';
+import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { reserveTicketsApi } from '../services/orders.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { onWebSocketEvent } from '../services/websocket.service.js';
 import { Giveaway } from '../types/giveaway.types.js';
 import { BankAccount, Order } from '../types/order.types.js';
+import { formatCurrency, formatNumber } from '../utils/number.util.js';
 import { formatMexicanPhone, normalizeMexicanPhone } from '../utils/phone.util.js';
 
 function escapeHtml(str: string | null | undefined): string {
@@ -18,6 +19,17 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function formatShortDate(dateStr: string, lang = 'es-419'): string {
+  const clean = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return dateStr;
+  const locale = lang.startsWith('en') ? 'en-US' : 'es-MX';
+  const day = d.getDate();
+  const monthName = d.toLocaleDateString(locale, { month: 'short' });
+  const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', '');
+  return `${day} ${capitalizedMonth}`;
 }
 
 const COUNTRY_LADAS = [
@@ -266,6 +278,9 @@ export class GiveawayDetailController {
     const winnerTicketEl = this.container.querySelector<HTMLElement>('[data-ref="winner-ticket-display"]');
     const buyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-buy-giveaway"]');
 
+    const upcomingBanner = this.container.querySelector<HTMLElement>('[data-ref="banner-upcoming"]');
+    const upcomingBannerText = this.container.querySelector<HTMLElement>('[data-ref="banner-upcoming-text"]');
+
     if (g.status === 'completed') {
       if (timerText) timerText.textContent = t('giveaway.status_completed');
       if (timerBadge) {
@@ -275,6 +290,10 @@ export class GiveawayDetailController {
       if (closedBanner) {
         closedBanner.classList.add('is-hidden');
         closedBanner.style.display = 'none';
+      }
+      if (upcomingBanner) {
+        upcomingBanner.classList.add('is-hidden');
+        upcomingBanner.style.display = 'none';
       }
       if (winnerBanner) {
         winnerBanner.classList.remove('is-hidden');
@@ -290,6 +309,49 @@ export class GiveawayDetailController {
       }
       this.disablePurchaseControls(true);
       return;
+    }
+
+    const now = Date.now();
+    const startClean = g.start_date ? (g.start_date.includes('T') ? g.start_date : g.start_date.replace(' ', 'T')) : '';
+    const startMs = startClean ? new Date(startClean).getTime() : 0;
+    const isUpcoming = !isNaN(startMs) && startMs > now;
+
+    if (isUpcoming) {
+      const dateText = formatShortDate(g.start_date, getCurrentLanguage());
+      if (timerText) {
+        timerText.textContent = t('giveaway.upcoming_badge', { date: dateText });
+      }
+      if (timerBadge) {
+        timerBadge.classList.remove('giveaway-badge--warning', 'giveaway-badge--danger');
+      }
+      if (closedBanner) {
+        closedBanner.classList.add('is-hidden');
+        closedBanner.style.display = 'none';
+      }
+      if (upcomingBanner) {
+        upcomingBanner.classList.remove('is-hidden');
+        upcomingBanner.style.display = 'block';
+        if (upcomingBannerText) {
+          upcomingBannerText.textContent = t('giveaway.upcoming_banner', { date: dateText });
+        }
+      }
+      if (winnerBanner) {
+        winnerBanner.classList.add('is-hidden');
+        winnerBanner.style.display = 'none';
+      }
+      if (buyBtn) {
+        buyBtn.disabled = true;
+        buyBtn.classList.add('is-disabled');
+        const text = buyBtn.querySelector('span');
+        if (text) text.textContent = t('giveaway.upcoming_btn', { date: dateText });
+      }
+      this.disablePurchaseControls(true);
+      return;
+    }
+
+    if (upcomingBanner) {
+      upcomingBanner.classList.add('is-hidden');
+      upcomingBanner.style.display = 'none';
     }
 
     if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
@@ -309,6 +371,13 @@ export class GiveawayDetailController {
       if (winnerBanner) {
         winnerBanner.classList.add('is-hidden');
         winnerBanner.style.display = 'none';
+      }
+      this.disablePurchaseControls(false);
+      if (buyBtn) {
+        buyBtn.disabled = this.selectedTickets.size === 0;
+        buyBtn.classList.toggle('is-disabled', this.selectedTickets.size === 0);
+        const text = buyBtn.querySelector('span');
+        if (text) text.textContent = t('giveaway.buy_now');
       }
       return;
     }
@@ -499,12 +568,32 @@ export class GiveawayDetailController {
     if (descEl) descEl.textContent = g.description || '';
 
     const priceEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-price-value"]');
-    if (priceEl) priceEl.textContent = `$${g.ticket_price.toFixed(2)} ${g.currency || 'MXN'}`;
+    if (priceEl) priceEl.textContent = formatCurrency(g.ticket_price, g.currency || 'MXN');
+
+    const statusBadgeEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-status-badge"]');
+    const now = Date.now();
+    const startClean = g.start_date ? (g.start_date.includes('T') ? g.start_date : g.start_date.replace(' ', 'T')) : '';
+    const startMs = startClean ? new Date(startClean).getTime() : 0;
+    const isUpcoming = !isNaN(startMs) && startMs > now;
+
+    if (statusBadgeEl) {
+      if (g.status === 'completed') {
+        statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.completed_badge'))}</span>`;
+      } else if (isUpcoming) {
+        statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.upcoming_status'))}</span>`;
+      } else {
+        statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.active_badge'))}</span>`;
+      }
+    }
 
     const drawBadgeEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-draw-date-badge"]');
     const dateTextEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-draw-date-text"]');
     if (drawBadgeEl && dateTextEl) {
-      if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
+      if (isUpcoming) {
+        drawBadgeEl.style.display = 'inline-flex';
+        const dateText = formatShortDate(g.start_date, getCurrentLanguage());
+        dateTextEl.textContent = t('giveaway.upcoming_badge', { date: dateText });
+      } else if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
         drawBadgeEl.style.display = 'inline-flex';
         dateTextEl.textContent = t('home.threshold_target', { target: g.min_threshold_pct });
       } else if (g.draw_date) {
@@ -526,10 +615,12 @@ export class GiveawayDetailController {
 
     const progressTextEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-progress-text"]');
     if (progressTextEl) {
+      const formattedAvailable = formatNumber(available);
+      const formattedTotal = formatNumber(total);
       if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
-        progressTextEl.textContent = `${t('giveaway.tickets_progress', { available, total })} • ${t('home.threshold_target', { target: g.min_threshold_pct })}`;
+        progressTextEl.textContent = `${t('giveaway.tickets_progress', { available: formattedAvailable, total: formattedTotal })} • ${t('home.threshold_target', { target: g.min_threshold_pct })}`;
       } else {
-        progressTextEl.textContent = t('giveaway.tickets_progress', { available, total });
+        progressTextEl.textContent = t('giveaway.tickets_progress', { available: formattedAvailable, total: formattedTotal });
       }
     }
 
@@ -695,7 +786,7 @@ export class GiveawayDetailController {
 
     banner.classList.remove('is-hidden');
     if (summaryEl) {
-      summaryEl.textContent = `${order.ticket_count} boletos apartados ($${order.total_amount.toFixed(2)} ${order.currency})`;
+      summaryEl.textContent = `${formatNumber(order.ticket_count)} boletos apartados (${formatCurrency(order.total_amount, order.currency)})`;
     }
 
     this.stopPendingOrderTimer();
@@ -863,12 +954,13 @@ export class GiveawayDetailController {
   private updateSummary(): void {
     if (!this.giveaway) return;
     const count = this.selectedTickets.size;
-    const total = (count * this.giveaway.ticket_price).toFixed(2);
+    const totalAmount = count * this.giveaway.ticket_price;
+    const total = formatNumber(totalAmount, { decimals: 2 });
     const currency = this.giveaway.currency || 'MXN';
 
     const countEl = this.container.querySelector<HTMLElement>('[data-ref="summary-selected-count"]');
     if (countEl) {
-      countEl.textContent = t('giveaway.selected_summary', { count });
+      countEl.textContent = t('giveaway.selected_summary', { count: formatNumber(count) });
     }
 
     const priceEl = this.container.querySelector<HTMLElement>('[data-ref="summary-subtotal-price"]');
@@ -879,10 +971,10 @@ export class GiveawayDetailController {
     const triggerText = this.container.querySelector<HTMLElement>('[data-ref="quantity-selected-text"]');
     const triggerPrice = this.container.querySelector<HTMLElement>('[data-ref="quantity-selected-price"]');
     if (triggerText) {
-      triggerText.textContent = count === 1 ? '1 boleto' : `${count} boletos`;
+      triggerText.textContent = count === 1 ? '1 boleto' : `${formatNumber(count)} boletos`;
     }
     if (triggerPrice) {
-      triggerPrice.textContent = `$${total} ${currency}`;
+      triggerPrice.textContent = formatCurrency(totalAmount, currency);
     }
 
     const options = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="list-quantities"] .menu-item');
@@ -921,15 +1013,15 @@ export class GiveawayDetailController {
 
     listEl.innerHTML = options
       .map((qty) => {
-        const subtotal = (qty * price).toFixed(2);
-        const qtyLabel = qty === 1 ? '1 boleto' : `${qty} boletos`;
+        const subtotal = formatCurrency(qty * price, currency);
+        const qtyLabel = qty === 1 ? '1 boleto' : `${formatNumber(qty)} boletos`;
         const disabledAttr = isClosed ? 'disabled' : '';
         const disabledClass = isClosed ? 'is-disabled' : '';
         return `
           <button type="button" class="menu-item ${disabledClass}" ${disabledAttr} data-ref="option-qty-${qty}" data-qty="${qty}">
             <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
             <span class="menu-item__text">${qtyLabel}</span>
-            <span class="menu-item__subtext">$${subtotal} ${currency}</span>
+            <span class="menu-item__subtext">${subtotal}</span>
           </button>
         `;
       })
@@ -1299,7 +1391,7 @@ export class GiveawayDetailController {
     }
 
     const count = this.selectedTickets.size;
-    const total = (count * this.giveaway.ticket_price).toFixed(2);
+    const totalAmount = count * this.giveaway.ticket_price;
     const currency = this.giveaway.currency || 'MXN';
     const ticketList = Array.from(this.selectedTickets)
       .map((n) => `<span class="giveaway-ticket giveaway-ticket--chip is-selected" data-ref="chip-ticket-${n}">#${n.toString().padStart(3, '0')}</span>`)
@@ -1370,8 +1462,8 @@ export class GiveawayDetailController {
 
         <div class="modal-reservation-summary" data-ref="reservation-summary">
           <div class="modal-reservation-summary__row" data-ref="summary-row">
-            <span class="modal-reservation-summary__label" data-ref="summary-label">${count} boletos seleccionados:</span>
-            <span class="modal-reservation-summary__total" data-ref="summary-total">$${total} ${currency}</span>
+            <span class="modal-reservation-summary__label" data-ref="summary-label">${count === 1 ? '1 boleto seleccionado' : `${formatNumber(count)} boletos seleccionados`}:</span>
+            <span class="modal-reservation-summary__total" data-ref="summary-total">${formatCurrency(totalAmount, currency)}</span>
           </div>
           <div class="modal-reservation-summary__tickets" data-ref="summary-tickets">
             ${ticketList}
@@ -1591,7 +1683,7 @@ export class GiveawayDetailController {
           <div class="modal-info-stat-card" data-ref="card-amount-to-pay">
             <div class="modal-info-stat-card__text" data-ref="text-amount-to-pay">
               <span class="modal-info-stat-card__label" data-ref="label-amount-to-pay">${t('orders.amount_to_pay')}</span>
-              <span class="modal-info-stat-card__val" data-ref="val-amount-to-pay">$${order.total_amount.toFixed(2)} ${order.currency}</span>
+              <span class="modal-info-stat-card__val" data-ref="val-amount-to-pay">${formatCurrency(order.total_amount, order.currency)}</span>
             </div>
             <button type="button" class="component-button component-button--ghost component-button--h32 component-button--icon-only modal-copy-btn" data-ref="btn-copy-amount" data-tooltip="${t('orders.copy_amount')}" data-copy-val="${order.total_amount.toFixed(2)}">
               <svg class="component-icon" data-ref="copy-amount-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>

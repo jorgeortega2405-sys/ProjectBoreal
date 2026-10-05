@@ -1,11 +1,55 @@
 import { navigate } from '../app-router.js';
 import { getGiveawayCategory, renderPrizeCategoryBadgesHtml } from '../config/prize-categories.config.js';
 import { fetchActiveGiveaways } from '../services/giveaways.service.js';
-import { t } from '../services/i18n.service.js';
+import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { onWebSocketEvent } from '../services/websocket.service.js';
 import { Giveaway } from '../types/giveaway.types.js';
+import { formatCurrency, formatNumber } from '../utils/number.util.js';
+
+function sortGiveaways(list: Giveaway[]): Giveaway[] {
+  const now = Date.now();
+  const parseMs = (d: string | null | undefined): number => {
+    if (!d) return 0;
+    const clean = d.includes('T') ? d : d.replace(' ', 'T');
+    const t = new Date(clean).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
+  return [...list].sort((a, b) => {
+    const aCompleted = a.status === 'completed';
+    const bCompleted = b.status === 'completed';
+    if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+
+    const aStart = parseMs(a.start_date);
+    const bStart = parseMs(b.start_date);
+    const aIsUpcoming = aStart > now;
+    const bIsUpcoming = bStart > now;
+
+    if (aIsUpcoming !== bIsUpcoming) {
+      return aIsUpcoming ? 1 : -1;
+    }
+
+    if (!aIsUpcoming && !bIsUpcoming) {
+      const aCountdown = Boolean(a.threshold_reached_at);
+      const bCountdown = Boolean(b.threshold_reached_at);
+      if (aCountdown !== bCountdown) return aCountdown ? -1 : 1;
+
+      const aEnd = parseMs(a.end_date);
+      const bEnd = parseMs(b.end_date);
+      if (aEnd !== bEnd) return aEnd - bEnd;
+    }
+
+    if (aIsUpcoming && bIsUpcoming) {
+      if (aStart !== bStart) return aStart - bStart;
+    }
+
+    const aEnd = parseMs(a.end_date);
+    const bEnd = parseMs(b.end_date);
+    return aEnd - bEnd;
+  });
+}
 
 function escapeHtml(str: string | null | undefined): string {
   if (!str) return '';
@@ -15,6 +59,17 @@ function escapeHtml(str: string | null | undefined): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function formatShortDate(dateStr: string, lang = 'es-419'): string {
+  const clean = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+  const d = new Date(clean);
+  if (isNaN(d.getTime())) return dateStr;
+  const locale = lang.startsWith('en') ? 'en-US' : 'es-MX';
+  const day = d.getDate();
+  const monthName = d.toLocaleDateString(locale, { month: 'short' });
+  const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', '');
+  return `${day} ${capitalizedMonth}`;
 }
 
 function computeThresholdBadge(item: Giveaway): string | null {
@@ -38,8 +93,29 @@ function computeTimerInfo(item: Giveaway): { isEnded: boolean; text: string } {
     };
   }
 
-  const endMs = new Date(item.end_date).getTime();
-  const diff = endMs - Date.now();
+  const now = Date.now();
+  if (item.start_date) {
+    const startClean = item.start_date.includes('T') ? item.start_date : item.start_date.replace(' ', 'T');
+    const startMs = new Date(startClean).getTime();
+    if (!isNaN(startMs) && startMs > now) {
+      const dateText = formatShortDate(item.start_date, getCurrentLanguage());
+      return {
+        isEnded: false,
+        text: t('home.upcoming_badge', { date: dateText }),
+      };
+    }
+  }
+
+  if (item.min_threshold_pct > 0 && !item.threshold_reached_at) {
+    return {
+      isEnded: false,
+      text: t('home.threshold_timer_pending', { target: item.min_threshold_pct }),
+    };
+  }
+
+  const endClean = item.end_date.includes('T') ? item.end_date : item.end_date.replace(' ', 'T');
+  const endMs = new Date(endClean).getTime();
+  const diff = endMs - now;
 
   if (diff <= 0) {
     return {
@@ -185,7 +261,7 @@ export class HomeController {
 
   private filterGiveaways(): void {
     const query = this.searchQuery.trim().toLowerCase();
-    this.filteredGiveaways = this.giveaways.filter((g) => {
+    const filtered = this.giveaways.filter((g) => {
       const matchesSearch = !query ||
         g.title.toLowerCase().includes(query) ||
         Boolean(g.description && g.description.toLowerCase().includes(query));
@@ -195,6 +271,7 @@ export class HomeController {
 
       return matchesSearch && matchesCategory;
     });
+    this.filteredGiveaways = sortGiveaways(filtered);
     this.renderGiveaways(this.filteredGiveaways);
   }
 
@@ -269,12 +346,20 @@ export class HomeController {
 
   private updateTimers(): void {
     let hasEndingGiveaways = false;
+    const now = Date.now();
     for (const item of this.filteredGiveaways) {
       const badge = this.container.querySelector<HTMLElement>(`[data-ref="card-timer-${item.uuid}"]`);
       if (!badge) continue;
       const info = computeTimerInfo(item);
       badge.textContent = info.text;
-      if (item.status === 'active' && new Date(item.end_date).getTime() <= Date.now()) {
+
+      const isUpcoming = Boolean(
+        item.start_date &&
+        new Date(item.start_date.includes('T') ? item.start_date : item.start_date.replace(' ', 'T')).getTime() > now
+      );
+      const isThresholdPending = item.min_threshold_pct > 0 && !item.threshold_reached_at;
+
+      if (!isUpcoming && !isThresholdPending && item.status === 'active' && new Date(item.end_date).getTime() <= now) {
         hasEndingGiveaways = true;
       }
     }
@@ -321,7 +406,7 @@ export class HomeController {
       .map((item) => {
         const ticketsLeft = item.status === 'completed'
           ? t('home.completed_badge')
-          : t('home.tickets_left', { count: item.available_tickets });
+          : t('home.tickets_left', { count: formatNumber(item.available_tickets) });
         const timerInfo = computeTimerInfo(item);
         const thresholdText = computeThresholdBadge(item);
         const category = getGiveawayCategory(item);
@@ -331,7 +416,7 @@ export class HomeController {
           ? t('home.view_winner_btn')
           : isSalesClosed
             ? t('giveaway.sales_closed_btn')
-            : `$${item.ticket_price.toFixed(2)} ${currency}`;
+            : formatCurrency(item.ticket_price, currency);
 
         const thresholdBadgeHtml = thresholdText
           ? `<div class="giveaway-card__meta-badge" data-ref="card-meta-${item.uuid}">${escapeHtml(thresholdText)}</div>`

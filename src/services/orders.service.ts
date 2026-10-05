@@ -84,8 +84,9 @@ export async function reserveTickets(data: {
     await conn.beginTransaction();
 
     const [giveaways] = await conn.query<RowDataPacket[]>(
-      `SELECT id, title, ticket_price, currency, status, total_tickets, end_date,
-              (NOW() >= DATE_SUB(end_date, INTERVAL 1 HOUR)) AS is_sales_closed
+      `SELECT id, title, ticket_price, currency, status, total_tickets, end_date, start_date, min_threshold_pct, threshold_reached_at,
+              (NOW() >= DATE_SUB(end_date, INTERVAL 1 HOUR)) AS is_sales_closed,
+              (start_date IS NOT NULL AND NOW() < start_date) AS is_not_started
        FROM giveaways
        WHERE uuid = ?
        LIMIT 1
@@ -104,7 +105,16 @@ export async function reserveTickets(data: {
       return { bankAccounts: [], success: false };
     }
 
-    if (Boolean(giveaway.is_sales_closed)) {
+    if (Boolean(giveaway.is_not_started)) {
+      await conn.rollback();
+      return {
+        bankAccounts: [],
+        error: 'La venta de boletos aún no ha comenzado para este sorteo.',
+        success: false,
+      };
+    }
+
+    if (Boolean(giveaway.is_sales_closed) && (giveaway.min_threshold_pct === 0 || Boolean(giveaway.threshold_reached_at))) {
       await conn.rollback();
       return {
         bankAccounts: [],

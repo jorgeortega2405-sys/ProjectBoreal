@@ -29,7 +29,19 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
        WHERE status = 'active' 
           OR (status = 'completed' AND end_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR))
        ORDER BY 
-          CASE WHEN status = 'active' THEN 0 ELSE 1 END,
+          CASE 
+            WHEN status = 'active' AND (start_date IS NULL OR start_date <= NOW()) THEN 0
+            WHEN status = 'active' AND start_date > NOW() THEN 1
+            ELSE 2 
+          END ASC,
+          CASE 
+            WHEN status = 'active' AND (start_date IS NULL OR start_date <= NOW()) AND threshold_reached_at IS NOT NULL THEN end_date
+            ELSE NULL
+          END ASC,
+          CASE 
+            WHEN status = 'active' AND start_date > NOW() THEN start_date
+            ELSE NULL
+          END ASC,
           end_date ASC`
     );
 

@@ -47,71 +47,6 @@ CREATE TABLE IF NOT EXISTS `giveaways` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- Datos Semilla de Sorteos
--- ============================================================================
-INSERT INTO `giveaways` (
-  `id`, `uuid`, `title`, `slug`, `description`, `primary_image_url`, `image_urls`, `ticket_price`, `total_tickets`, `available_tickets`, `currency`, `status`, `start_date`, `end_date`, `min_threshold_pct`, `countdown_hours`, `threshold_reached_at`, `winner_ticket_number`, `winner_name`, `winner_announced_at`
-) VALUES
-(
-  1,
-  'e7b1a2c3-4d5e-6f7a-8b9c-0d1e2f3a4b5c',
-  'Gran Sorteo $1,000,000 MXN en Efectivo',
-  'sorteo-1-millon-mxn-en-efectivo',
-  '¡Llévate $1,000,000 de pesos en efectivo directo a tu cuenta bancaria! Emisión limitada de 100,000 boletos del 00000 al 99999. Selección 100% transparente y aleatoria por sistema.',
-  'https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=800&q=80',
-  '["https://images.unsplash.com/photo-1580519542036-c47de6196ba5?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1567427017947-545c5f8d16ad?auto=format&fit=crop&w=800&q=80"]',
-  10.00,
-  100000,
-  100000,
-  'MXN',
-  'active',
-  NOW(),
-  DATE_ADD(NOW(), INTERVAL 7 DAY),
-  0,
-  48,
-  NULL,
-  NULL,
-  NULL,
-  NULL
-),
-(
-  2,
-  'f8c2b3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
-  'Sorteo de Inauguración: Ford Mustang GT 2025',
-  'sorteo-inauguracion-ford-mustang-gt-2025',
-  '¡Entrega oficial realizada con éxito ante Fe Pública! Ford Mustang GT V8 2025 entregado con tanque lleno y seguro pagado por 1 año al poseedor del boleto premiado.',
-  'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?auto=format&fit=crop&w=800&q=80',
-  '["https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"]',
-  25.00,
-  50000,
-  0,
-  'MXN',
-  'completed',
-  DATE_SUB(NOW(), INTERVAL 30 DAY),
-  DATE_SUB(NOW(), INTERVAL 2 DAY),
-  0,
-  48,
-  DATE_SUB(NOW(), INTERVAL 2 DAY),
-  41280,
-  'CARLOS MENDOZA VILLARREAL',
-  DATE_SUB(NOW(), INTERVAL 2 DAY)
-)
-ON DUPLICATE KEY UPDATE
-  `title` = VALUES(`title`),
-  `description` = VALUES(`description`),
-  `image_urls` = VALUES(`image_urls`),
-  `ticket_price` = VALUES(`ticket_price`),
-  `total_tickets` = VALUES(`total_tickets`),
-  `available_tickets` = VALUES(`available_tickets`),
-  `min_threshold_pct` = VALUES(`min_threshold_pct`),
-  `countdown_hours` = VALUES(`countdown_hours`),
-  `threshold_reached_at` = VALUES(`threshold_reached_at`),
-  `end_date` = VALUES(`end_date`),
-  `winner_ticket_number` = VALUES(`winner_ticket_number`),
-  `winner_name` = VALUES(`winner_name`),
-  `winner_announced_at` = VALUES(`winner_announced_at`);
-
--- ============================================================================
 -- Tabla de Órdenes y Apartados de Boletos
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS `orders` (
@@ -205,11 +140,6 @@ CREATE TABLE IF NOT EXISTS `giveaway_bank_accounts` (
   CONSTRAINT `fk_gba_giveaway` FOREIGN KEY (`giveaway_id`) REFERENCES `giveaways` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_gba_bank_account` FOREIGN KEY (`bank_account_id`) REFERENCES `bank_accounts` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `giveaway_bank_accounts` (`giveaway_id`, `bank_account_id`, `is_active`)
-VALUES
-(1, 1, 1)
-ON DUPLICATE KEY UPDATE `is_active` = VALUES(`is_active`);
 
 -- ============================================================================
 -- Cola de Validación SPEI Banxico por Lotes

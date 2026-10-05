@@ -15,17 +15,9 @@ export async function fetchActiveGiveaways(): Promise<Giveaway[]> {
 
 export async function fetchWinnersGiveaways(): Promise<WinnerGiveawayItem[]> {
   try {
-    const res = await fetch('/api/giveaways/winners');
+    const res = await fetch('/api/giveaways');
     if (res.ok) {
       const json = await res.json();
-      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-        return json.data as WinnerGiveawayItem[];
-      }
-    }
-
-    const fallbackRes = await fetch('/api/giveaways');
-    if (fallbackRes.ok) {
-      const json = await fallbackRes.json();
       if (json.success && Array.isArray(json.data)) {
         const completed: WinnerGiveawayItem[] = json.data
           .filter((g: Giveaway) => g.status === 'completed' && g.winner_ticket_number !== null && g.winner_ticket_number !== undefined)

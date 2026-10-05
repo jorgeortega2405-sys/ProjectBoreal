@@ -4,6 +4,7 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { WinnerGiveawayItem } from '../types/giveaway.types.js';
+import { formatNumber } from '../utils/number.util.js';
 
 function escapeHtml(str: string | null | undefined): string {
   if (!str) return '';
@@ -94,10 +95,10 @@ export class WinnersView {
       'click',
       (e) => {
         const target = e.target as HTMLElement | null;
-        const btn = target?.closest<HTMLButtonElement>('[data-giveaway-uuid]');
-        if (btn) {
+        const card = target?.closest<HTMLElement>('.canvas-card');
+        if (card) {
           e.preventDefault();
-          const uuid = btn.dataset.giveawayUuid;
+          const uuid = card.dataset.uuid;
           if (uuid) {
             navigate(`/s/${uuid}`);
           }
@@ -173,50 +174,30 @@ export class WinnersView {
       const imgUrl = item.primary_image_url || (item.image_urls && item.image_urls[0]) || '/images/card-fallback.jpg';
       const formattedDate = formatDate(item.winner_announced_at || item.draw_date || item.end_date);
       const winnerName = item.winner_name || t('winners.official_winner');
-      const ticketNum = item.winner_ticket_number !== null ? `#${item.winner_ticket_number}` : 'N/A';
+      const ticketNum = item.winner_ticket_number !== null ? `#${formatNumber(item.winner_ticket_number)}` : 'N/A';
       const location = item.customer_state ? escapeHtml(item.customer_state) : 'México';
 
       html += `
-        <article class="winner-delivery-card" data-ref="card-winner-${item.uuid}">
-          <div class="winner-delivery-card__media">
-            <img class="winner-delivery-card__img" src="${escapeHtml(imgUrl)}" alt="${escapeHtml(item.title)}" loading="lazy" />
-            <span class="winner-delivery-card__verified-badge">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-              <span>${escapeHtml(t('winners.verified_badge'))}</span>
-            </span>
-            ${formattedDate ? `<span class="winner-delivery-card__date-badge">${escapeHtml(formattedDate)}</span>` : ''}
-          </div>
-
-          <div class="winner-delivery-card__body">
-            <h2 class="winner-delivery-card__title">${escapeHtml(item.title)}</h2>
-
-            <div class="winner-delivery-card__winner-strip">
-              <div class="winner-delivery-card__winner-info">
-                <span class="winner-delivery-card__winner-label">${escapeHtml(t('winners.winner_label'))}</span>
-                <span class="winner-delivery-card__winner-name" title="${escapeHtml(winnerName)}">${escapeHtml(winnerName)}</span>
-              </div>
-              <div class="winner-delivery-card__ticket-box">
-                <span class="winner-delivery-card__ticket-label">${escapeHtml(t('winners.ticket_label'))}</span>
-                <span class="winner-delivery-card__ticket-pill">${escapeHtml(ticketNum)}</span>
-              </div>
+        <div class="canvas-card" data-ref="card-winner-${item.uuid}" data-uuid="${escapeHtml(item.uuid)}">
+          <div class="canvas-card__thumbnail">
+            <img class="canvas-card__image" data-ref="card-img-${item.uuid}" src="${escapeHtml(imgUrl)}" alt="${escapeHtml(item.title)}" loading="lazy" />
+            <div class="giveaway-card__meta-badge" data-ref="card-ticket-${item.uuid}">${escapeHtml(ticketNum)}</div>
+            <span class="canvas-card__btn-sync" data-ref="card-btn-sync-${item.uuid}">${escapeHtml(t('winners.view_giveaway'))}</span>
+            <div class="giveaway-card__timer-badge" data-ref="card-winner-badge-${item.uuid}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#emoji_events"></use></svg>
+              <span>${escapeHtml(winnerName)}</span>
             </div>
-
-            <div class="winner-delivery-card__meta">
-              <span class="winner-delivery-card__location">
+          </div>
+          <div class="canvas-card__info">
+            <h3 class="canvas-card__name" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
+            <div class="canvas-card__meta">
+              <span class="canvas-card__category-icon" title="${escapeHtml(location)}" aria-label="${escapeHtml(location)}">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#location_on"></use></svg>
-                <span>${location}</span>
               </span>
-              <span>${item.total_tickets.toLocaleString('es-MX')} boletos emitidos</span>
-            </div>
-
-            <div class="winner-delivery-card__actions">
-              <button type="button" class="component-button component-button--black component-button--h36 component-button--w-full" data-ref="btn-view-giveaway-${item.uuid}" data-giveaway-uuid="${escapeHtml(item.uuid)}">
-                <span>${escapeHtml(t('winners.view_giveaway'))}</span>
-                <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-              </button>
+              <span>${escapeHtml(location)}${formattedDate ? ` • ${escapeHtml(formattedDate)}` : ''}</span>
             </div>
           </div>
-        </article>
+        </div>
       `;
     }
 

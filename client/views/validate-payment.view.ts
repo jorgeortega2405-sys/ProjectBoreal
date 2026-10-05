@@ -4,6 +4,7 @@ import { lookupOrdersApi, uploadReceiptApi } from '../services/orders.service.js
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { Order } from '../types/order.types.js';
+import { formatCurrency, formatNumber } from '../utils/number.util.js';
 import { formatMexicanPhone, normalizeMexicanPhone } from '../utils/phone.util.js';
 
 function escapeHtml(str: string | null | undefined): string {
@@ -183,7 +184,7 @@ export class ValidatePaymentController {
             </div>
 
             <div class="validate-order-card__tickets-box">
-              <span class="validate-order-card__tickets-label">Boletos apartados (${order.ticket_count}):</span>
+              <span class="validate-order-card__tickets-label">Boletos apartados (${formatNumber(order.ticket_count)}):</span>
               <div class="validate-order-card__tickets-chips">
                 ${ticketChips}
               </div>
@@ -191,7 +192,7 @@ export class ValidatePaymentController {
 
             <div class="validate-order-card__footer">
               <span class="validate-order-card__total-label">Total:</span>
-              <span class="validate-order-card__total-val">$${order.total_amount.toFixed(2)} ${escapeHtml(order.currency)}</span>
+              <span class="validate-order-card__total-val">${formatCurrency(order.total_amount, order.currency)}</span>
             </div>
           </div>
         `;
@@ -348,7 +349,7 @@ export class ValidatePaymentController {
       cancelText: t('common.cancel'),
       confirmClass: 'component-button--black',
       confirmText: t('validate_payment.submit_receipt_btn'),
-      description: `Participante: ${order.customer_name} • Monto: $${order.total_amount.toFixed(2)} ${order.currency}`,
+      description: `Participante: ${order.customer_name} • Monto: ${formatCurrency(order.total_amount, order.currency)}`,
       onConfirm: async () => {
         if (!selectedBase64) {
           modal.setError('Por favor selecciona una imagen del comprobante bancario.');
