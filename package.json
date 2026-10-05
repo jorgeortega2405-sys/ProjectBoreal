@@ -11,13 +11,9 @@
     "build:server": "tsc -p tsconfig.server.json",
     "build:client": "vite build",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
-    "dev:admin": "tsx admin/src/index.ts",
-    "build:admin": "tsc -p admin/tsconfig.server.json && vite build --config admin/vite.config.ts",
-    "typecheck:admin": "tsc -p admin/tsconfig.server.json --noEmit && tsc -p admin/tsconfig.client.json --noEmit",
-    "typecheck:all": "npm run typecheck && npm run typecheck:admin",
+    "typecheck:all": "npm run typecheck",
     "worker:payment": "py payment_worker/main.py",
-    "start": "node dist/index.js",
-    "start:admin": "node admin/dist/index.js"
+    "start": "node dist/index.js"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",

@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS `giveaways` (
 -- Datos Semilla de Sorteos
 -- ============================================================================
 INSERT INTO `giveaways` (
-  `id`, `uuid`, `title`, `slug`, `description`, `primary_image_url`, `image_urls`, `ticket_price`, `total_tickets`, `available_tickets`, `currency`, `status`, `start_date`, `end_date`, `min_threshold_pct`, `countdown_hours`, `threshold_reached_at`
+  `id`, `uuid`, `title`, `slug`, `description`, `primary_image_url`, `image_urls`, `ticket_price`, `total_tickets`, `available_tickets`, `currency`, `status`, `start_date`, `end_date`, `min_threshold_pct`, `countdown_hours`, `threshold_reached_at`, `winner_ticket_number`, `winner_name`, `winner_announced_at`
 ) VALUES
 (
   1,
@@ -69,7 +69,32 @@ INSERT INTO `giveaways` (
   DATE_ADD(NOW(), INTERVAL 7 DAY),
   0,
   48,
+  NULL,
+  NULL,
+  NULL,
   NULL
+),
+(
+  2,
+  'f8c2b3d4-5e6f-7a8b-9c0d-1e2f3a4b5c6d',
+  'Sorteo de Inauguración: Ford Mustang GT 2025',
+  'sorteo-inauguracion-ford-mustang-gt-2025',
+  '¡Entrega oficial realizada con éxito ante Fe Pública! Ford Mustang GT V8 2025 entregado con tanque lleno y seguro pagado por 1 año al poseedor del boleto premiado.',
+  'https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?auto=format&fit=crop&w=800&q=80',
+  '["https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80"]',
+  25.00,
+  50000,
+  0,
+  'MXN',
+  'completed',
+  DATE_SUB(NOW(), INTERVAL 30 DAY),
+  DATE_SUB(NOW(), INTERVAL 2 DAY),
+  0,
+  48,
+  DATE_SUB(NOW(), INTERVAL 2 DAY),
+  41280,
+  'CARLOS MENDOZA VILLARREAL',
+  DATE_SUB(NOW(), INTERVAL 2 DAY)
 )
 ON DUPLICATE KEY UPDATE
   `title` = VALUES(`title`),
@@ -81,7 +106,10 @@ ON DUPLICATE KEY UPDATE
   `min_threshold_pct` = VALUES(`min_threshold_pct`),
   `countdown_hours` = VALUES(`countdown_hours`),
   `threshold_reached_at` = VALUES(`threshold_reached_at`),
-  `end_date` = VALUES(`end_date`);
+  `end_date` = VALUES(`end_date`),
+  `winner_ticket_number` = VALUES(`winner_ticket_number`),
+  `winner_name` = VALUES(`winner_name`),
+  `winner_announced_at` = VALUES(`winner_announced_at`);
 
 -- ============================================================================
 -- Tabla de Órdenes y Apartados de Boletos

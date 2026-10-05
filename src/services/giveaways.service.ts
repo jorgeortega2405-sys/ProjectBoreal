@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import { Pool, PoolConnection, RowDataPacket } from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { deleteCache, getCache, publishGiveawayEvent, setCache } from '../config/redis.config.js';
-import { Giveaway } from '../types/giveaway.types.js';
+import { Giveaway, WinnerGiveawayItem } from '../types/giveaway.types.js';
 import { logger } from './logger.service.js';
 
 interface GiveawayRow extends RowDataPacket, Giveaway {}
@@ -46,6 +46,65 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
   } catch (error) {
     logger.db.error('Error al consultar sorteos activos en MySQL', error);
     throw new Error('Error al obtener los sorteos activos');
+  }
+}
+
+export async function getCompletedGiveawaysWithWinners(): Promise<WinnerGiveawayItem[]> {
+  try {
+    const cached = await getCache<WinnerGiveawayItem[]>('giveaways:winners');
+    if (cached) return cached;
+
+    interface WinnerRow extends RowDataPacket {
+      currency: string;
+      customer_state: string | null;
+      draw_date: string | null;
+      end_date: string;
+      image_urls: string | string[] | null;
+      primary_image_url: string;
+      slug: string;
+      ticket_price: number;
+      title: string;
+      total_tickets: number;
+      uuid: string;
+      winner_announced_at: string | null;
+      winner_name: string | null;
+      winner_ticket_number: number | null;
+    }
+
+    const [rows] = await pool.query<WinnerRow[]>(
+      `SELECT g.uuid, g.title, g.slug, g.primary_image_url, g.image_urls,
+              CAST(g.ticket_price AS DOUBLE) AS ticket_price,
+              g.total_tickets, g.currency, g.draw_date, g.end_date,
+              g.winner_ticket_number, g.winner_name, g.winner_announced_at,
+              o.customer_state
+       FROM giveaways g
+       LEFT JOIN orders o ON g.winner_order_id = o.id
+       WHERE g.status = 'completed' AND g.winner_ticket_number IS NOT NULL
+       ORDER BY COALESCE(g.winner_announced_at, g.end_date) DESC`
+    );
+
+    const list: WinnerGiveawayItem[] = rows.map((row) => ({
+      currency: row.currency,
+      customer_state: row.customer_state,
+      draw_date: row.draw_date,
+      end_date: row.end_date,
+      image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
+      primary_image_url: row.primary_image_url,
+      slug: row.slug,
+      ticket_price: row.ticket_price,
+      title: row.title,
+      total_tickets: row.total_tickets,
+      uuid: row.uuid,
+      winner_announced_at: row.winner_announced_at,
+      winner_name: row.winner_name,
+      winner_ticket_number: row.winner_ticket_number,
+    }));
+
+    await setCache('giveaways:winners', list, 300);
+    return list;
+  } catch (error) {
+    logger.db.error('Error al consultar ganadores en MySQL', error);
+    throw new Error('Error al obtener los ganadores de sorteos');
   }
 }
 
@@ -292,6 +351,7 @@ export async function drawGiveawayWinners(): Promise<void> {
         await deleteCache('giveaways:active');
         await deleteCache(`giveaway:${giveaway.uuid}`);
         await deleteCache(`giveaway:${giveaway.uuid}:tickets`);
+        await deleteCache('giveaways:winners');
 
         logger.app.info(
           `Sorteo concluido exitosamente para '${giveaway.title}' (ID: ${giveaway.id}). Ganador: ${winnerName}, Boleto: #${winnerTicketNumber ?? 'N/A'}`

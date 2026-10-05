@@ -101,8 +101,7 @@ async fn ws_handler(
             || origin.starts_with("https://localhost:")
             || origin.starts_with("http://127.0.0.1:")
             || origin.ends_with(".projectboreal.internal")
-            || origin == "https://projectboreal.com"
-            || origin == "https://admin.projectboreal.com";
+            || origin == "https://projectboreal.com";
         if !is_allowed {
             return (StatusCode::FORBIDDEN, "Origen no autorizado").into_response();
         }

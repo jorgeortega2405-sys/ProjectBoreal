@@ -845,3 +845,8 @@ html.reduce-motion {
   }
 }
 
+.is-hidden {
+  display: none !important;
+}
+
+

@@ -27,3 +27,20 @@ export interface Giveaway {
   winner_order_id?: number | null;
   winner_ticket_number?: number | null;
 }
+
+export interface WinnerGiveawayItem {
+  currency: string;
+  customer_state?: string | null;
+  draw_date: string | null;
+  end_date: string;
+  image_urls: string[] | null;
+  primary_image_url: string;
+  slug: string;
+  ticket_price: number;
+  title: string;
+  total_tickets: number;
+  uuid: string;
+  winner_announced_at: string | null;
+  winner_name: string | null;
+  winner_ticket_number: number | null;
+}

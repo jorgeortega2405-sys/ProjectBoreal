@@ -1,4 +1,3 @@
-import { navigate } from '../app-router.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 
@@ -12,20 +11,6 @@ export class LegalController {
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
-    this.bindBackButton();
-  }
-
-  private bindBackButton(): void {
-    const signal = this.abortController?.signal;
-    const btn = this.container.querySelector<HTMLElement>('[data-ref="btn-back-help"]');
-    btn?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        navigate('/help');
-      },
-      { signal }
-    );
   }
 
   destroy(): void {

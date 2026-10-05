@@ -9,18 +9,16 @@ export interface PrizeCategoryItem {
   label: string;
 }
 
-const SVG_ATTRIBUTES = 'width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
-
 export const PRIZE_CATEGORY_ICONS: Record<string, string> = {
-  all: `<svg class="component-icon" ${SVG_ATTRIBUTES}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>`,
-  cash: `<svg class="component-icon" ${SVG_ATTRIBUTES}><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>`,
-  computers: `<svg class="component-icon" ${SVG_ATTRIBUTES}><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>`,
-  gaming: `<svg class="component-icon" ${SVG_ATTRIBUTES}><rect width="20" height="12" x="2" y="6" rx="6"/><path d="M6 12h4m-2-2v4m7-2h.01m3 0h.01"/></svg>`,
-  home_appliances: `<svg class="component-icon" ${SVG_ATTRIBUTES}><rect width="20" height="15" x="2" y="4" rx="2"/><path d="M17 19v2M7 19v2m0 0h10"/></svg>`,
-  luxury: `<svg class="component-icon" ${SVG_ATTRIBUTES}><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M11 3 8 9l4 12 4-12-3-6M2 9h20"/></svg>`,
-  tech: `<svg class="component-icon" ${SVG_ATTRIBUTES}><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg>`,
-  travel: `<svg class="component-icon" ${SVG_ATTRIBUTES}><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>`,
-  vehicles: `<svg class="component-icon" ${SVG_ATTRIBUTES}><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10l-2-4H7L5 10s-2.7.6-4.5 1.1C-.3 11.3 0 12.1 0 13v3c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>`,
+  all: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#grid_view"></use></svg>',
+  cash: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#paid"></use></svg>',
+  computers: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#laptop_mac"></use></svg>',
+  gaming: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sports_esports"></use></svg>',
+  home_appliances: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#home"></use></svg>',
+  luxury: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#diamond"></use></svg>',
+  tech: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>',
+  travel: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flight_takeoff"></use></svg>',
+  vehicles: '<svg class="component-icon" aria-hidden="true"><use href="/icons.svg#directions_car"></use></svg>',
 };
 
 export const PRIZE_CATEGORIES: PrizeCategoryItem[] = [

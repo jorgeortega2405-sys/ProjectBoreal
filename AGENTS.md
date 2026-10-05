@@ -162,6 +162,3 @@ import { debounce, setupDropdown, withButtonLoading } from '../utils/dom.util.js
 1. **Scripts SQL como Única Autoridad**:
    - Toda creación o modificación de tablas, columnas e índices debe residir exclusivamente en los scripts de arranque en `database/` (`database/db_identity.sql`, `database/db_canvas.sql` y `database/db_cassandra.cql`).
    - Queda estrictamente prohibido colocar sentencias DDL (`CREATE TABLE`, `ALTER TABLE`) o migraciones automáticas inline dentro de `src/config/database.config.ts` o servicios backend.
-
-Para consultar la especificación completa y exhaustiva, revisa [docs/AI_INSTRUCTIONS.md](file:///f:/Spriteboard/docs/AI_INSTRUCTIONS.md).
-

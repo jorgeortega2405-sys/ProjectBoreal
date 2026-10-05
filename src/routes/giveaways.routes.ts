@@ -1,6 +1,6 @@
-import { getGiveawayDetail, getGiveawayTicketsHandler, listActiveGiveaways } from '../controllers/giveaways.controller.js';
-import { createRateLimiter } from '../middlewares/rate-limit.middleware.js';
 import { Router } from 'express';
+import { getGiveawayDetail, getGiveawayTicketsHandler, listActiveGiveaways, listWinnersHandler } from '../controllers/giveaways.controller.js';
+import { createRateLimiter } from '../middlewares/rate-limit.middleware.js';
 
 const router = Router();
 
@@ -17,8 +17,10 @@ const giveawayDetailLimiter = createRateLimiter({
 });
 
 router.get('/', giveawayListLimiter, listActiveGiveaways);
+router.get('/winners', giveawayListLimiter, listWinnersHandler);
 router.get('/:uuid/tickets', giveawayDetailLimiter, getGiveawayTicketsHandler);
 router.get('/:uuid', giveawayDetailLimiter, getGiveawayDetail);
 
 export default router;
+
 

@@ -184,6 +184,27 @@ const FALLBACK_TRANSLATIONS: Record<string, unknown> = {
     winner_banner_title: 'CONGRATULATIONS! YOU WON',
     winner_contact_info: 'Our team will contact you using your registered phone number to arrange official prize delivery.',
   },
+  winners: {
+    clear_search: 'Limpiar búsqueda',
+    delivery_guarantee: '100% Entregas Garantizadas',
+    delivery_location: 'Ubicación de Entrega',
+    draw_date_label: 'Fecha del Sorteo',
+    empty_desc: 'Los ganadores de nuestros sorteos activos aparecerán aquí inmediatamente después de la selección oficial y la entrega.',
+    empty_title: 'Aún no hay sorteos concluidos',
+    hero_subtitle: 'Transparencia total. Consulta los sorteos concluidos, números de boletos premiados y evidencia de entrega de premios.',
+    hero_title: 'Ganadores y Entregas Oficiales',
+    no_results: 'No se encontraron sorteos o ganadores que coincidan con tu búsqueda.',
+    official_winner: 'Ganador Oficial',
+    search_aria: 'Buscar entre los ganadores y entregas',
+    search_placeholder: 'Buscar por sorteo, ganador o número de boleto...',
+    stat_guarantee: 'Legalidad y Fe Pública',
+    stat_prizes_awarded: 'Total en Premios',
+    stat_total_winners: 'Ganadores Oficiales',
+    ticket_label: 'Boleto Ganador',
+    verified_badge: 'Entrega Verificada',
+    view_giveaway: 'Ver Sorteo',
+    winner_label: 'Ganador(a)',
+  },
 };
 
 function getNestedValue(obj: unknown, path: string): unknown {

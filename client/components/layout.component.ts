@@ -48,13 +48,6 @@ const DRAWER_CONFIGS: Record<string, DrawerPageConfig> = {
         i18nKey: 'nav.legal_policies',
         items: [
           {
-            icon: 'help',
-            i18nKey: 'nav.help',
-            label: 'Ayuda',
-            path: '/help',
-            ref: 'btn-drawer-help',
-          },
-          {
             icon: 'description',
             i18nKey: 'nav.terms',
             label: 'Términos y Condiciones',
@@ -129,6 +122,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const isHome = path === '/' || path === '';
   const isSettings = path === '/settings' || path.startsWith('/settings');
   const isValidate = path === '/validate-payment' || path === '/validar-pago';
+  const isWinners = path === '/winners' || path === '/ganadores';
   const config = getDrawerConfigForRoute(path);
   const isHelpOrLegal = config !== null;
 
@@ -136,18 +130,25 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnHome = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-home"]');
   const itemValidate = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-validate-payment"]');
   const btnValidate = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-validate-payment"]');
-  const itemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"]');
-  const btnHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-help"]');
-  const btnSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-settings"]');
+  const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
+  const btnWinners = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-winners"]');
+  const itemMore = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-more"]');
+  const btnMore = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-more"]');
+  const btnMenuSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
+  const btnMenuHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-help"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
   itemHome?.classList.toggle('is-active', isHome);
   btnHome?.classList.toggle('is-active', isHome);
   itemValidate?.classList.toggle('is-active', isValidate);
   btnValidate?.classList.toggle('is-active', isValidate);
-  itemHelp?.classList.toggle('is-active', isHelpOrLegal);
-  btnHelp?.classList.toggle('is-active', isHelpOrLegal);
-  btnSettings?.classList.toggle('is-active', isSettings);
+  itemWinners?.classList.toggle('is-active', isWinners);
+  btnWinners?.classList.toggle('is-active', isWinners);
+  const isMoreActive = isSettings || isHelpOrLegal;
+  itemMore?.classList.toggle('is-active', isMoreActive);
+  btnMore?.classList.toggle('is-active', isMoreActive);
+  btnMenuSettings?.classList.toggle('is-active', isSettings);
+  btnMenuHelp?.classList.toggle('is-active', isHelpOrLegal);
 
   if (!config) {
     isDrawerOpen = false;
@@ -311,8 +312,12 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   const itemHome = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-home"]');
   const itemValidate = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-validate-payment"]');
-  const itemHelp = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-help"], [data-ref="btn-rail-help"]');
-  const itemSettings = sidebar.querySelector<HTMLElement>('[data-ref="settings-container"], [data-ref="btn-rail-settings"]');
+  const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
+  const moreContainer = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-more"]');
+  const btnMore = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-rail-more"]');
+  const moreMenu = moreContainer?.querySelector<HTMLElement>('[data-ref="more-menu"]');
+  const btnMenuSettings = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
+  const btnMenuHelp = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-menu-help"]');
 
   btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -329,15 +334,87 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     navigate('/validate-payment');
   });
 
-  itemHelp?.addEventListener('click', (e) => {
+  itemWinners?.addEventListener('click', (e) => {
     e.preventDefault();
-    navigate('/help');
+    navigate('/winners');
   });
 
-  itemSettings?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/settings');
-  });
+  if (moreContainer && btnMore && moreMenu) {
+    let isMoreOpen = false;
+
+    const positionMoreMenu = () => {
+      if (window.innerWidth > 768) {
+        const btnRect = btnMore.getBoundingClientRect();
+        moreMenu.style.position = 'fixed';
+        moreMenu.style.left = `${Math.round(btnRect.right + 10)}px`;
+        const menuHeight = moreMenu.offsetHeight || 96;
+        if (btnRect.top + menuHeight > window.innerHeight - 16) {
+          moreMenu.style.top = 'auto';
+          moreMenu.style.bottom = `${Math.max(16, window.innerHeight - btnRect.bottom)}px`;
+        } else {
+          moreMenu.style.top = `${Math.max(16, Math.round(btnRect.top - 6))}px`;
+          moreMenu.style.bottom = 'auto';
+        }
+      } else {
+        moreMenu.style.position = '';
+        moreMenu.style.left = '';
+        moreMenu.style.top = '';
+        moreMenu.style.bottom = '';
+      }
+    };
+
+    const openMoreMenu = () => {
+      isMoreOpen = true;
+      btnMore.classList.add('is-active');
+      moreMenu.classList.add('is-open');
+      positionMoreMenu();
+    };
+
+    const closeMoreMenu = () => {
+      if (!isMoreOpen) return;
+      isMoreOpen = false;
+      const path = window.location.pathname;
+      const isSettings = path === '/settings' || path.startsWith('/settings');
+      const isHelpOrLegal = getDrawerConfigForRoute(path) !== null;
+      btnMore.classList.toggle('is-active', isSettings || isHelpOrLegal);
+      moreMenu.classList.remove('is-open');
+    };
+
+    const toggleMoreMenu = (e: Event) => {
+      e.stopPropagation();
+      if (isMoreOpen) {
+        closeMoreMenu();
+      } else {
+        openMoreMenu();
+      }
+    };
+
+    btnMore.addEventListener('click', toggleMoreMenu);
+
+    btnMenuSettings?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeMoreMenu();
+      navigate('/settings');
+    });
+
+    btnMenuHelp?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeMoreMenu();
+      navigate('/terms');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (isMoreOpen && !moreContainer.contains(e.target as Node)) {
+        closeMoreMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isMoreOpen) {
+        closeMoreMenu();
+      }
+    });
+  }
 }
 
 export async function createSidebar(): Promise<HTMLElement> {

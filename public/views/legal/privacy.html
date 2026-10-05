@@ -1,30 +1,109 @@
 <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="legal-wrapper">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="legal-scrollable">
-    <div class="settings-layout" data-ref="legal-layout">
-
-      <div class="legal-nav-bar" data-ref="legal-nav-bar" style="margin-bottom: 8px;">
-        <button type="button" class="component-button component-button--secondary component-button--h36" data-ref="btn-back-help">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-          <span data-ref="text-back-help" data-i18n="legal.back_to_help">Volver al Centro de Ayuda</span>
-        </button>
-      </div>
+    <div class="legal-layout" data-ref="legal-layout">
 
       <div class="settings-header" data-ref="legal-header">
         <div class="legal-icon-badge" data-ref="legal-badge" style="width: 48px; height: 48px; border-radius: 14px; background-color: var(--accent-pink-subtle); color: var(--accent-pink); display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
           <svg class="component-icon" aria-hidden="true" style="font-size: 24px;"><use href="/icons.svg#shield"></use></svg>
         </div>
-        <h1 class="settings-title" data-ref="legal-title" data-i18n="legal.privacy_title">Política de Privacidad y Protección de Datos</h1>
-        <p class="settings-subtitle" data-ref="legal-subtitle" data-i18n="legal.privacy_desc">Cómo recopilamos, utilizamos, almacenamos y protegemos tus datos personales.</p>
-        <span class="legal-effective-date" data-ref="legal-date" data-i18n="legal.effective_date" style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">Vigente a partir de: Octubre 2026</span>
+        <h1 class="settings-title" data-ref="legal-title" data-i18n="legal.privacy_title"></h1>
+        <p class="settings-subtitle" data-ref="legal-subtitle" data-i18n="legal.privacy_desc"></p>
+        <span class="legal-effective-date" data-ref="legal-date" data-i18n="legal.effective_date" style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;"></span>
       </div>
 
-      <div class="settings-group" data-ref="legal-content-group" style="padding: 32px 24px;">
-        <div class="drawer-empty-card" data-ref="legal-placeholder-card">
-          <div class="drawer-empty-state__icon" data-ref="placeholder-icon">
-            <svg class="component-icon" aria-hidden="true" style="font-size: 32px;"><use href="/icons.svg#shield"></use></svg>
+      <div class="settings-group" data-ref="legal-content-group">
+        <div class="legal-document-body" data-ref="privacy-document-body">
+
+          <div class="legal-section" data-ref="privacy-sec-1">
+            <div class="legal-section__header" data-ref="privacy-sec-header-1">
+              <span class="legal-section__badge" data-ref="privacy-badge-1">01</span>
+              <h2 class="legal-section__title" data-ref="privacy-heading-1" data-i18n="legal.privacy_sec1_title"></h2>
+            </div>
+            <p class="legal-paragraph" data-ref="privacy-p1-1" data-i18n="legal.privacy_sec1_p1"></p>
           </div>
-          <span class="drawer-empty-card__title" data-ref="placeholder-title" data-i18n="legal.privacy_title">Política de Privacidad y Protección de Datos</span>
-          <p class="drawer-empty-card__desc" data-ref="placeholder-desc" data-i18n="legal.placeholder_notice">Este documento legal se encuentra en proceso de redacción y formalización normativa conforme al marco legal aplicable.</p>
+
+          <div class="legal-section" data-ref="privacy-sec-2">
+            <div class="legal-section__header" data-ref="privacy-sec-header-2">
+              <span class="legal-section__badge" data-ref="privacy-badge-2">02</span>
+              <h2 class="legal-section__title" data-ref="privacy-heading-2" data-i18n="legal.privacy_sec2_title"></h2>
+            </div>
+            <p class="legal-paragraph" data-ref="privacy-p2-1" data-i18n="legal.privacy_sec2_p1"></p>
+            <ul class="legal-list" data-ref="privacy-list-2">
+              <li class="legal-list__item" data-ref="privacy-li-2-1" data-i18n="legal.privacy_sec2_item1"></li>
+              <li class="legal-list__item" data-ref="privacy-li-2-2" data-i18n="legal.privacy_sec2_item2"></li>
+              <li class="legal-list__item" data-ref="privacy-li-2-3" data-i18n="legal.privacy_sec2_item3"></li>
+              <li class="legal-list__item" data-ref="privacy-li-2-4" data-i18n="legal.privacy_sec2_item4"></li>
+            </ul>
+          </div>
+
+          <div class="legal-section" data-ref="privacy-sec-3">
+            <div class="legal-section__header" data-ref="privacy-sec-header-3">
+              <span class="legal-section__badge" data-ref="privacy-badge-3">03</span>
+              <h2 class="legal-section__title" data-ref="privacy-heading-3" data-i18n="legal.privacy_sec3_title"></h2>
+            </div>
+            <p class="legal-paragraph" data-ref="privacy-p3-1" data-i18n="legal.privacy_sec3_p1"></p>
+            <ul class="legal-list" data-ref="privacy-list-3">
+              <li class="legal-list__item" data-ref="privacy-li-3-1" data-i18n="legal.privacy_sec3_item1"></li>
+              <li class="legal-list__item" data-ref="privacy-li-3-2" data-i18n="legal.privacy_sec3_item2"></li>
+              <li class="legal-list__item" data-ref="privacy-li-3-3" data-i18n="legal.privacy_sec3_item3"></li>
+              <li class="legal-list__item" data-ref="privacy-li-3-4" data-i18n="legal.privacy_sec3_item4"></li>
+              <li class="legal-list__item" data-ref="privacy-li-3-5" data-i18n="legal.privacy_sec3_item5"></li>
+              <li class="legal-list__item" data-ref="privacy-li-3-6" data-i18n="legal.privacy_sec3_item6"></li>
+            </ul>
+          </div>
+
+          <div class="legal-section" data-ref="privacy-sec-4">
+            <div class="legal-section__header" data-ref="privacy-sec-header-4">
+              <span class="legal-section__badge" data-ref="privacy-badge-4">04</span>
+              <h2 class="legal-section__title" data-ref="privacy-heading-4" data-i18n="legal.privacy_sec4_title"></h2>
+            </div>
+            <p class="legal-paragraph" data-ref="privacy-p4-1" data-i18n="legal.privacy_sec4_p1"></p>
+          </div>
+
+          <div class="legal-section" data-ref="privacy-sec-5">
+            <div class="legal-section__header" data-ref="privacy-sec-header-5">
+              <span class="legal-section__badge" data-ref="privacy-badge-5">05</span>
+              <h2 class="legal-section__title" data-ref="privacy-heading-5" data-i18n="legal.privacy_sec5_title"></h2>
+            </div>
+            <p class="legal-paragraph" data-ref="privacy-p5-1" data-i18n="legal.privacy_sec5_p1"></p>
+            <ul class="legal-list" data-ref="privacy-list-5">
+              <li class="legal-list__item" data-ref="privacy-li-5-1" data-i18n="legal.privacy_sec5_item1"></li>
+              <li class="legal-list__item" data-ref="privacy-li-5-2" data-i18n="legal.privacy_sec5_item2"></li>
+              <li class="legal-list__item" data-ref="privacy-li-5-3" data-i18n="legal.privacy_sec5_item3"></li>
+            </ul>
+          </div>
+
+          <div class="legal-section" data-ref="privacy-sec-6">
+            <div class="legal-section__header" data-ref="privacy-sec-header-6">
+              <span class="legal-section__badge" data-ref="privacy-badge-6">06</span>
+              <h2 class="legal-section__title" data-ref="privacy-heading-6" data-i18n="legal.privacy_sec6_title"></h2>
+            </div>
+            <p class="legal-paragraph" data-ref="privacy-p6-1" data-i18n="legal.privacy_sec6_p1"></p>
+            <div class="legal-callout legal-callout--success" data-ref="privacy-callout-6">
+              <svg class="component-icon legal-callout__icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+              <div class="legal-callout__content" data-ref="privacy-callout-content-6">
+                <span class="legal-callout__title" data-ref="privacy-callout-title-6">Garantía Constitucional y Plazo Legal</span>
+                <p class="legal-callout__desc" data-ref="privacy-callout-desc-6" data-i18n="legal.privacy_sec6_p2"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="legal-section" data-ref="privacy-sec-7">
+            <div class="legal-section__header" data-ref="privacy-sec-header-7">
+              <span class="legal-section__badge" data-ref="privacy-badge-7">07</span>
+              <h2 class="legal-section__title" data-ref="privacy-heading-7" data-i18n="legal.privacy_sec7_title"></h2>
+            </div>
+            <p class="legal-paragraph" data-ref="privacy-p7-1" data-i18n="legal.privacy_sec7_p1"></p>
+          </div>
+
+          <div class="legal-section" data-ref="privacy-sec-8">
+            <div class="legal-section__header" data-ref="privacy-sec-header-8">
+              <span class="legal-section__badge" data-ref="privacy-badge-8">08</span>
+              <h2 class="legal-section__title" data-ref="privacy-heading-8" data-i18n="legal.privacy_sec8_title"></h2>
+            </div>
+            <p class="legal-paragraph" data-ref="privacy-p8-1" data-i18n="legal.privacy_sec8_p1"></p>
+          </div>
+
         </div>
       </div>
 

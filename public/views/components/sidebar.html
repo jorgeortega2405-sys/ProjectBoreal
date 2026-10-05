@@ -26,21 +26,34 @@
           <span class="rail-nav-item__label" data-ref="rail-label-validate-payment" data-i18n="nav.validate_payment"></span>
         </div>
 
+        <div class="rail-nav-item" data-ref="rail-item-winners">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-winners" data-i18n-tooltip="nav.winners" data-i18n-aria="nav.winners">
+            <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#emoji_events"></use></svg>
+          </button>
+          <span class="rail-nav-item__label" data-ref="rail-label-winners" data-i18n="nav.winners"></span>
+        </div>
       </div>
     </div>
 
     <div class="layout-rail__bottom" data-ref="rail-bottom">
-      <div class="rail-nav-item" data-ref="rail-item-help">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--help" data-ref="btn-rail-help" data-i18n-tooltip="nav.help" data-i18n-aria="nav.help">
-          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
+      <div class="rail-nav-item" data-ref="rail-item-more" style="position: relative;">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn" data-ref="btn-rail-more" data-tooltip="Más opciones" data-i18n-tooltip="nav.more" data-i18n-aria="nav.more" aria-label="Más opciones">
+          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#more_vert"></use></svg>
         </button>
-        <span class="rail-nav-item__label" data-ref="rail-label-help" data-i18n="nav.help"></span>
-      </div>
+        <span class="rail-nav-item__label" data-ref="rail-label-more" data-i18n="nav.more">Más</span>
 
-      <div class="rail-item-container" data-ref="settings-container">
-        <button type="button" class="component-button component-button--h40 component-button--icon-only rail-btn rail-btn--settings" data-ref="btn-rail-settings" data-i18n-tooltip="nav.settings" data-i18n-aria="nav.settings">
-          <svg class="component-icon rail-btn__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
-        </button>
+        <div class="menu-panel menu-panel--dropdown menu-panel--w-220 menu-panel--h-auto more-panel" data-ref="more-menu">
+          <div class="menu-panel__list" data-ref="panel-more-options">
+            <button type="button" class="menu-item" data-ref="btn-menu-settings">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#settings"></use></svg>
+              <span class="menu-item__text" data-ref="text-menu-settings" data-i18n="nav.settings">Configuración</span>
+            </button>
+            <button type="button" class="menu-item" data-ref="btn-menu-help">
+              <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#help"></use></svg>
+              <span class="menu-item__text" data-ref="text-menu-help" data-i18n="nav.help">Ayuda</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

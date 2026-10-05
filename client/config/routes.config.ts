@@ -31,6 +31,14 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/validate-payment' || path === '/validar-pago',
   },
   {
+    handler: async () => {
+      const { createWinnersView } = await import('../views/winners.view.js');
+      return await createWinnersView();
+    },
+    id: 'winners',
+    match: (path) => path === '/winners' || path === '/ganadores',
+  },
+  {
     handler: async (ctx) => {
       const { createGiveawayDetailView } = await import('../views/giveaway-detail.view.js');
       return await createGiveawayDetailView(ctx.params.uuid);
@@ -60,19 +68,11 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
-      const { createHelpView } = await import('../views/help.view.js');
-      return await createHelpView();
-    },
-    id: 'help',
-    match: (path) => path === '/help' || path === '/faq' || path === '/ayuda',
-  },
-  {
-    handler: async () => {
       const { createLegalView } = await import('../views/legal.view.js');
       return await createLegalView('terms');
     },
     id: 'legal-terms',
-    match: (path) => path === '/terms' || path === '/terminos',
+    match: (path) => path === '/terms' || path === '/terminos' || path === '/help' || path === '/faq' || path === '/ayuda',
   },
   {
     handler: async () => {

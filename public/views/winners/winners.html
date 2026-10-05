@@ -1,0 +1,44 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="winners-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="winners-scrollable">
+    <div class="view-body" data-ref="winners-container">
+      <div class="view-backdrop" data-ref="winners-backdrop"></div>
+
+      <div class="view-hero winners-hero" data-ref="winners-hero">
+        <div class="view-hero__content">
+          <div class="winners-hero__badge" data-ref="winners-hero-badge">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#emoji_events"></use></svg>
+            <span data-i18n="winners.stat_guarantee">Legalidad y Fe Pública</span>
+          </div>
+
+          <h1 class="view-hero__title" data-ref="winners-title" data-i18n="winners.hero_title">Ganadores y Entregas Oficiales</h1>
+          <p class="winners-hero__subtitle" data-ref="winners-subtitle" data-i18n="winners.hero_subtitle">Transparencia total. Consulta los sorteos concluidos, números de boletos premiados y evidencia de entrega de premios.</p>
+
+          <div class="view-search-pill" data-ref="winners-search-box">
+            <svg class="component-icon view-search-pill__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="view-search-pill__input" data-ref="winners-search-input" type="text" placeholder=" " autocomplete="off" data-i18n-placeholder="winners.search_placeholder" data-i18n-aria="winners.search_aria" />
+            <button type="button" class="component-button component-button--h32 component-button--icon-only view-search-pill__clear is-hidden" data-ref="btn-clear-search" data-i18n-tooltip="winners.clear_search" data-i18n-aria="winners.clear_search">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <section class="winners-section" data-ref="winners-section">
+        <div class="winners-loading" data-ref="winners-loading">
+          <div class="loading-spinner"></div>
+          <span class="winners-loading__text" data-i18n="app.loading">Cargando...</span>
+        </div>
+
+        <div class="winners-empty is-hidden" data-ref="winners-empty" hidden>
+          <div class="winners-empty__icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#emoji_events"></use></svg>
+          </div>
+          <h2 class="winners-empty__title" data-ref="winners-empty-title" data-i18n="winners.empty_title">Aún no hay sorteos concluidos</h2>
+          <p class="winners-empty__desc" data-ref="winners-empty-desc" data-i18n="winners.empty_desc">Los ganadores de nuestros sorteos activos aparecerán aquí inmediatamente después de la selección oficial y la entrega.</p>
+        </div>
+
+        <div class="winners-grid" data-ref="winners-grid"></div>
+      </section>
+    </div>
+  </div>
+</div>

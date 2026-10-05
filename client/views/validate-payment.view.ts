@@ -66,7 +66,16 @@ export class ValidatePaymentController {
     }
 
     emptyState.classList.add('is-hidden');
-    listContainer.innerHTML = this.orders
+    const sortedOrders = [...this.orders].sort((a, b) => {
+      const aWinner = a.is_winner === 1 ? 1 : 0;
+      const bWinner = b.is_winner === 1 ? 1 : 0;
+      if (aWinner !== bWinner) {
+        return bWinner - aWinner;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    listContainer.innerHTML = sortedOrders
       .map((order) => {
         const isWinner = order.is_winner === 1;
         const winnerBannerHtml = isWinner
@@ -160,7 +169,7 @@ export class ValidatePaymentController {
         }
 
         return `
-          <div class="validate-order-card" data-ref="order-card-${order.uuid}">
+          <div class="validate-order-card${isWinner ? ' validate-order-card--winner' : ''}" data-ref="order-card-${order.uuid}">
             ${winnerBannerHtml}
             <div class="validate-order-card__header">
               <div class="validate-order-card__meta">
