@@ -136,6 +136,8 @@
     "amount_to_pay": "Valor exato a transferir",
     "back_btn": "Voltar",
     "bank_name_label": "Banco recebedor",
+    "bank_warning_desc": "Se algum cartão ou conta estiver saturado ou recusar a transferência, tente com outra opção disponível.",
+    "bank_warning_title": "Aviso de saturação bancária",
     "beneficiary_label": "Beneficiário",
     "clabe_label": "Chave / CLABE (18 dígitos)",
     "concept_hint": "Coloque seu nome completo oficial no conceito da transferência.",

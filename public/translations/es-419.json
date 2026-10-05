@@ -162,6 +162,8 @@
     "amount_to_pay": "Monto exacto a transferir",
     "back_btn": "Atrás",
     "bank_name_label": "Banco receptor",
+    "bank_warning_desc": "Si alguna tarjeta o cuenta bancaria se encuentra saturada o no te permite transferir, por favor intenta con cualquiera de las otras cuentas disponibles.",
+    "bank_warning_title": "Aviso de saturación bancaria",
     "beneficiary_label": "Beneficiario",
     "card_number_label": "Número de tarjeta para depósito",
     "clabe_label": "CLABE interbancaria (18 dígitos)",

@@ -136,6 +136,8 @@
     "amount_to_pay": "Montant exact à transférer",
     "back_btn": "Retour",
     "bank_name_label": "Banque réceptrice",
+    "bank_warning_desc": "Si une carte ou un compte est saturé ou rejette le virement, veuillez essayer avec une autre option disponible.",
+    "bank_warning_title": "Avis de saturation bancaire",
     "beneficiary_label": "Bénéficiaire",
     "clabe_label": "CLABE interbancaire (18 chiffres)",
     "concept_hint": "Indiquez votre nom complet officiel dans le motif du virement.",

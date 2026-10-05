@@ -160,6 +160,8 @@
     "amount_to_pay": "Exact amount to transfer",
     "back_btn": "Back",
     "bank_name_label": "Receiving bank",
+    "bank_warning_desc": "If any card or bank account is saturated or rejects the transfer, please try another available option.",
+    "bank_warning_title": "Bank saturation notice",
     "beneficiary_label": "Beneficiary",
     "card_number_label": "Card number for deposit",
     "clabe_label": "Interbank CLABE (18 digits)",

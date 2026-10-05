@@ -79,7 +79,7 @@ class ReceiptParser:
         }
 
     @classmethod
-    def validate_against_order(cls, parsed: Dict[str, Any], order: Dict[str, Any], bank_account: Dict[str, Any]) -> Dict[str, Any]:
+    def validate_against_order(cls, parsed: Dict[str, Any], order: Dict[str, Any], bank_account_or_list: Any) -> Dict[str, Any]:
         errors = []
 
         fatal_error = False
@@ -109,19 +109,30 @@ class ReceiptParser:
         if len(concept_words) > 0 and len(matched_words) < max(2, len(concept_words) - 1):
             errors.append(f"El concepto de pago en el comprobante no coincide con el concepto requerido ('{order.get('concept_reference')}').")
 
-        # 3. Validar Cuenta / CLABE Destino
-        clabe = str(bank_account.get("clabe") or "")
-        clabe_last4 = clabe[-4:] if len(clabe) >= 4 else ""
-        bank_name_lower = str(bank_account.get("bank_name") or "").lower()
-
+        # 3. Validar Cuenta / Tarjeta / CLABE Destino contra cuentas autorizadas
+        bank_accounts = bank_account_or_list if isinstance(bank_account_or_list, list) else [bank_account_or_list]
         dest_text_lower = str(parsed.get("destination") or "").lower()
-        full_text_lower = parsed.get("full_text", "").lower()
 
-        has_clabe_digits = clabe_last4 in dest_text_lower or clabe_last4 in full_text_lower if clabe_last4 else False
-        has_bank_name = any(part in full_text_lower for part in bank_name_lower.split() if len(part) > 3)
+        matched_account = None
+        for acc in bank_accounts:
+            if not acc:
+                continue
+            clabe = str(acc.get("clabe") or "")
+            card = str(acc.get("card_number") or "")
+            clabe_last4 = clabe[-4:] if len(clabe) >= 4 else ""
+            card_last4 = card[-4:] if len(card) >= 4 else ""
+            bank_name_lower = str(acc.get("bank_name") or "").lower()
 
-        if not has_clabe_digits and not has_bank_name:
-            errors.append(f"El destinatario no corresponde a la cuenta de depósito activa ({bank_account.get('bank_name')} CLABE ...{clabe_last4}).")
+            has_clabe_digits = clabe_last4 in dest_text_lower or clabe_last4 in full_text_lower if clabe_last4 else False
+            has_card_digits = card_last4 in dest_text_lower or card_last4 in full_text_lower if card_last4 else False
+            has_bank_name = any(part in full_text_lower for part in bank_name_lower.split() if len(part) > 3)
+
+            if has_clabe_digits or has_card_digits or has_bank_name:
+                matched_account = acc
+                break
+
+        if not matched_account and bank_accounts:
+            errors.append("El destinatario no corresponde a ninguna de las cuentas bancarias o tarjetas autorizadas.")
             if parsed.get("destination"):
                 fatal_error = True
 
@@ -129,5 +140,6 @@ class ReceiptParser:
             "valid": len(errors) == 0,
             "fatal_error": fatal_error,
             "errors": errors,
-            "tracking_key": parsed.get("tracking_key")
+            "tracking_key": parsed.get("tracking_key"),
+            "matched_account": matched_account or (bank_accounts[0] if bank_accounts else None)
         }

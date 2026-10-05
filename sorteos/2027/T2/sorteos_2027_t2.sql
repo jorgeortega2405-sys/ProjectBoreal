@@ -183,10 +183,10 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO `giveaway_bank_accounts` (`giveaway_id`, `bank_account_id`, `is_active`)
 VALUES
-(14, 1, 1),
-(15, 1, 1),
-(16, 1, 1),
-(17, 1, 1),
-(18, 1, 1),
-(19, 1, 1)
+(14, 1, 1), (14, 2, 1), (14, 3, 1),
+(15, 1, 1), (15, 2, 1), (15, 3, 1),
+(16, 1, 1), (16, 2, 1), (16, 3, 1),
+(17, 1, 1), (17, 2, 1), (17, 3, 1),
+(18, 1, 1), (18, 2, 1), (18, 3, 1),
+(19, 1, 1), (19, 2, 1), (19, 3, 1)
 ON DUPLICATE KEY UPDATE `is_active` = VALUES(`is_active`);

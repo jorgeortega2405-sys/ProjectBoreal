@@ -170,11 +170,19 @@ class ReceiptWorker:
                     FROM giveaway_bank_accounts gba
                     INNER JOIN bank_accounts ba ON gba.bank_account_id = ba.id
                     WHERE gba.giveaway_id = %s AND gba.is_active = 1 AND ba.is_active = 1
-                    LIMIT 1
                 """, (order["giveaway_id"],))
-                bank_account = cur.fetchone()
+                bank_accounts = cur.fetchall()
 
-            if not bank_account:
+            if not bank_accounts:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT id, bank_name, account_holder, clabe, account_number, card_number
+                        FROM bank_accounts
+                        WHERE is_active = 1
+                    """)
+                    bank_accounts = cur.fetchall()
+
+            if not bank_accounts:
                 logger.error(f"[{order_uuid}] No se encontró cuenta bancaria activa para sorteo {order['giveaway_id']}")
                 self._schedule_retry(order, conn, {"error": "Cuenta bancaria no configurada"}, is_transient=True)
                 return False
@@ -187,7 +195,7 @@ class ReceiptWorker:
                 self._schedule_retry(order, conn, {"error": f"Fallo motor OCR: {str(ocr_err)}"}, is_transient=True)
                 return False
 
-            validation = ReceiptParser.validate_against_order(parsed, order, bank_account)
+            validation = ReceiptParser.validate_against_order(parsed, order, bank_accounts)
             tracking_key = validation.get("tracking_key") or order.get("tracking_key")
 
             if tracking_key:
@@ -210,13 +218,15 @@ class ReceiptWorker:
                 self._cancel_and_release_order(order, conn, validation["errors"], parsed=parsed)
                 return False
 
+            matched_acc = validation.get("matched_account") or (bank_accounts[0] if bank_accounts else {})
+            beneficiary_clabe = matched_acc.get("clabe") if matched_acc else None
             banxico_res = None
             if tracking_key:
                 try:
                     banxico_res = BanxicoClient.query_cep(
                         tracking_key=tracking_key,
                         amount=float(order["total_amount"]),
-                        beneficiary_clabe=bank_account.get("clabe")
+                        beneficiary_clabe=beneficiary_clabe
                     )
                 except Exception as b_err:
                     banxico_res = {

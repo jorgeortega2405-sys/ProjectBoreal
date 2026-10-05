@@ -183,13 +183,28 @@ ON DUPLICATE KEY UPDATE
   `start_date` = VALUES(`start_date`),
   `end_date` = VALUES(`end_date`);
 
--- 2. Vinculación de Cuentas Bancarias Receptoras
+-- 2. Registro de Cuentas Bancarias y Tarjetas
+INSERT INTO `bank_accounts` (`id`, `uuid`, `bank_name`, `account_holder`, `account_type`, `clabe`, `account_number`, `card_number`, `currency`, `is_active`)
+VALUES
+(1, 'a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d', 'Mercado Pago', 'JORGE LUIS ORTEGA AGUILAR', 'clabe', '722969028909564682', NULL, NULL, 'MXN', 1),
+(2, 'b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e', 'BBVA', 'JORGE LUIS ORTEGA AGUILAR', 'both', '012180015091837460', NULL, '4152314252542769', 'MXN', 1),
+(3, 'c3d4e5f6-a7b8-9c0d-1e2f-3a4b5c6d7e8f', 'Santander', 'JORGE LUIS ORTEGA AGUILAR', 'clabe', '014818140033440856', NULL, NULL, 'MXN', 1)
+ON DUPLICATE KEY UPDATE
+  `bank_name` = VALUES(`bank_name`),
+  `account_holder` = VALUES(`account_holder`),
+  `account_type` = VALUES(`account_type`),
+  `clabe` = VALUES(`clabe`),
+  `card_number` = VALUES(`card_number`),
+  `currency` = VALUES(`currency`),
+  `is_active` = VALUES(`is_active`);
+
+-- 3. Vinculación de Cuentas Bancarias Receptoras por Sorteo
 INSERT INTO `giveaway_bank_accounts` (`giveaway_id`, `bank_account_id`, `is_active`)
 VALUES
-(1, 1, 1),
-(2, 1, 1),
-(3, 1, 1),
-(4, 1, 1),
-(5, 1, 1),
-(6, 1, 1)
+(1, 1, 1), (1, 2, 1), (1, 3, 1),
+(2, 1, 1), (2, 2, 1), (2, 3, 1),
+(3, 1, 1), (3, 2, 1), (3, 3, 1),
+(4, 1, 1), (4, 2, 1), (4, 3, 1),
+(5, 1, 1), (5, 2, 1), (5, 3, 1),
+(6, 1, 1), (6, 2, 1), (6, 3, 1)
 ON DUPLICATE KEY UPDATE `is_active` = VALUES(`is_active`);

@@ -1671,6 +1671,46 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   padding-top: 10px;
 }
 
+.modal-bank-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.28);
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.modal-bank-warning__icon {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  min-height: 18px;
+  margin-top: 1px;
+  fill: #eab308;
+}
+
+.modal-bank-warning__content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modal-bank-warning__title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modal-bank-warning__text {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+  margin: 0;
+}
+
 .payment-split__accounts-list {
   display: flex;
   flex-direction: column;

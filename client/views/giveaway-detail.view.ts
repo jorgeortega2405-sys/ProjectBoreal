@@ -1725,6 +1725,14 @@ export class GiveawayDetailController {
             <p class="payment-split__section-desc" data-ref="section-desc-accounts">Transfiere el monto exacto a cualquiera de las siguientes cuentas:</p>
           </div>
 
+          <div class="modal-bank-warning" data-ref="modal-bank-warning">
+            <svg class="component-icon modal-bank-warning__icon" data-ref="icon-bank-warning" aria-hidden="true"><use href="/icons.svg#info"></use></svg>
+            <div class="modal-bank-warning__content" data-ref="content-bank-warning">
+              <strong class="modal-bank-warning__title" data-ref="title-bank-warning">${t('orders.bank_warning_title')}</strong>
+              <p class="modal-bank-warning__text" data-ref="text-bank-warning">${t('orders.bank_warning_desc')}</p>
+            </div>
+          </div>
+
           <div class="payment-split__accounts-list" data-ref="accounts-list">
             ${bankAccounts.length === 0 ? `
               <div class="empty-accounts-notice" data-ref="notice-empty-accounts">
