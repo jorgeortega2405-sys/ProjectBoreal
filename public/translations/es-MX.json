@@ -13,7 +13,7 @@
     "help": "Ayuda",
     "home": "Inicio",
     "legal_policies": "Políticas y Legal",
-    "more": "Más opciones",
+    "more": "Más",
     "navigation": "Navegación",
     "prizes": "Entrega de Premios",
     "privacy": "Política de Privacidad",
@@ -22,28 +22,27 @@
     "settings": "Configuración",
     "terms": "Términos y Condiciones",
     "toggle_drawer": "Alternar menú lateral",
-    "validate_payment": "Validar Pago",
-    "winners": "Ganadores"
+    "validate_payment": "Boletos",
+    "winners": "Resultados"
   },
   "daily": {
     "badge_frequency": "Lunes a Viernes",
-    "badge_title": "Sorteo Diario",
-    "buy_btn": "Jugar Ahora ($2 MXN)",
-    "closing_monday": "Venta cierra 1 hora antes (22:59 hrs)",
-    "closing_today": "Venta cierra 1 hora antes (22:59 hrs)",
-    "countdown_label": "Cierre y Sorteo Oficial en:",
-    "drawing_in_progress": "¡Sorteo en curso! Seleccionando ganador...",
-    "empty_winners": "Sé el primer ganador de hoy",
+    "badge_title": "Sorteo Diario 10k",
+    "buy_btn": "Elegir Boletos • $5 c/u",
+    "closing_today": "Cierre hoy a las 23:59 hrs",
+    "closing_monday": "Cierre el Lunes a las 23:59 hrs",
+    "countdown_label": "Tiempo restante",
+    "drawing_in_progress": "¡Sorteo en curso!",
+    "empty_winners": "¡El próximo ganador podrías ser tú! Participa por solo $5 MXN.",
     "hours_label": "Horas",
-    "live_pot_badge": "Bolsa En Vivo",
-    "minutes_label": "Minutos",
-    "pot_label": "Bolsa Acumulada Hoy",
-    "prize_amount": "${amount} MXN",
-    "prize_subtitle": "¡El ganador se lleva una parte del acumulado de hoy! Boletos a solo $2 MXN.",
-    "recent_winners_title": "Últimos Ganadores",
-    "seconds_label": "Segundos",
+    "minutes_label": "Min",
+    "next_cycle_note": "Al concluir, el siguiente sorteo inicia inmediatamente.",
+    "prize_amount": "$10,000 MXN en Efectivo",
+    "prize_subtitle": "10,000 boletos a solo $5 MXN cada uno",
+    "recent_winners_title": "Últimos 5 Ganadores",
+    "seconds_label": "Seg",
     "tickets_progress": "{available} de {total} boletos disponibles",
-    "view_all_winners": "Ver todos"
+    "view_all_winners": "Ver todos los ganadores"
   },
   "home": {
     "active_badge": "Activo",
@@ -104,10 +103,7 @@
     "high_contrast_desc": "Mejora la legibilidad aumentando el contraste entre bordes, fondos y textos."
   },
   "languages": {
-    "es_419": "Español (Latinoamérica)",
-    "en_US": "English (United States)",
-    "pt_BR": "Português (Brasil)",
-    "fr_FR": "Français (France)"
+    "es_MX": "Español (México)"
   },
   "toasts": {
     "theme_updated": "Tema visual actualizado",
@@ -131,6 +127,7 @@
     "clear_selection": "Limpiar",
     "countdown_title": "Tiempo restante para el sorteo:",
     "days_short": "días",
+    "disclaimer_illustrative": "* Imagen con fines ilustrativos. La entrega o presentación final puede diferir de la imagen mostrada.",
     "draw_date": "Fecha del sorteo: {date}",
     "guarantee_delivery": "Entrega Oficial",
     "guarantee_secure": "Pago Seguro",
@@ -162,6 +159,7 @@
     "select_tickets_subtitle": "Haz clic en los números que desees o utiliza la selección al azar",
     "select_tickets_title": "Elige tus números de la suerte",
     "selected_summary": "{count} boletos seleccionados",
+    "selected_tray_title": "Tus boletos seleccionados ({count}):",
     "threshold_pending_badge": "🎯 Meta: {current}% de {target}% para iniciar sorteo",
     "threshold_waiting_desc": "El cronómetro oficial de {hours}h iniciará al alcanzar el {target}% de boletos vendidos.",
     "ticket_status_available": "Disponible",
@@ -458,28 +456,15 @@
     "view_giveaway": "Ver Sorteo",
     "winner_label": "Ganador(a)"
   },
-  "daily": {
-    "badge_frequency": "Lunes a Viernes",
-    "badge_title": "Sorteo Diario 10k",
-    "buy_btn": "Elegir Boletos • $5 c/u",
-    "closing_today": "Cierre hoy a las 23:59 hrs",
-    "closing_monday": "Cierre el Lunes a las 23:59 hrs",
-    "countdown_label": "Tiempo restante",
-    "drawing_in_progress": "¡Sorteo en curso!",
-    "empty_winners": "¡El próximo ganador podrías ser tú! Participa por solo $5 MXN.",
-    "hours_label": "Horas",
-    "minutes_label": "Min",
-    "next_cycle_note": "Al concluir, el siguiente sorteo inicia inmediatamente.",
-    "prize_amount": "$10,000 MXN en Efectivo",
-    "prize_subtitle": "10,000 boletos a solo $5 MXN cada uno",
-    "recent_winners_title": "Últimos 5 Ganadores",
-    "seconds_label": "Seg",
-    "tickets_progress": "{available} de {total} boletos disponibles",
-    "view_all_winners": "Ver todos los ganadores"
-  },
   "error": {
     "back_to_home": "Volver al inicio",
     "not_found_desc": "La página que estás buscando no existe, ha sido movida o la dirección es incorrecta.",
     "not_found_title": "Página no encontrada"
+  },
+  "drawer": {
+    "section_giveaways": "Sorteos y Participación",
+    "daily_giveaway": "Sorteo Diario Activo",
+    "section_transparency": "Transparencia y Legal",
+    "section_preferences": "Preferencias"
   }
 }

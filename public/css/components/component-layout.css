@@ -1111,6 +1111,10 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
   pointer-events: none;
   z-index: 150;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  width: 295px;
+  min-width: 295px;
+  max-width: 295px;
+  box-sizing: border-box;
 }
 
 .more-panel.is-open {
@@ -1127,6 +1131,9 @@ html.dark-theme .rail-nav-item.is-active .rail-nav-item__label {
     bottom: 60px;
     top: auto;
     right: auto;
+    width: min(295px, calc(100vw - 20px));
+    min-width: 0;
+    max-width: calc(100vw - 20px);
   }
 }
 

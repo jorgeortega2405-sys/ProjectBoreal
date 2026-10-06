@@ -237,7 +237,7 @@ export class SettingsController {
         'click',
         async (e) => {
           e.preventDefault();
-          const val = opt.getAttribute('data-lang-value') || 'es-419';
+          const val = opt.getAttribute('data-lang-value') || 'es-MX';
           await setLanguage(val);
           this.updateLanguageUi(val, selectedText, options);
           close();
@@ -255,7 +255,7 @@ export class SettingsController {
   ): void {
     options.forEach((opt) => {
       const optVal = opt.getAttribute('data-lang-value');
-      const match = optVal === langVal || (langVal === 'es' && optVal === 'es-419') || (langVal === 'en' && optVal === 'en-US');
+      const match = optVal === langVal || (langVal.startsWith('es') && optVal === 'es-MX');
       opt.classList.toggle('is-active', match);
     });
 

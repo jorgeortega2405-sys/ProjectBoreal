@@ -96,7 +96,7 @@ export class GiveawayDetailController {
     if (this.giveaway.primary_image_url) {
       list.push(this.giveaway.primary_image_url);
     }
-    if (Array.isArray(this.giveaway.image_urls)) {
+    if (this.giveaway.type !== 'daily' && Array.isArray(this.giveaway.image_urls)) {
       for (const url of this.giveaway.image_urls) {
         if (url && !list.includes(url)) {
           list.push(url);
@@ -678,9 +678,14 @@ export class GiveawayDetailController {
       mainImg.alt = this.giveaway?.title || '';
     }
 
+    const disclaimerEl = this.container.querySelector<HTMLElement>('[data-ref="gallery-disclaimer"]');
+    if (disclaimerEl) {
+      disclaimerEl.textContent = t('giveaway.disclaimer_illustrative');
+    }
+
     const dotsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-dots"]');
     if (dotsContainer) {
-      if (this.allImages.length <= 1) {
+      if (this.giveaway?.type === 'daily' || this.allImages.length <= 1) {
         dotsContainer.style.display = 'none';
       } else {
         dotsContainer.style.display = 'flex';
@@ -698,7 +703,7 @@ export class GiveawayDetailController {
     const thumbsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-thumbs"]');
     if (!thumbsContainer) return;
 
-    if (this.allImages.length <= 1) {
+    if (this.giveaway?.type === 'daily' || this.allImages.length <= 1) {
       thumbsContainer.style.display = 'none';
       return;
     }
@@ -718,7 +723,7 @@ export class GiveawayDetailController {
 
   private startGallerySlideshow(): void {
     this.stopGallerySlideshow();
-    if (this.allImages.length <= 1) return;
+    if (this.giveaway?.type === 'daily' || this.allImages.length <= 1) return;
 
     this.slideshowInterval = setInterval(() => {
       if (this.isGalleryHovered) return;
@@ -1033,6 +1038,49 @@ export class GiveawayDetailController {
         buyBtn.disabled = count === 0;
       }
     }
+
+    this.renderSelectedTickets();
+  }
+
+  private renderSelectedTickets(): void {
+    if (!this.giveaway) return;
+    const count = this.selectedTickets.size;
+    const totalT = this.giveaway.total_tickets || 100;
+    const padLen = totalT > 9999 ? 5 : totalT >= 1000 ? 4 : 3;
+
+    const summaryChips = this.container.querySelector<HTMLElement>('[data-ref="summary-selected-chips"]');
+    if (summaryChips) {
+      if (count === 0) {
+        summaryChips.classList.add('is-hidden');
+        summaryChips.innerHTML = '';
+      } else {
+        summaryChips.classList.remove('is-hidden');
+        const sortedTickets = Array.from(this.selectedTickets).sort((a, b) => a - b);
+        summaryChips.innerHTML = sortedTickets
+          .map((num) => {
+            const formatted = num.toString().padStart(padLen, '0');
+            return `
+              <button type="button" class="giveaway-info__summary-chip" data-ref="summary-chip-${num}" data-ticket="${num}">
+                <span>#${formatted}</span>
+              </button>
+            `;
+          })
+          .join('');
+      }
+    }
+  }
+
+  private jumpToTicket(num: number): void {
+    if (!num || !this.giveaway) return;
+    this.currentPage = Math.ceil(num / this.pageSize);
+    this.renderTickets();
+    this.renderPagination();
+    const ticketBtn = this.container.querySelector<HTMLButtonElement>(`[data-ref="ticket-${num}"]`);
+    if (ticketBtn) {
+      ticketBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ticketBtn.classList.add('is-highlighted');
+      setTimeout(() => ticketBtn.classList.remove('is-highlighted'), 1200);
+    }
   }
 
   private getMaxAllowedTickets(): number {
@@ -1281,8 +1329,8 @@ export class GiveawayDetailController {
       onConfirm: () => {
         this.selectRandomTickets(selectedQty);
         modal.close();
-        const section = this.container.querySelector<HTMLElement>('[data-ref="giveaway-tickets-section"]');
-        section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const summaryBox = this.container.querySelector<HTMLElement>('[data-ref="tickets-summary"]');
+        summaryBox?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         return true;
       },
       size: 'sm',
@@ -1525,6 +1573,22 @@ export class GiveawayDetailController {
           this.renderPagination();
           this.updateSummary();
           showToast(t('giveaway.toast_selection_cleared'), 'info');
+        }
+      },
+      { signal }
+    );
+
+    const summaryChips = this.container.querySelector<HTMLElement>('[data-ref="summary-selected-chips"]');
+    summaryChips?.addEventListener(
+      'click',
+      (e) => {
+        const chip = (e.target as HTMLElement | null)?.closest<HTMLElement>('.giveaway-info__summary-chip');
+        if (chip) {
+          e.preventDefault();
+          const num = parseInt(chip.getAttribute('data-ticket') || '0', 10);
+          if (num > 0) {
+            this.jumpToTicket(num);
+          }
         }
       },
       { signal }

@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="100%" height="100%">
+  <defs>
+    <!-- Gradiente de fondo estudio -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="60%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Gradiente de mesa moderna (madera pulida oscura) -->
+    <linearGradient id="tableGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3b2219" />
+      <stop offset="15%" stop-color="#2d170f" />
+      <stop offset="100%" stop-color="#190d09" />
+    </linearGradient>
+    <linearGradient id="tableHighlight" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.03" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.03" />
+    </linearGradient>
+
+    <!-- Billete de 1,000 Pesos Familia G: Color base gris pizarra y azul cian -->
+    <linearGradient id="billBase" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b" />
+      <stop offset="50%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="billCyanAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+
+    <!-- Cintas de Oro / Faja del paquete -->
+    <linearGradient id="goldBand" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="40%" stop-color="#fde047" />
+      <stop offset="70%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+    <linearGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="35%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+
+    <!-- Sombras difusas -->
+    <filter id="shadowBig" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="25" stdDeviation="30" flood-color="#000000" flood-opacity="0.75" />
+    </filter>
+    <filter id="glowGold" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- 1. Fondo de Estudio -->
+  <rect width="1200" height="750" fill="url(#bgGrad)" />
+
+  <!-- Luz cenital suave detrás -->
+  <ellipse cx="600" cy="220" rx="420" ry="240" fill="#38bdf8" fill-opacity="0.08" filter="blur(60px)" />
+  <ellipse cx="600" cy="380" rx="260" ry="120" fill="#f59e0b" fill-opacity="0.12" filter="blur(40px)" />
+
+  <!-- 2. Mesa de Madera / Superficie -->
+  <path d="M0 430 L1200 430 L1200 750 L0 750 Z" fill="url(#tableGrad)" />
+  <!-- Borde biselado superior de la mesa -->
+  <rect x="0" y="428" width="1200" height="4" fill="url(#tableHighlight)" />
+  <line x1="0" y1="432" x2="1200" y2="432" stroke="#1c0f0a" stroke-width="2" />
+
+  <!-- 3. Sombra Principal de los Fajos sobre la Mesa -->
+  <ellipse cx="600" cy="570" rx="360" ry="48" fill="#000000" fill-opacity="0.65" filter="blur(16px)" />
+
+  <!-- 4. Fajo Inferior (Base) -->
+  <g transform="translate(0, 40)" filter="url(#shadowBig)">
+    <!-- Borde lateral inferior fajo -->
+    <path d="M260 400 L940 400 L940 460 L260 460 Z" rx="12" fill="#1e293b" stroke="#334155" stroke-width="3" />
+    <!-- Líneas de papel apilado -->
+    <line x1="265" y1="412" x2="935" y2="412" stroke="#475569" stroke-width="2" />
+    <line x1="265" y1="424" x2="935" y2="424" stroke="#334155" stroke-width="2" />
+    <line x1="265" y1="436" x2="935" y2="436" stroke="#475569" stroke-width="2" />
+    <line x1="265" y1="448" x2="935" y2="448" stroke="#334155" stroke-width="2" />
+  </g>
+
+  <!-- 5. Fajo Principal Superior (Billete $1,000 Pesos Mexicanos) -->
+  <g filter="url(#shadowBig)">
+    <!-- Cuerpo del Billete de $1,000 MXN -->
+    <rect x="250" y="270" width="700" height="150" rx="16" fill="url(#billBase)" stroke="#94a3b8" stroke-width="4" />
+
+    <!-- Textura y marco ornamental del billete -->
+    <rect x="264" y="284" width="672" height="122" rx="10" fill="none" stroke="#64748b" stroke-width="1.8" stroke-dasharray="6 4" />
+
+    <!-- Franja izquierda azul/turquesa icónica de la Familia G -->
+    <rect x="272" y="292" width="160" height="106" rx="8" fill="url(#billCyanAccent)" fill-opacity="0.3" stroke="#38bdf8" stroke-width="2" />
+    <!-- Símbolo $1,000 -->
+    <text x="352" y="348" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="34" fill="#38bdf8" text-anchor="middle">$1000</text>
+    <text x="352" y="374" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="14" fill="#bae6fd" text-anchor="middle" letter-spacing="2">PESOS</text>
+
+    <!-- Ventana Transparente / Holograma de Seguridad -->
+    <rect x="448" y="296" width="36" height="98" rx="6" fill="#38bdf8" fill-opacity="0.25" stroke="#7dd3fc" stroke-width="1.5" />
+    <circle cx="466" cy="345" r="10" fill="#fde047" fill-opacity="0.5" />
+
+    <!-- Centro: Retratos Ilustrados (Madero, Hermila Galindo, Carmen Serdán) y Calakmul -->
+    <g transform="translate(500, 300)">
+      <circle cx="40" cy="45" r="32" fill="#334155" stroke="#64748b" stroke-width="2" />
+      <path d="M22 65 C22 45, 58 45, 58 65 Z" fill="#94a3b8" />
+      <circle cx="40" cy="38" r="14" fill="#cbd5e1" />
+      <!-- Silueta locomotora histórica -->
+      <rect x="85" y="55" width="45" height="18" rx="3" fill="#475569" />
+      <rect x="115" y="42" width="12" height="15" rx="2" fill="#64748b" />
+    </g>
+
+    <!-- Cabecera Oficial: BANCO DE MÉXICO -->
+    <text x="730" y="315" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="20" fill="#f1f5f9" letter-spacing="3">BANCO DE MÉXICO</text>
+
+    <!-- Número 1000 en la esquina superior derecha -->
+    <text x="890" y="380" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="44" fill="#ffffff">1000</text>
+
+    <!-- 6. Cinta / Precinto de Seguridad Metálico Dorado del Fajo -->
+    <g filter="url(#glowGold)">
+      <rect x="540" y="260" width="120" height="170" rx="8" fill="url(#goldBand)" stroke="#fef08a" stroke-width="2.5" />
+      <!-- Líneas de brillo en la cinta -->
+      <line x1="550" y1="260" x2="550" y2="430" stroke="#fef08a" stroke-opacity="0.6" stroke-width="2" />
+      <line x1="648" y1="260" x2="648" y2="430" stroke="#78350f" stroke-opacity="0.6" stroke-width="2" />
+      <!-- Texto en la cinta -->
+      <text x="600" y="332" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="16" fill="#78350f" text-anchor="middle" letter-spacing="1">PREMIO</text>
+      <text x="600" y="364" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="26" fill="#451a03" text-anchor="middle">MXN</text>
+    </g>
+  </g>
+
+  <!-- 7. Monedas 3D Doradas de la Suerte sobre la Mesa -->
+  <!-- Moneda 1 (Izquierda abajo) -->
+  <g transform="translate(180, 520)" filter="url(#shadowBig)">
+    <ellipse cx="40" cy="30" rx="38" ry="18" fill="url(#coinGrad)" stroke="#fef08a" stroke-width="2" />
+    <ellipse cx="40" cy="27" rx="30" ry="13" fill="none" stroke="#78350f" stroke-width="1.5" />
+    <text x="40" y="32" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="16" fill="#78350f" text-anchor="middle">$</text>
+  </g>
+
+  <!-- Moneda 2 (Derecha abajo) -->
+  <g transform="translate(920, 510)" filter="url(#shadowBig)">
+    <ellipse cx="40" cy="35" rx="44" ry="20" fill="url(#coinGrad)" stroke="#fef08a" stroke-width="2" />
+    <ellipse cx="40" cy="32" rx="35" ry="15" fill="none" stroke="#78350f" stroke-width="1.5" />
+    <text x="40" y="38" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="18" fill="#78350f" text-anchor="middle">$</text>
+  </g>
+
+  <!-- Moneda 3 (Apilada a la derecha) -->
+  <g transform="translate(960, 480)">
+    <ellipse cx="30" cy="25" rx="32" ry="14" fill="url(#coinGrad)" stroke="#fef08a" stroke-width="1.8" />
+  </g>
+
+  <!-- Destellos de luz / Brillos animados tipo cartoon -->
+  <path d="M520 250 L525 265 L540 270 L525 275 L520 290 L515 275 L500 270 L515 265 Z" fill="#ffffff" opacity="0.8" />
+  <path d="M910 270 L913 280 L923 283 L913 286 L910 296 L907 286 L897 283 L907 280 Z" fill="#fde047" opacity="0.9" />
+</svg>

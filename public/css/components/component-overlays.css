@@ -50,6 +50,12 @@
   max-width: 285px;
 }
 
+.menu-panel--w-295 {
+  width: 295px;
+  min-width: 295px;
+  max-width: 295px;
+}
+
 .menu-panel--w-265 {
   width: 265px;
   min-width: 265px;
@@ -808,8 +814,6 @@ body.modal-open {
   inset: 0;
   z-index: 2000;
   background-color: var(--overlay-dark);
-  backdrop-filter: var(--overlay-blur);
-  -webkit-backdrop-filter: var(--overlay-blur);
   display: flex;
   align-items: center;
   justify-content: center;

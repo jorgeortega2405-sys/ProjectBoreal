@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgFan" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="60%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="woodTable" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3e2723" />
+      <stop offset="100%" stop-color="#1b0000" />
+    </linearGradient>
+    <linearGradient id="billBaseA" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="goldFan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="40%" stop-color="#fef08a" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+    <filter id="fanShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="25" stdDeviation="28" flood-color="#000000" flood-opacity="0.8" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#bgFan)" />
+  <circle cx="600" cy="240" r="350" fill="#38bdf8" fill-opacity="0.1" filter="blur(60px)" />
+
+  <!-- Mesa de madera -->
+  <path d="M0 450 L1200 450 L1200 750 L0 750 Z" fill="url(#woodTable)" />
+  <line x1="0" y1="450" x2="1200" y2="450" stroke="#5d4037" stroke-width="3" />
+
+  <!-- Sombra en la mesa -->
+  <ellipse cx="600" cy="580" rx="420" ry="55" fill="#000000" fill-opacity="0.75" filter="blur(20px)" />
+
+  <!-- Fajo 1 (Izquierda inclinado) -->
+  <g transform="translate(220, 260) rotate(-14)" filter="url(#fanShadow)">
+    <rect x="0" y="0" width="460" height="110" rx="12" fill="url(#billBaseA)" stroke="#94a3b8" stroke-width="3" />
+    <rect x="15" y="15" width="430" height="80" rx="8" fill="none" stroke="#64748b" stroke-dasharray="6 4" stroke-width="1.5" />
+    <text x="60" y="60" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="28" fill="#38bdf8">$1000</text>
+    <rect x="190" y="-5" width="80" height="120" rx="6" fill="url(#goldFan)" />
+    <text x="400" y="70" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="32" fill="#ffffff">1000</text>
+  </g>
+
+  <!-- Fajo 2 (Derecha inclinado) -->
+  <g transform="translate(560, 270) rotate(14)" filter="url(#fanShadow)">
+    <rect x="0" y="0" width="460" height="110" rx="12" fill="url(#billBaseA)" stroke="#94a3b8" stroke-width="3" />
+    <rect x="15" y="15" width="430" height="80" rx="8" fill="none" stroke="#64748b" stroke-dasharray="6 4" stroke-width="1.5" />
+    <text x="60" y="60" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="28" fill="#38bdf8">$1000</text>
+    <rect x="190" y="-5" width="80" height="120" rx="6" fill="url(#goldFan)" />
+    <text x="400" y="70" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="32" fill="#ffffff">1000</text>
+  </g>
+
+  <!-- Fajo 3 (Central Frontal sobre los anteriores) -->
+  <g transform="translate(350, 310)" filter="url(#fanShadow)">
+    <!-- Bloque de billetes -->
+    <path d="M0 90 L500 90 L500 135 L0 135 Z" fill="#1e293b" />
+    <line x1="0" y1="102" x2="500" y2="102" stroke="#475569" stroke-width="2" />
+    <line x1="0" y1="114" x2="500" y2="114" stroke="#334155" stroke-width="2" />
+    <line x1="0" y1="126" x2="500" y2="126" stroke="#475569" stroke-width="2" />
+
+    <rect x="0" y="0" width="500" height="110" rx="14" fill="url(#billBaseA)" stroke="#cbd5e1" stroke-width="3.5" />
+    <rect x="15" y="12" width="470" height="86" rx="8" fill="none" stroke="#64748b" stroke-dasharray="6 4" stroke-width="1.5" />
+    <!-- Franja $1000 -->
+    <rect x="25" y="20" width="110" height="70" rx="6" fill="#0284c7" fill-opacity="0.3" stroke="#38bdf8" stroke-width="1.5" />
+    <text x="80" y="58" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="24" fill="#38bdf8" text-anchor="middle">$1000</text>
+    <text x="80" y="76" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="10" fill="#bae6fd" text-anchor="middle">PESOS</text>
+
+    <!-- BANCO DE MÉXICO -->
+    <text x="270" y="36" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="14" fill="#f1f5f9" letter-spacing="2">BANCO DE MÉXICO</text>
+    <text x="430" y="70" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="34" fill="#ffffff">1000</text>
+
+    <!-- Fajilla de Oro Central -->
+    <rect x="205" y="-8" width="90" height="126" rx="6" fill="url(#goldFan)" stroke="#fef08a" stroke-width="2" />
+    <text x="250" y="48" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="12" fill="#78350f" text-anchor="middle">GRAN</text>
+    <text x="250" y="72" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="18" fill="#451a03" text-anchor="middle">PREMIO</text>
+  </g>
+
+  <!-- Monedas Doradas en Primer Plano -->
+  <ellipse cx="280" cy="590" rx="36" ry="16" fill="url(#goldFan)" stroke="#fef08a" stroke-width="2" />
+  <ellipse cx="900" cy="580" rx="42" ry="18" fill="url(#goldFan)" stroke="#fef08a" stroke-width="2" />
+  <ellipse cx="940" cy="550" rx="34" ry="15" fill="url(#goldFan)" stroke="#fef08a" stroke-width="1.8" />
+</svg>

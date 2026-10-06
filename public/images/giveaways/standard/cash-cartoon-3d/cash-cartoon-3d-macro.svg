@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgMacro" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1329" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="billGris" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#64748b" />
+      <stop offset="60%" stop-color="#475569" />
+      <stop offset="100%" stop-color="#334155" />
+    </linearGradient>
+    <linearGradient id="cyanFranja" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="goldRibbon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="30%" stop-color="#fef08a" />
+      <stop offset="70%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#92400e" />
+    </linearGradient>
+    <filter id="macroShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="20" stdDeviation="25" flood-color="#000000" flood-opacity="0.8" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#bgMacro)" />
+
+  <!-- Luz focal suave -->
+  <circle cx="500" cy="380" r="380" fill="#38bdf8" fill-opacity="0.08" filter="blur(50px)" />
+
+  <!-- Macro Billete de $1,000 en ángulo dinámico -->
+  <g transform="rotate(-6 600 375)" filter="url(#macroShadow)">
+    <rect x="80" y="140" width="1040" height="470" rx="24" fill="url(#billGris)" stroke="#94a3b8" stroke-width="6" />
+
+    <!-- Marco ornamentado y micropatrones -->
+    <rect x="110" y="170" width="980" height="410" rx="16" fill="none" stroke="#64748b" stroke-width="3" stroke-dasharray="10 6" />
+
+    <!-- Zona Azul/Turquesa Característica $1,000 Pesos -->
+    <rect x="130" y="190" width="280" height="370" rx="12" fill="url(#cyanFranja)" fill-opacity="0.35" stroke="#38bdf8" stroke-width="3" />
+    <text x="270" y="360" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="76" fill="#38bdf8" text-anchor="middle">$1000</text>
+    <text x="270" y="420" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="28" fill="#bae6fd" text-anchor="middle" letter-spacing="4">PESOS</text>
+
+    <!-- Ventana de Seguridad / Polímero Transparente -->
+    <rect x="440" y="200" width="60" height="350" rx="10" fill="#38bdf8" fill-opacity="0.2" stroke="#7dd3fc" stroke-width="2.5" />
+    <circle cx="470" cy="375" r="20" fill="#fde047" fill-opacity="0.6" />
+
+    <!-- BANCO DE MÉXICO -->
+    <text x="760" y="250" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="34" fill="#ffffff" letter-spacing="4">BANCO DE MÉXICO</text>
+
+    <!-- Calakmul / Jaguar silueta ilustrada -->
+    <g transform="translate(540, 290)">
+      <circle cx="90" cy="90" r="70" fill="#334155" stroke="#64748b" stroke-width="4" />
+      <path d="M50 140 C50 90, 130 90, 130 140 Z" fill="#94a3b8" />
+      <circle cx="90" cy="80" r="30" fill="#cbd5e1" />
+    </g>
+
+    <text x="960" y="550" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="90" fill="#ffffff">1000</text>
+
+    <!-- Faja / Precinto Dorado con relieve -->
+    <rect x="760" y="125" width="160" height="500" rx="12" fill="url(#goldRibbon)" stroke="#fef08a" stroke-width="4" />
+    <text x="840" y="340" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="24" fill="#78350f" text-anchor="middle" letter-spacing="3">GARANTIZADO</text>
+    <text x="840" y="400" font-family="'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="38" fill="#451a03" text-anchor="middle">100%</text>
+  </g>
+
+  <!-- Destello -->
+  <path d="M740 120 L748 140 L768 148 L748 156 L740 176 L732 156 L712 148 L732 140 Z" fill="#ffffff" />
+</svg>

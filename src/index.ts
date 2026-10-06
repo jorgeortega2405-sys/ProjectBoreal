@@ -7,6 +7,7 @@ import giveawaysRoutes from './routes/giveaways.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import { processBanxicoBatch } from './services/banxico.service.js';
+import { ensureCurrentDailyGiveaway } from './services/daily-giveaway.service.js';
 import { drawGiveawayWinners } from './services/giveaways.service.js';
 import { logger } from './services/logger.service.js';
 import { releaseExpiredReservations } from './services/orders.service.js';
@@ -253,6 +254,7 @@ async function startWorkerServer(): Promise<void> {
   await checkDbConnection();
   await checkRedisConnection();
   await checkCassandraConnection();
+  await ensureCurrentDailyGiveaway();
 
   const server = http.createServer(app);
   await setupClient(app, server);

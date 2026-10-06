@@ -149,11 +149,9 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
     const title = `Sorteo Diario (${dayStr}/${monthStr}/${yearStr})`;
     const description =
       '¡Sorteo diario de lunes a viernes! 20,000 boletos disponibles a solo $2 MXN cada uno. El ganador se lleva una parte del acumulado en efectivo al finalizar el día.';
-    const primaryImageUrl = '/images/giveaways/cash-dark-luxe-main.jpg';
+    const primaryImageUrl = '/images/giveaways/daily/daily-cash-1000-main.jpg';
     const imageUrls = JSON.stringify([
-      '/images/giveaways/cash-dark-luxe-main.jpg',
-      '/images/giveaways/cash-dark-luxe-angle.jpg',
-      '/images/giveaways/cash-dark-luxe-macro.jpg',
+      '/images/giveaways/daily/daily-cash-1000-main.jpg',
     ]);
     const packageOptions = JSON.stringify([5, 10, 25, 50, 100]);
 
@@ -194,6 +192,14 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
     if (createdRows.length === 0) return null;
 
     const row = createdRows[0];
+
+    await pool.query(
+      `INSERT INTO giveaway_bank_accounts (giveaway_id, bank_account_id, is_active)
+       SELECT ?, id, 1 FROM bank_accounts WHERE is_active = 1
+       ON DUPLICATE KEY UPDATE is_active = 1`,
+      [row.id]
+    );
+
     const newGiveaway: Giveaway = {
       ...row,
       current_pot: 0,

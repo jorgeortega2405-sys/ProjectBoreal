@@ -19,6 +19,8 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
     const cached = await getCache<Giveaway[]>('giveaways:active');
     if (cached) return cached;
 
+    await ensureCurrentDailyGiveaway();
+
     const [rows] = await pool.query<GiveawayRow[]>(
       `SELECT id, uuid, title, slug, description, primary_image_url, image_urls, package_options,
               CAST(ticket_price AS DOUBLE) AS ticket_price,

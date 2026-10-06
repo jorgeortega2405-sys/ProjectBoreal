@@ -1,4 +1,4 @@
-export function formatShortDate(dateStr: string | null | undefined, lang = 'es-419'): string {
+export function formatShortDate(dateStr: string | null | undefined, lang = 'es-MX'): string {
   if (!dateStr) return '';
   const clean = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
   const d = new Date(clean);
@@ -26,6 +26,7 @@ export function formatDate(dateStr: string | null | undefined, locale = 'es-MX')
   }
 }
 
-export function formatWinnerDate(dateStr: string | null | undefined, lang = 'es-419'): string {
+export function formatWinnerDate(dateStr: string | null | undefined, lang = 'es-MX'): string {
   return formatShortDate(dateStr, lang);
 }
+

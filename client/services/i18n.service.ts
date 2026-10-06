@@ -1,6 +1,6 @@
 import { detectBrowserLanguage } from '../utils/languages.util.js';
 
-let currentLanguage = 'es-419';
+let currentLanguage = 'es-MX';
 let currentTranslations: Record<string, unknown> = {};
 
 const FALLBACK_TRANSLATIONS: Record<string, unknown> = {
@@ -300,11 +300,8 @@ export async function initI18n(): Promise<void> {
   const savedLang = localStorage.getItem('boreal_language');
   const browserLang = detectBrowserLanguage();
 
-  let code = savedLang || browserLang || 'es-419';
-  if (code === 'es') code = 'es-419';
-  if (code === 'en') code = 'en-US';
-  if (code === 'pt') code = 'pt-BR';
-  if (code === 'fr') code = 'fr-FR';
+  let code = savedLang || browserLang || 'es-MX';
+  if (code !== 'es-MX') code = 'es-MX';
 
   currentLanguage = code;
   await loadTranslationFile(currentLanguage);

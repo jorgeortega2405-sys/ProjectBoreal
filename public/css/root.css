@@ -449,7 +449,7 @@
   --border-subtle-translucent: #00000020;
 
   --overlay-dark: rgba(0, 0, 0, 0.45);
-  --overlay-blur: blur(6px);
+  --overlay-blur: none;
 
   /* Acciones Primarias */
   --action-primary: #111827;

@@ -177,6 +177,64 @@ CREATE TABLE IF NOT EXISTS `spei_validation_queue` (
   CONSTRAINT `fk_spei_queue_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================================================
+-- Sorteo Diario Inicial Activo (50/50)
+-- ============================================================================
+INSERT INTO `giveaways` (
+  `id`,
+  `uuid`,
+  `title`,
+  `slug`,
+  `description`,
+  `primary_image_url`,
+  `image_urls`,
+  `package_options`,
+  `ticket_price`,
+  `total_tickets`,
+  `available_tickets`,
+  `currency`,
+  `type`,
+  `status`,
+  `start_date`,
+  `end_date`,
+  `draw_date`,
+  `min_threshold_pct`,
+  `countdown_hours`,
+  `prize_amount`
+) VALUES (
+  1,
+  'd1a11111-e222-3333-4444-555555555555',
+  'Sorteo Diario: Bolsa Acumulada en Efectivo',
+  'sorteo-diario-activo',
+  '¡Sorteo diario! 20,000 boletos disponibles a solo $2 MXN cada uno. El ganador se lleva una parte del acumulado en efectivo al finalizar el día.',
+  '/images/giveaways/daily/daily-cash-1000-main.jpg',
+  '["/images/giveaways/daily/daily-cash-1000-main.jpg"]',
+  '[5, 10, 25, 50, 100]',
+  2.00,
+  20000,
+  20000,
+  'MXN',
+  'daily',
+  'active',
+  CURRENT_TIMESTAMP,
+  DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 24 HOUR),
+  DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 24 HOUR),
+  0,
+  24,
+  NULL
+)
+ON DUPLICATE KEY UPDATE
+  `title` = VALUES(`title`),
+  `status` = 'active',
+  `ticket_price` = VALUES(`ticket_price`),
+  `primary_image_url` = VALUES(`primary_image_url`),
+  `image_urls` = VALUES(`image_urls`),
+  `type` = 'daily';
+
+INSERT INTO `giveaway_bank_accounts` (`giveaway_id`, `bank_account_id`, `is_active`)
+SELECT 1, `id`, 1 FROM `bank_accounts` WHERE `is_active` = 1
+ON DUPLICATE KEY UPDATE `is_active` = 1;
+
 GRANT ALL PRIVILEGES ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
 
