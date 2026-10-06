@@ -1,5 +1,5 @@
 export function normalizeMexicanPhone(phone: string | null | undefined): string {
-  if (!phone) return '';
+  if (!phone || String(phone).includes('*')) return '';
   const digits = String(phone).replace(/\D/g, '');
   if (digits.startsWith('521') && digits.length === 13) {
     return digits.slice(3);
@@ -17,7 +17,9 @@ export function normalizeMexicanPhone(phone: string | null | undefined): string 
 }
 
 export function formatMexicanPhone(phone: string | null | undefined): string {
+  if (!phone || String(phone).includes('*')) return '';
   const digits = normalizeMexicanPhone(phone);
+  if (!digits) return '';
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
   return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)}`;

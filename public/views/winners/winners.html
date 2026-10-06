@@ -14,19 +14,6 @@
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
             </button>
           </div>
-
-          <div class="component-tags-carousel-wrapper view-tags-wrapper" data-ref="winners-tabs">
-            <div class="component-tags-carousel">
-              <button type="button" class="component-badge component-badge--interactive is-active" data-ref="tab-standard" data-tab="standard">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
-                <span>Sorteos Principales</span>
-              </button>
-              <button type="button" class="component-badge component-badge--interactive" data-ref="tab-daily" data-tab="daily">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#bolt"></use></svg>
-                <span>Sorteos Diarios</span>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -36,16 +23,13 @@
           <span class="winners-loading__text" data-i18n="app.loading">Cargando...</span>
         </div>
 
-        <!-- Grid de Sorteos Estándar -->
-        <div class="canvas-grid" data-ref="winners-grid"></div>
-
-        <!-- Tabla de Ganadores Diarios -->
-        <div class="winners-daily-wrapper is-hidden" data-ref="winners-daily-wrapper">
-          <div class="winners-daily-table-card">
+        <div class="winners-daily-wrapper" data-ref="winners-table-wrapper">
+          <div class="winners-daily-table-card" data-ref="winners-table-card">
             <div class="winners-daily-table-scroll">
-              <table class="winners-daily-table" data-ref="winners-daily-table">
+              <table class="winners-daily-table" data-ref="winners-table">
                 <thead>
                   <tr>
+                    <th class="winners-th winners-th--giveaway" scope="col">Sorteo</th>
                     <th class="winners-th winners-th--winner" scope="col">Ganador</th>
                     <th class="winners-th winners-th--location" scope="col">Ubicación</th>
                     <th class="winners-th winners-th--phone" scope="col">Teléfono</th>
@@ -54,7 +38,7 @@
                     <th class="winners-th winners-th--date" scope="col">Fecha</th>
                   </tr>
                 </thead>
-                <tbody class="winners-tbody" data-ref="tbody-daily-winners"></tbody>
+                <tbody class="winners-tbody" data-ref="tbody-winners"></tbody>
               </table>
             </div>
           </div>

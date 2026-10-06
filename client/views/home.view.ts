@@ -58,7 +58,7 @@ function sortGiveaways(list: Giveaway[]): Giveaway[] {
 
 function computeThresholdBadge(item: Giveaway): string | null {
   if (item.type === 'daily' && item.status === 'active') {
-    return '⚡ Sorteo Diario';
+    return 'Sorteo Diario';
   }
   if (item.min_threshold_pct > 0 && !item.threshold_reached_at && item.status !== 'completed') {
     const total = item.total_tickets || 100;
@@ -71,8 +71,9 @@ function computeThresholdBadge(item: Giveaway): string | null {
 
 function computeTimerInfo(item: Giveaway): { isEnded: boolean; text: string } {
   if (item.status === 'completed') {
-    const winnerText = item.winner_name && item.winner_name !== 'Sin participantes'
-      ? t('home.winner_announced', { name: item.winner_name, ticket: item.winner_ticket_number ?? 'N/A' })
+    const hasWinner = Boolean(item.winner_ticket_number != null && item.winner_name && item.winner_name !== 'Sin participantes');
+    const winnerText = hasWinner
+      ? t('home.winner_announced', { name: item.winner_name!, ticket: item.winner_ticket_number! })
       : t('home.completed_badge');
     return {
       isEnded: true,
@@ -436,7 +437,6 @@ export class HomeController {
   private bindEvents(view: HTMLElement): void {
     const signal = this.abortController?.signal;
     const searchInput = view.querySelector<HTMLInputElement>('[data-ref="hero-search-input"]');
-    const clearBtn = view.querySelector<HTMLButtonElement>('[data-ref="btn-hero-clear-search"]');
     const grid = view.querySelector<HTMLElement>('[data-ref="giveaways-grid"]');
 
     if (searchInput) {
@@ -444,9 +444,6 @@ export class HomeController {
         'input',
         () => {
           this.searchQuery = searchInput.value;
-          if (clearBtn) {
-            clearBtn.style.display = this.searchQuery.trim().length > 0 ? 'inline-flex' : 'none';
-          }
           this.filterGiveaways();
         },
         { signal }
@@ -466,21 +463,6 @@ export class HomeController {
         { signal }
       );
     }
-
-    clearBtn?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        if (searchInput) {
-          searchInput.value = '';
-          searchInput.focus();
-        }
-        this.searchQuery = '';
-        clearBtn.style.display = 'none';
-        this.filterGiveaways();
-      },
-      { signal }
-    );
 
     grid?.addEventListener(
       'click',

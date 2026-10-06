@@ -251,7 +251,10 @@ export async function getOrderDetailHandler(req: Request, res: Response): Promis
     });
 
     res.status(200).json({
-      data: maskOrder(order),
+      data: {
+        ...maskOrder(order),
+        customer_phone: order.customer_phone,
+      },
       success: true,
     });
   } catch (error) {
@@ -362,7 +365,10 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     }
 
     res.status(200).json({
-      data: maskOrder(updatedOrder),
+      data: {
+        ...maskOrder(updatedOrder),
+        customer_phone: updatedOrder.customer_phone,
+      },
       message: 'Comprobante registrado exitosamente. Tu pago pasará a validación Banxico.',
       success: true,
     });

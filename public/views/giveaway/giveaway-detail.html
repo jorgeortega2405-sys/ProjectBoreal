@@ -44,13 +44,16 @@
             </div>
 
             <!-- Banner Ganador Oficial (si el sorteo concluyó) -->
-            <div class="banner banner--winner" data-ref="banner-giveaway-winner" style="display: none; padding: 14px 18px; border-radius: 12px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(59, 130, 246, 0.24)); border: 1px solid rgba(59, 130, 246, 0.45);">
-              <div class="banner-title" style="font-size: 15px; font-weight: 800; color: #3b82f6; margin-bottom: 4px;">
+            <div class="banner banner--winner" data-ref="banner-giveaway-winner" style="display: none;">
+              <div class="banner-title" data-ref="banner-winner-title">
                 <span data-i18n="giveaway.winner_congrats_title"></span>
               </div>
-              <div class="banner-desc" style="font-size: 13px; color: var(--text-primary);">
-                <span data-i18n="giveaway.winner_label"></span> <strong class="banner-highlight" data-ref="winner-name-display"></strong>
-                • <span data-i18n="giveaway.winner_ticket_label"></span> <strong class="banner-highlight" data-ref="winner-ticket-display"></strong>
+              <div class="banner-desc" data-ref="banner-winner-desc">
+                <span data-ref="winner-details-row">
+                  <span data-i18n="giveaway.winner_label"></span> <strong class="banner-highlight" data-ref="winner-name-display"></strong>
+                  • <span data-i18n="giveaway.winner_ticket_label"></span> <strong class="banner-highlight" data-ref="winner-ticket-display"></strong>
+                </span>
+                <span class="is-hidden" data-ref="no-winner-details-row"></span>
               </div>
             </div>
 
@@ -89,29 +92,16 @@
               <div class="giveaway-info__threshold-hint is-hidden" data-ref="giveaway-threshold-hint"></div>
             </div>
 
-            <!-- Precio por boleto y selector de paquetes -->
+            <!-- Precio por boleto y botón de selección al azar -->
             <div class="giveaway-info__price-box" data-ref="giveaway-price-box">
-              <div>
+              <div class="giveaway-info__price-content" data-ref="giveaway-price-content">
                 <div class="giveaway-info__price-value" data-ref="giveaway-price-value"></div>
                 <div class="giveaway-info__price-sub" data-i18n="giveaway.per_ticket"></div>
               </div>
-              <div class="settings-dropdown-wrapper giveaway-info__dropdown-wrapper" data-ref="dropdown-wrapper-quantity">
-                <button type="button" class="dropdown-trigger" data-ref="btn-trigger-quantity" aria-haspopup="listbox" aria-expanded="false">
-                  <div class="dropdown-trigger__left">
-                    <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-                    <span class="dropdown-trigger__text" data-ref="quantity-selected-text">1 boleto</span>
-                  </div>
-                  <div class="dropdown-trigger__right">
-                    <span class="dropdown-trigger__price" data-ref="quantity-selected-price"></span>
-                    <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-                  </div>
-                </button>
-                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-quantity">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-quantity" role="listbox">
-                    <div class="menu-panel__list" data-ref="list-quantities"></div>
-                  </div>
-                </div>
-              </div>
+              <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-lucky-pick-header">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+                <span data-i18n="giveaway.generate_tickets">Generar boletos</span>
+              </button>
             </div>
 
             <!-- Resumen de selección en columna lateral -->
@@ -143,15 +133,8 @@
               <p class="giveaway-info__desc-text" data-ref="giveaway-description"></p>
             </div>
 
-            <!-- Último Ganador (Solo Sorteo Diario) -->
-            <div class="giveaway-daily-last-winner" data-ref="section-daily-winners" style="display: none;">
-              <div class="giveaway-daily-last-winner__header" data-ref="daily-last-winner-header">
-                <span class="giveaway-daily-last-winner__label" data-ref="daily-last-winner-label">Último ganador</span>
-              </div>
-              <div class="giveaway-daily-last-winner__badges" data-ref="daily-last-winner-badges"></div>
             </div>
           </div>
-        </div>
 
         <!-- Sección Inferior: Selector de Boletos -->
         <section class="giveaway-tickets" data-ref="giveaway-tickets-section">

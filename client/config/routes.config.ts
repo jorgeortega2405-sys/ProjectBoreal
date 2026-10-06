@@ -23,18 +23,25 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/' || path === '',
   },
   {
-    handler: async () => {
+    handler: async (ctx) => {
       const { createValidatePaymentView } = await import('../views/validate-payment.view.js');
-      return await createValidatePaymentView();
+      const orderUuid = ctx.params?.orderUuid || ctx.query?.get('order') || undefined;
+      return await createValidatePaymentView(orderUuid);
     },
     id: 'validate-payment',
-    match: (path) => path === '/validate-payment' || path === '/validar-pago',
+    match: (path) => {
+      if (path === '/validate-payment' || path === '/validar-pago') {
+        return true;
+      }
+      const match = path.match(/^\/(?:validate-payment|validar-pago)\/o\/([a-zA-Z0-9-]+)$/);
+      if (!match) return false;
+      return { orderUuid: match[1] };
+    },
   },
   {
-    handler: async (ctx) => {
+    handler: async () => {
       const { createWinnersView } = await import('../views/winners.view.js');
-      const initialTab = ctx?.query?.get('tab') || new URLSearchParams(window.location.search).get('tab') || 'standard';
-      return await createWinnersView(initialTab);
+      return await createWinnersView();
     },
     id: 'winners',
     match: (path) => path === '/winners' || path === '/ganadores',

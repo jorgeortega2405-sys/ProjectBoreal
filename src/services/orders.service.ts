@@ -136,8 +136,8 @@ export async function reserveTickets(data: {
     const packageOpts = giveaway.package_options
       ? (typeof giveaway.package_options === 'string' ? JSON.parse(giveaway.package_options) : giveaway.package_options)
       : [];
-    const maxPkg = Array.isArray(packageOpts) && packageOpts.length > 0 ? Math.max(...packageOpts) : 20;
-    const maxAllowed = Math.max(20, maxPkg, giveaway.type === 'daily' ? 100 : 20);
+    const maxByTotal = Math.max(10, Math.floor(giveaway.total_tickets * 0.20));
+    const maxAllowed = Math.max(1, maxByTotal);
 
     if (cleanNumbers.length > maxAllowed) {
       await conn.rollback();

@@ -1,7 +1,7 @@
 import { navigate } from '../app-router.js';
 import { openBankInfoModal } from '../components/bank-info-modal.component.js';
 import { openModal } from '../components/modal.component.js';
-import { fetchDailyWinners, fetchGiveawayDetail, fetchGiveawayTickets } from '../services/giveaways.service.js';
+import { fetchGiveawayDetail, fetchGiveawayTickets } from '../services/giveaways.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { reserveTicketsApi } from '../services/orders.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -81,7 +81,6 @@ export class GiveawayDetailController {
     this.renderGallery();
     this.renderTickets();
     this.renderPagination();
-    this.renderQuantitiesDropdown();
     this.updateSummary();
     this.updateCountdownDisplay();
     this.checkPendingOrderStorage();
@@ -261,8 +260,30 @@ export class GiveawayDetailController {
       if (winnerBanner) {
         winnerBanner.classList.remove('is-hidden');
         winnerBanner.style.display = 'block';
-        if (winnerNameEl) winnerNameEl.textContent = g.winner_name || 'Sin participantes';
-        if (winnerTicketEl) winnerTicketEl.textContent = g.winner_ticket_number ? `#${g.winner_ticket_number}` : 'N/A';
+
+        const hasWinner = Boolean(g.winner_ticket_number != null && g.winner_name && g.winner_name !== 'Sin participantes');
+        const winnerTitleEl = this.container.querySelector<HTMLElement>('[data-ref="banner-winner-title"]');
+        const winnerDetailsRow = this.container.querySelector<HTMLElement>('[data-ref="winner-details-row"]');
+        const noWinnerDetailsRow = this.container.querySelector<HTMLElement>('[data-ref="no-winner-details-row"]');
+
+        if (hasWinner) {
+          winnerBanner.classList.add('banner--winner');
+          winnerBanner.classList.remove('banner--no-winner');
+          if (winnerTitleEl) winnerTitleEl.textContent = t('giveaway.winner_congrats_title');
+          if (winnerDetailsRow) winnerDetailsRow.classList.remove('is-hidden');
+          if (noWinnerDetailsRow) noWinnerDetailsRow.classList.add('is-hidden');
+          if (winnerNameEl) winnerNameEl.textContent = g.winner_name || '';
+          if (winnerTicketEl) winnerTicketEl.textContent = `#${g.winner_ticket_number}`;
+        } else {
+          winnerBanner.classList.remove('banner--winner');
+          winnerBanner.classList.add('banner--no-winner');
+          if (winnerTitleEl) winnerTitleEl.textContent = t('giveaway.no_winner_banner_title');
+          if (winnerDetailsRow) winnerDetailsRow.classList.add('is-hidden');
+          if (noWinnerDetailsRow) {
+            noWinnerDetailsRow.classList.remove('is-hidden');
+            noWinnerDetailsRow.textContent = t('giveaway.no_winner_banner_desc');
+          }
+        }
       }
       if (buyBtn) {
         buyBtn.disabled = true;
@@ -412,10 +433,10 @@ export class GiveawayDetailController {
   }
 
   private disablePurchaseControls(disabled: boolean): void {
-    const triggerBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-quantity"]');
-    if (triggerBtn) {
-      triggerBtn.disabled = disabled;
-      triggerBtn.classList.toggle('is-disabled', disabled);
+    const luckyHeaderBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-lucky-pick-header"]');
+    if (luckyHeaderBtn) {
+      luckyHeaderBtn.disabled = disabled;
+      luckyHeaderBtn.classList.toggle('is-disabled', disabled);
     }
     const luckyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-lucky-pick"]');
     if (luckyBtn) {
@@ -477,22 +498,43 @@ export class GiveawayDetailController {
   }
 
   private showWinnerModal(winnerName: string, ticketNum: number | null): void {
-    const modalContent = `
+    const hasWinner = Boolean(ticketNum != null && winnerName && winnerName !== 'Sin participantes');
+    const modalContent = hasWinner
+      ? `
       <div class="winner-modal-box" style="text-align: center; padding: 24px 16px;">
         <div class="winner-trophy" style="font-size: 48px; margin-bottom: 12px;">🏆</div>
-        <h2 class="winner-title" style="font-size: 22px; font-weight: 800; color: #f59e0b; margin-bottom: 8px;">${t('giveaway.winner_congrats_title')}</h2>
+        <h2 class="winner-title" style="font-size: 22px; font-weight: 800; color: #f59e0b; margin-bottom: 8px;">${escapeHtml(t('giveaway.winner_congrats_title'))}</h2>
         <p class="winner-sub" style="font-size: 15px; color: var(--text-secondary); margin-bottom: 20px;">
-          ${t('giveaway.winner_congrats_desc', { ticket: ticketNum ?? 'N/A' })}
+          ${escapeHtml(t('giveaway.winner_congrats_desc', { ticket: ticketNum! }))}
         </p>
         <div class="winner-card" style="padding: 16px 20px; border-radius: 12px; background: var(--bg-hover); margin-bottom: 24px; border: 1px solid var(--border-subtle);">
-          <div class="winner-card-label" style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">${t('giveaway.winner_label')}</div>
-          <div class="winner-card-name" style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${winnerName}</div>
+          <div class="winner-card-label" style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">${escapeHtml(t('giveaway.winner_label'))}</div>
+          <div class="winner-card-name" style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(winnerName)}</div>
           <div class="winner-card-ticket" style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
-            ${t('giveaway.winner_ticket_label')} <strong style="color: #f59e0b;">#${ticketNum ?? 'N/A'}</strong>
+            ${escapeHtml(t('giveaway.winner_ticket_label'))} <strong style="color: #f59e0b;">#${ticketNum}</strong>
           </div>
         </div>
         <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full" data-ref="btn-close-winner-modal">
-          ${t('giveaway.winner_close_modal')}
+          ${escapeHtml(t('giveaway.winner_close_modal'))}
+        </button>
+      </div>
+    `
+      : `
+      <div class="winner-modal-box" style="text-align: center; padding: 24px 16px;">
+        <div class="winner-trophy" style="font-size: 48px; margin-bottom: 12px;">🎟️</div>
+        <h2 class="winner-title" style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">${escapeHtml(t('giveaway.no_winner_modal_title'))}</h2>
+        <p class="winner-sub" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
+          ${escapeHtml(t('giveaway.no_winner_modal_desc'))}
+        </p>
+        <div class="winner-card" style="padding: 16px 20px; border-radius: 12px; background: var(--bg-hover); margin-bottom: 24px; border: 1px solid var(--border-subtle);">
+          <div class="winner-card-label" style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">${escapeHtml(t('giveaway.no_winner_status_label'))}</div>
+          <div class="winner-card-name" style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(t('giveaway.no_winner_status_badge'))}</div>
+          <div class="winner-card-ticket" style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
+            ${escapeHtml(t('giveaway.no_winner_status_detail'))}
+          </div>
+        </div>
+        <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full" data-ref="btn-close-winner-modal">
+          ${escapeHtml(t('giveaway.winner_close_modal'))}
         </button>
       </div>
     `;
@@ -545,7 +587,7 @@ export class GiveawayDetailController {
       } else if (isUpcoming) {
         statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.upcoming_status'))}</span>`;
       } else if (g.type === 'daily') {
-        statusBadgeEl.innerHTML = `<span>⚡ Sorteo Diario</span>`;
+        statusBadgeEl.innerHTML = `<span>Sorteo Diario</span>`;
       } else {
         statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.active_badge'))}</span>`;
       }
@@ -616,7 +658,6 @@ export class GiveawayDetailController {
     }
 
     const dailyPotBanner = this.container.querySelector<HTMLElement>('[data-ref="banner-daily-pot"]');
-    const dailyWinnersSection = this.container.querySelector<HTMLElement>('[data-ref="section-daily-winners"]');
     if (g.type === 'daily') {
       if (dailyPotBanner) {
         dailyPotBanner.style.display = 'block';
@@ -625,46 +666,8 @@ export class GiveawayDetailController {
           potAmountEl.textContent = formatCurrency(g.current_pot || 0, g.currency || 'MXN', { decimals: 0 });
         }
       }
-      if (dailyWinnersSection) {
-        void this.loadDailyLastWinner(dailyWinnersSection);
-      }
     } else {
       if (dailyPotBanner) dailyPotBanner.style.display = 'none';
-      if (dailyWinnersSection) dailyWinnersSection.style.display = 'none';
-    }
-  }
-
-  private async loadDailyLastWinner(sectionEl: HTMLElement): Promise<void> {
-    try {
-      const winners = await fetchDailyWinners(1);
-      if (!winners || winners.length === 0) {
-        sectionEl.style.display = 'none';
-        return;
-      }
-
-      const item = winners[0];
-      const badgesContainer = sectionEl.querySelector<HTMLElement>('[data-ref="daily-last-winner-badges"]');
-      if (!badgesContainer) return;
-
-      const name = escapeHtml(item.winner_name || 'Participante');
-      const state = escapeHtml(item.customer_state || item.customer_city || 'México');
-      const phone = escapeHtml(item.customer_phone_masked || '•• •• •• --');
-      const ticketNum = item.winner_ticket_number != null ? `#${String(item.winner_ticket_number).padStart(5, '0')}` : 'N/A';
-      const prize = formatCurrency(item.prize_amount || 0, 'MXN');
-      const date = formatShortDate(item.draw_date || item.winner_announced_at || '', getCurrentLanguage());
-
-      badgesContainer.innerHTML = `
-        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-name">${name}</span>
-        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-location">🇲🇽 ${state}</span>
-        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-phone">${phone}</span>
-        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-ticket">${ticketNum}</span>
-        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-prize">${prize}</span>
-        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-date">${date}</span>
-      `;
-
-      sectionEl.style.display = 'block';
-    } catch (_) {
-      sectionEl.style.display = 'none';
     }
   }
 
@@ -1016,21 +1019,6 @@ export class GiveawayDetailController {
       priceEl.textContent = t('giveaway.total_price', { currency, total });
     }
 
-    const triggerText = this.container.querySelector<HTMLElement>('[data-ref="quantity-selected-text"]');
-    const triggerPrice = this.container.querySelector<HTMLElement>('[data-ref="quantity-selected-price"]');
-    if (triggerText) {
-      triggerText.textContent = count === 1 ? '1 boleto' : `${formatNumber(count)} boletos`;
-    }
-    if (triggerPrice) {
-      triggerPrice.textContent = formatCurrency(totalAmount, currency);
-    }
-
-    const options = this.container.querySelectorAll<HTMLButtonElement>('[data-ref="list-quantities"] .menu-item');
-    options.forEach((opt) => {
-      const qty = parseInt(opt.getAttribute('data-qty') || '0', 10);
-      opt.classList.toggle('is-active', qty === count);
-    });
-
     const buyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-buy-giveaway"]');
     if (buyBtn) {
       if (this.isSalesClosed()) {
@@ -1047,42 +1035,167 @@ export class GiveawayDetailController {
     }
   }
 
-  private renderQuantitiesDropdown(): void {
-    if (!this.giveaway) return;
-    const listEl = this.container.querySelector<HTMLElement>('[data-ref="list-quantities"]');
-    if (!listEl) return;
+  private getMaxAllowedTickets(): number {
+    if (!this.giveaway) return 20;
+    const total = this.giveaway.total_tickets || 100;
+    const available = this.giveaway.available_tickets ?? total;
 
+    const maxByTotal = Math.max(10, Math.floor(total * 0.20));
+    const maxByAvailable = available > 10 ? Math.floor(available * 0.50) : available;
+    const safeCap = Math.min(available, maxByTotal, maxByAvailable);
+    return Math.max(1, safeCap);
+  }
+
+  private openRandomPickModal(): void {
+    if (!this.giveaway) return;
+    if (this.isSalesClosed()) {
+      showToast(t('giveaway.toast_sales_closed'), 'warning');
+      return;
+    }
+
+    const availableCount = this.giveaway.available_tickets ?? this.giveaway.total_tickets ?? 0;
+    if (availableCount <= 0) {
+      showToast(t('giveaway.toast_all_taken'), 'warning');
+      return;
+    }
+
+    const maxAllowedSafe = this.getMaxAllowedTickets();
     const rawOptions = this.giveaway.package_options;
-    const options = Array.isArray(rawOptions) && rawOptions.length > 0 ? rawOptions : [1, 3, 5, 10, 20];
+    const baseOptions = Array.isArray(rawOptions) && rawOptions.length > 0 ? rawOptions : [1, 3, 5, 10, 20];
+    const allOptions = Array.from(new Set([1, ...baseOptions])).sort((a, b) => a - b);
+    const validOptions = allOptions.filter((qty) => qty <= maxAllowedSafe);
+    const options = validOptions.length > 0 ? validOptions : [1];
+
+    let isCustomMode = false;
+    let selectedQty = options[0] || 1;
+    if (this.selectedTickets.size > 0 && this.selectedTickets.size <= maxAllowedSafe) {
+      selectedQty = this.selectedTickets.size;
+      if (!options.includes(selectedQty)) {
+        isCustomMode = true;
+      }
+    }
+
     const currency = this.giveaway.currency || 'MXN';
     const price = this.giveaway.ticket_price || 0;
 
-    const isClosed = this.isSalesClosed();
+    const modalBody = document.createElement('div');
+    modalBody.innerHTML = `
+      <div class="random-pick-modal" data-ref="random-pick-modal">
+        <div class="random-pick-modal__group" data-ref="group-dropdown">
+          <span class="random-pick-modal__label" data-ref="label-select-package">${t('giveaway.random_modal_select_package')}</span>
+          <div class="settings-dropdown-wrapper giveaway-info__dropdown-wrapper" data-ref="dropdown-wrapper-quantity">
+            <button type="button" class="dropdown-trigger" data-ref="btn-trigger-quantity" aria-haspopup="listbox" aria-expanded="false">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="quantity-selected-text">${isCustomMode ? t('giveaway.random_modal_custom_option') : (selectedQty === 1 ? '1 boleto' : `${formatNumber(selectedQty)} boletos`)}</span>
+              </div>
+              <div class="dropdown-trigger__right">
+                <span class="dropdown-trigger__price" data-ref="quantity-selected-price">${formatCurrency(selectedQty * price, currency)}</span>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </div>
+            </button>
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-quantity">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-quantity" role="listbox">
+                <div class="menu-panel__list" data-ref="list-quantities">
+                  ${options.map((qty) => `
+                    <button type="button" class="menu-item${!isCustomMode && qty === selectedQty ? ' is-active' : ''}" data-ref="option-qty-${qty}" data-qty="${qty}">
+                      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+                      <span class="menu-item__text">${qty === 1 ? '1 boleto' : `${formatNumber(qty)} boletos`}</span>
+                      <span class="menu-item__subtext">${formatCurrency(qty * price, currency)}</span>
+                    </button>
+                  `).join('')}
+                  <button type="button" class="menu-item${isCustomMode ? ' is-active' : ''}" data-ref="option-qty-custom" data-qty="custom">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                    <span class="menu-item__text">${t('giveaway.random_modal_custom_option')}</span>
+                    <span class="menu-item__subtext">${t('giveaway.random_modal_custom_subtext')}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-    listEl.innerHTML = options
-      .map((qty) => {
-        const subtotal = formatCurrency(qty * price, currency);
-        const qtyLabel = qty === 1 ? '1 boleto' : `${formatNumber(qty)} boletos`;
-        const disabledAttr = isClosed ? 'disabled' : '';
-        const disabledClass = isClosed ? 'is-disabled' : '';
-        return `
-          <button type="button" class="menu-item ${disabledClass}" ${disabledAttr} data-ref="option-qty-${qty}" data-qty="${qty}">
-            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-            <span class="menu-item__text">${qtyLabel}</span>
-            <span class="menu-item__subtext">${subtotal}</span>
-          </button>
-        `;
-      })
-      .join('');
-  }
+        <div class="random-pick-custom-box${isCustomMode ? '' : ' is-hidden'}" data-ref="random-pick-custom-box">
+          <label class="field" data-ref="field-custom-quantity">
+            <input class="field__input field__input--has-action" data-ref="input-custom-quantity" type="number" min="1" max="${maxAllowedSafe}" placeholder=" " value="${selectedQty}" />
+            <span class="field__label" data-ref="label-custom-quantity">${t('giveaway.random_modal_custom_field')}</span>
+            <span class="field__action" data-ref="action-custom-quantity">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+            </span>
+          </label>
+          <div class="random-pick-custom-hint" data-ref="random-pick-custom-hint">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
+            <span>${t('giveaway.random_modal_custom_hint', { max: maxAllowedSafe })}</span>
+          </div>
+        </div>
 
-  private bindQuantityDropdown(): void {
-    const signal = this.abortController?.signal;
-    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-quantity"]');
-    const trigger = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-quantity"]');
-    const backdrop = this.container.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-quantity"]');
-    const menu = this.container.querySelector<HTMLElement>('[data-ref="dropdown-menu-quantity"]');
-    const listEl = this.container.querySelector<HTMLElement>('[data-ref="list-quantities"]');
+        <div class="random-pick-modal__summary" data-ref="random-pick-summary">
+          <div class="random-pick-modal__summary-item">
+            <span class="random-pick-modal__summary-label">${t('giveaway.random_modal_tickets_label')}</span>
+            <span class="random-pick-modal__summary-value" data-ref="random-summary-count">${selectedQty === 1 ? '1 boleto' : `${formatNumber(selectedQty)} boletos`}</span>
+          </div>
+          <div class="random-pick-modal__summary-item">
+            <span class="random-pick-modal__summary-label">${t('giveaway.random_modal_total_label')}</span>
+            <span class="random-pick-modal__summary-value random-pick-modal__summary-value--accent" data-ref="random-summary-total">${formatCurrency(selectedQty * price, currency)}</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const wrapper = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-quantity"]');
+    const trigger = modalBody.querySelector<HTMLButtonElement>('[data-ref="btn-trigger-quantity"]');
+    const backdrop = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-backdrop-quantity"]');
+    const menu = modalBody.querySelector<HTMLElement>('[data-ref="dropdown-menu-quantity"]');
+    const triggerText = modalBody.querySelector<HTMLElement>('[data-ref="quantity-selected-text"]');
+    const triggerPrice = modalBody.querySelector<HTMLElement>('[data-ref="quantity-selected-price"]');
+    const summaryCount = modalBody.querySelector<HTMLElement>('[data-ref="random-summary-count"]');
+    const summaryTotal = modalBody.querySelector<HTMLElement>('[data-ref="random-summary-total"]');
+    const customBox = modalBody.querySelector<HTMLElement>('[data-ref="random-pick-custom-box"]');
+    const customInput = modalBody.querySelector<HTMLInputElement>('[data-ref="input-custom-quantity"]');
+    const menuItems = modalBody.querySelectorAll<HTMLButtonElement>('.menu-item');
+
+    const updateModalDisplay = () => {
+      const totalAmount = selectedQty * price;
+      const label = selectedQty === 1 ? '1 boleto' : `${formatNumber(selectedQty)} boletos`;
+      const priceText = formatCurrency(totalAmount, currency);
+
+      if (summaryCount) summaryCount.textContent = label;
+      if (summaryTotal) summaryTotal.textContent = priceText;
+      if (triggerPrice) triggerPrice.textContent = priceText;
+
+      if (isCustomMode) {
+        if (triggerText) triggerText.textContent = `${label} (${t('giveaway.random_modal_custom_subtext')})`;
+      } else {
+        if (triggerText) triggerText.textContent = label;
+      }
+
+      menuItems.forEach((m) => {
+        const mQty = m.getAttribute('data-qty');
+        if (mQty === 'custom') {
+          m.classList.toggle('is-active', isCustomMode);
+        } else {
+          m.classList.toggle('is-active', !isCustomMode && parseInt(mQty || '0', 10) === selectedQty);
+        }
+      });
+
+      if (modal?.btnConfirm) {
+        modal.btnConfirm.textContent = `${t('giveaway.random_modal_confirm')} (${selectedQty})`;
+      }
+    };
+
+    const setCustomMode = (active: boolean) => {
+      isCustomMode = active;
+      if (active) {
+        customBox?.classList.remove('is-hidden');
+        if (customInput) {
+          customInput.value = String(selectedQty);
+          setTimeout(() => customInput.focus(), 50);
+        }
+      } else {
+        customBox?.classList.add('is-hidden');
+      }
+      updateModalDisplay();
+    };
 
     const closeDropdown = () => {
       wrapper?.classList.remove('is-open');
@@ -1100,71 +1213,81 @@ export class GiveawayDetailController {
       trigger?.setAttribute('aria-expanded', 'true');
     };
 
-    trigger?.addEventListener(
-      'click',
-      (e) => {
+    trigger?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (wrapper?.classList.contains('is-open')) {
+        closeDropdown();
+      } else {
+        openDropdown();
+      }
+    });
+
+    backdrop?.addEventListener('click', (e) => {
+      if (e.target === backdrop) closeDropdown();
+    });
+
+    menuItems.forEach((item) => {
+      item.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (this.isSalesClosed()) {
-          showToast(t('giveaway.toast_sales_closed'), 'warning');
-          return;
-        }
-        if (wrapper?.classList.contains('is-open')) {
-          closeDropdown();
+        const qtyAttr = item.getAttribute('data-qty');
+        if (qtyAttr === 'custom') {
+          setCustomMode(true);
         } else {
-          openDropdown();
+          const q = parseInt(qtyAttr || '0', 10);
+          if (q > 0) {
+            selectedQty = q;
+            setCustomMode(false);
+          }
         }
-      },
-      { signal }
-    );
-
-    backdrop?.addEventListener(
-      'click',
-      (e) => {
-        if (e.target === backdrop) {
-          closeDropdown();
-        }
-      },
-      { signal }
-    );
-
-    document.addEventListener(
-      'click',
-      (e) => {
-        if (!wrapper?.contains(e.target as Node)) {
-          closeDropdown();
-        }
-      },
-      { signal }
-    );
-
-    document.addEventListener(
-      'keydown',
-      (e) => {
-        if (e.key === 'Escape') {
-          closeDropdown();
-        }
-      },
-      { signal }
-    );
-
-    listEl?.addEventListener(
-      'click',
-      (e) => {
-        const itemBtn = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>('.menu-item');
-        if (!itemBtn) return;
-        const qtyStr = itemBtn.getAttribute('data-qty');
-        if (!qtyStr) return;
-        const qty = parseInt(qtyStr, 10);
         closeDropdown();
-        if (this.isSalesClosed()) {
-          showToast(t('giveaway.toast_sales_closed'), 'warning');
-          return;
-        }
-        this.selectRandomTickets(qty);
+      });
+    });
+
+    customInput?.addEventListener('input', () => {
+      let val = parseInt(customInput.value, 10);
+      if (isNaN(val)) return;
+      if (val > maxAllowedSafe) {
+        val = maxAllowedSafe;
+        customInput.value = String(maxAllowedSafe);
+        showToast(`Máximo permitido: ${maxAllowedSafe} boletos por orden`, 'warning');
+      } else if (val < 1) {
+        val = 1;
+      }
+      selectedQty = val;
+      updateModalDisplay();
+    });
+
+    customInput?.addEventListener('blur', () => {
+      let val = parseInt(customInput.value, 10);
+      if (isNaN(val) || val < 1) {
+        val = 1;
+        customInput.value = '1';
+      } else if (val > maxAllowedSafe) {
+        val = maxAllowedSafe;
+        customInput.value = String(maxAllowedSafe);
+      }
+      selectedQty = val;
+      updateModalDisplay();
+    });
+
+    const modal = openModal({
+      bodyHtml: modalBody,
+      cancelText: 'Cancelar',
+      confirmClass: 'component-button--black',
+      confirmText: `${t('giveaway.random_modal_confirm')} (${selectedQty})`,
+      description: t('giveaway.random_modal_desc'),
+      onConfirm: () => {
+        this.selectRandomTickets(selectedQty);
+        modal.close();
+        const section = this.container.querySelector<HTMLElement>('[data-ref="giveaway-tickets-section"]');
+        section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return true;
       },
-      { signal }
-    );
+      size: 'sm',
+      title: t('giveaway.random_modal_title'),
+    });
   }
 
   private renderNotFound(): void {
@@ -1196,9 +1319,7 @@ export class GiveawayDetailController {
     }
 
     this.selectedTickets.clear();
-    const rawOptions = this.giveaway.package_options;
-    const maxPkg = Array.isArray(rawOptions) && rawOptions.length > 0 ? Math.max(...rawOptions) : 20;
-    const maxAllowed = Math.max(20, maxPkg);
+    const maxAllowed = this.getMaxAllowedTickets();
     const targetCount = Math.min(count, availableCount, maxAllowed);
     let attempts = 0;
     const maxAttempts = targetCount * 500;
@@ -1287,7 +1408,11 @@ export class GiveawayDetailController {
       'click',
       (e) => {
         e.preventDefault();
-        navigate('/validate-payment');
+        if (this.activePendingOrder?.order?.uuid) {
+          navigate(`/validate-payment/o/${encodeURIComponent(this.activePendingOrder.order.uuid)}`);
+        } else {
+          navigate('/validate-payment');
+        }
       },
       { signal }
     );
@@ -1297,7 +1422,7 @@ export class GiveawayDetailController {
       'click',
       (e) => {
         e.preventDefault();
-        navigate('/winners?tab=daily');
+        navigate('/winners');
       },
       { signal }
     );
@@ -1340,9 +1465,7 @@ export class GiveawayDetailController {
           this.selectedTickets.delete(num);
           ticketBtn.classList.remove('is-selected');
         } else {
-          const rawOptions = this.giveaway?.package_options;
-          const maxPkg = Array.isArray(rawOptions) && rawOptions.length > 0 ? Math.max(...rawOptions) : 20;
-          const maxAllowed = Math.max(20, maxPkg);
+          const maxAllowed = this.getMaxAllowedTickets();
           if (this.selectedTickets.size >= maxAllowed) {
             showToast(`No puedes seleccionar más de ${maxAllowed} boletos por orden.`, 'warning');
             return;
@@ -1371,16 +1494,22 @@ export class GiveawayDetailController {
       { signal }
     );
 
+    const luckyHeaderBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-lucky-pick-header"]');
+    luckyHeaderBtn?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        this.openRandomPickModal();
+      },
+      { signal }
+    );
+
     const luckyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-lucky-pick"]');
     luckyBtn?.addEventListener(
       'click',
       (e) => {
         e.preventDefault();
-        if (this.isSalesClosed()) {
-          showToast(t('giveaway.toast_sales_closed'), 'warning');
-          return;
-        }
-        this.selectRandomTickets(3);
+        this.openRandomPickModal();
       },
       { signal }
     );
@@ -1400,8 +1529,6 @@ export class GiveawayDetailController {
       },
       { signal }
     );
-
-    this.bindQuantityDropdown();
 
     const buyBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-buy-giveaway"]');
     buyBtn?.addEventListener(
@@ -1805,6 +1932,11 @@ export class GiveawayDetailController {
           return false;
         }
 
+        try {
+          localStorage.setItem('boreal_phone', finalPhone);
+          localStorage.setItem('boreal_name', name);
+        } catch (_) {}
+
         for (const num of this.selectedTickets) {
           this.reservedSet.add(num);
         }
@@ -1831,7 +1963,7 @@ export class GiveawayDetailController {
 
     openBankInfoModal({
       bankAccounts,
-      onUploadReceipt: () => navigate(`/validate-payment?order=${encodeURIComponent(order.uuid)}`),
+      onUploadReceipt: () => navigate(`/validate-payment/o/${encodeURIComponent(order.uuid)}`),
       order,
     });
   }

@@ -121,7 +121,11 @@ function getDrawerConfigForRoute(path: string): DrawerPageConfig | null {
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
   const isHome = path === '/' || path === '';
   const isSettings = path === '/settings' || path.startsWith('/settings');
-  const isValidate = path === '/validate-payment' || path === '/validar-pago';
+  const isValidate =
+    path === '/validate-payment' ||
+    path === '/validar-pago' ||
+    path.startsWith('/validate-payment/') ||
+    path.startsWith('/validar-pago/');
   const isWinners = path === '/winners' || path === '/ganadores';
   const config = getDrawerConfigForRoute(path);
   const isHelpOrLegal = config !== null;

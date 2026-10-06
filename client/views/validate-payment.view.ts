@@ -13,23 +13,20 @@ export class ValidatePaymentController {
   private abortController: AbortController | null = null;
   private container: HTMLElement;
   private countdownTimer: number | null = null;
+  private initialOrderUuid: string | null = null;
   private orders: Order[] = [];
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, initialOrderUuid?: string) {
     this.container = container;
+    this.initialOrderUuid = initialOrderUuid || null;
   }
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
     this.bindEvents();
 
-    try {
-      localStorage.removeItem('boreal_phone');
-      localStorage.removeItem('boreal_name');
-    } catch {}
-
     const urlParams = new URLSearchParams(window.location.search);
-    const orderUuid = urlParams.get('order');
+    const orderUuid = this.initialOrderUuid || urlParams.get('order');
     const phoneParam = urlParams.get('phone');
     if (phoneParam) {
       const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-phone-search"]');
@@ -39,17 +36,59 @@ export class ValidatePaymentController {
       }
     } else if (orderUuid) {
       void this.loadOrderByUuid(orderUuid);
+    } else {
+      try {
+        const savedPhone = localStorage.getItem('boreal_phone');
+        if (savedPhone) {
+          const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-phone-search"]');
+          if (input) {
+            input.value = formatMexicanPhone(savedPhone);
+            void this.searchOrders(savedPhone);
+          }
+        }
+      } catch (_) {}
     }
   }
 
   private async loadOrderByUuid(uuid: string): Promise<void> {
     const order = await fetchOrderDetailApi(uuid);
-    if (order && order.customer_phone) {
+    if (!order) {
+      showToast('La orden especificada no fue encontrada.', 'warning');
+      return;
+    }
+
+    let phone = order.customer_phone || '';
+    if (phone.includes('*')) {
+      try {
+        const local = localStorage.getItem('boreal_phone') || '';
+        if (local && !local.includes('*')) {
+          phone = local;
+        }
+      } catch (_) {}
+    }
+
+    if (phone && !phone.includes('*')) {
       const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-phone-search"]');
       if (input) {
-        input.value = formatMexicanPhone(order.customer_phone);
+        input.value = formatMexicanPhone(phone);
       }
-      void this.searchOrders(order.customer_phone);
+      try {
+        localStorage.setItem('boreal_phone', phone);
+      } catch (_) {}
+      await this.searchOrders(phone);
+    }
+
+    if (!this.orders.some((o) => o.uuid === order.uuid)) {
+      this.orders.unshift(order);
+      this.renderOrders();
+    }
+
+    if (order.status === 'pending_payment') {
+      const now = new Date().getTime();
+      const expiresAt = new Date(order.expires_at).getTime();
+      if (expiresAt > now) {
+        this.openUploadReceiptModal(order.uuid);
+      }
     }
   }
 
@@ -462,9 +501,9 @@ export class ValidatePaymentController {
   }
 }
 
-export async function createValidatePaymentView(): Promise<HTMLElement> {
+export async function createValidatePaymentView(initialOrderUuid?: string): Promise<HTMLElement> {
   const container = await loadTemplate('/views/payment/validate-payment.html');
-  const controller = new ValidatePaymentController(container);
+  const controller = new ValidatePaymentController(container, initialOrderUuid);
   await controller.init();
   (container as any).__controller = controller;
   return container;

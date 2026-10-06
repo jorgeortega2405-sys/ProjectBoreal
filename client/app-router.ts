@@ -11,13 +11,36 @@ let previousPath = '';
 
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
-  return rawPath.replace(/\/+$/, '');
+  const clean = rawPath.replace(/\/+$/, '');
+  return clean === '' ? '/' : clean;
+}
+
+function parseRouteUrl(rawUrl: string): { fullUrl: string; pathname: string; query: URLSearchParams } {
+  try {
+    const urlObj = new URL(rawUrl, window.location.origin);
+    const pathname = normalizePath(urlObj.pathname);
+    return {
+      fullUrl: `${pathname}${urlObj.search}${urlObj.hash}`,
+      pathname,
+      query: urlObj.searchParams,
+    };
+  } catch {
+    const [pathAndQuery] = (rawUrl || '').split('#');
+    const [pathPart, queryPart = ''] = pathAndQuery.split('?');
+    const pathname = normalizePath(pathPart);
+    return {
+      fullUrl: rawUrl,
+      pathname,
+      query: new URLSearchParams(queryPart),
+    };
+  }
 }
 
 export function navigate(url: string, replace = false): void {
-  const cleanPath = normalizePath(url);
+  const { fullUrl, pathname } = parseRouteUrl(url);
 
-  if (window.location.pathname === cleanPath && !replace) {
+  const currentFull = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (currentFull === fullUrl && !replace) {
     const scrollable = document.querySelector<HTMLElement>(
       '.view-scrollable, .home-scrollable, .layout-scrollable, .layout-body--scrollable, .layout-content'
     );
@@ -30,21 +53,21 @@ export function navigate(url: string, replace = false): void {
   previousPath = window.location.pathname;
 
   if (replace) {
-    window.history.replaceState({}, '', cleanPath);
+    window.history.replaceState({}, '', fullUrl);
   } else {
-    window.history.pushState({}, '', cleanPath);
+    window.history.pushState({}, '', fullUrl);
   }
 
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
   if (sidebar) {
-    updateSidebarActiveState(sidebar, cleanPath);
+    updateSidebarActiveState(sidebar, pathname);
   }
 
-  void render(cleanPath);
+  void render(pathname);
 }
 
 export async function render(rawPath = window.location.pathname): Promise<void> {
-  const path = normalizePath(rawPath);
+  const { pathname: path } = parseRouteUrl(rawPath);
   closeAllModals();
   hideTooltip();
 
