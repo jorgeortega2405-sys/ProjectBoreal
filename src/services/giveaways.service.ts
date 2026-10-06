@@ -1,6 +1,7 @@
 import { pool } from '../config/database.config.js';
 import { deleteCache, getCache, publishGiveawayEvent, setCache } from '../config/redis.config.js';
 import { Giveaway, WinnerGiveawayItem } from '../types/giveaway.types.js';
+import { recordAudit } from './audit.service.js';
 import { ensureCurrentDailyGiveaway } from './daily-giveaway.service.js';
 import { logger } from './logger.service.js';
 import crypto from 'crypto';
@@ -350,8 +351,11 @@ export async function drawGiveawayWinners(): Promise<void> {
         let winnerTicketNumber: number | null = null;
         let winnerName = 'Sin participantes';
         let winnerOrderId: number | null = null;
+        let drawHash: string | null = null;
+        let drawSeed: string | null = null;
 
         if (totalPaid > 0) {
+          const rawSeed = crypto.randomBytes(32).toString('hex');
           const randomIndex = crypto.randomInt(0, totalPaid);
           const [chosenRows] = await connection.query<RowDataPacket[]>(
             `SELECT ticket_number, order_id 
@@ -367,6 +371,11 @@ export async function drawGiveawayWinners(): Promise<void> {
             const chosen = chosenRows[0];
             winnerTicketNumber = chosen.ticket_number;
             winnerOrderId = chosen.order_id;
+            drawSeed = rawSeed;
+            drawHash = crypto
+              .createHash('sha256')
+              .update(`${rawSeed}:${giveaway.uuid}:${winnerTicketNumber}`)
+              .digest('hex');
 
             if (winnerOrderId) {
               const [orderRows] = await connection.query<RowDataPacket[]>(
@@ -436,6 +445,8 @@ export async function drawGiveawayWinners(): Promise<void> {
         );
 
         await publishGiveawayEvent('boreal:giveaways', {
+          draw_hash: drawHash,
+          draw_seed: drawSeed,
           giveaway_title: giveaway.title,
           giveaway_uuid: giveaway.uuid,
           prize_amount: safePrizeAmount,
@@ -443,6 +454,21 @@ export async function drawGiveawayWinners(): Promise<void> {
           winner_announced_at: new Date().toISOString(),
           winner_name: winnerName,
           winner_ticket_number: winnerTicketNumber,
+        });
+
+        await recordAudit({
+          action: 'GIVEAWAY_WINNER_DRAWN',
+          actor_type: 'system',
+          details: {
+            draw_hash: drawHash,
+            draw_seed: drawSeed,
+            giveaway_id: giveaway.id,
+            giveaway_uuid: giveaway.uuid,
+            prize_amount: safePrizeAmount,
+            total_paid: totalPaid,
+            winner_ticket_number: winnerTicketNumber,
+          },
+          order_id: winnerOrderId || undefined,
         });
       } catch (drawErr) {
         if (connection) {

@@ -18,9 +18,47 @@ interface QueueRow extends RowDataPacket {
   order_status: string;
   order_uuid: string;
   receipt_filename: string | null;
+  receiver_clabe?: string | null;
   ticket_count: number;
   ticket_numbers: string | number[];
   tracking_key: string;
+}
+
+const CLABE_PREFIX_MAP: Record<string, string> = {
+  '002': '40002',
+  '012': '40012',
+  '014': '40014',
+  '021': '40021',
+  '030': '40030',
+  '036': '40036',
+  '042': '40042',
+  '044': '40044',
+  '058': '40058',
+  '062': '40062',
+  '072': '40072',
+  '127': '40127',
+  '130': '40130',
+  '133': '40133',
+  '136': '40136',
+  '137': '40137',
+  '166': '40166',
+  '646': '90646',
+  '656': '90656',
+  '659': '90659',
+  '684': '90684',
+  '695': '90695',
+  '698': '90698',
+  '703': '90703',
+  '720': '90720',
+  '721': '90721',
+  '728': '90728',
+  '733': '90733',
+};
+
+function getBankCodeFromClabe(clabe: string | null | undefined): string | undefined {
+  if (!clabe || clabe.length < 3) return undefined;
+  const prefix = clabe.slice(0, 3);
+  return CLABE_PREFIX_MAP[prefix] || (prefix.startsWith('6') || prefix.startsWith('7') ? '90646' : '40012');
 }
 
 export interface BanxicoVerificationResult {
@@ -157,7 +195,14 @@ export async function processBanxicoBatch(): Promise<number> {
               q.attempts, q.max_attempts,
               o.uuid AS order_uuid, o.giveaway_id, o.ticket_numbers, o.ticket_count,
               o.customer_name, o.customer_phone, o.currency, o.status AS order_status,
-              o.receipt_filename
+              o.receipt_filename,
+              (
+                SELECT ba.clabe
+                FROM giveaway_bank_accounts gba
+                INNER JOIN bank_accounts ba ON gba.bank_account_id = ba.id
+                WHERE gba.giveaway_id = o.giveaway_id AND gba.is_active = 1
+                LIMIT 1
+              ) AS receiver_clabe
        FROM spei_validation_queue q
        INNER JOIN orders o ON q.order_id = o.id
        WHERE q.status IN ('pending', 'verifying') AND q.next_retry_at <= NOW()
@@ -170,7 +215,14 @@ export async function processBanxicoBatch(): Promise<number> {
 
     for (const item of queueRows) {
       try {
-        const result = await validateSpeiPayment(item.tracking_key, item.expected_amount);
+        const receiverBankCode = getBankCodeFromClabe(item.receiver_clabe);
+        const result = await validateSpeiPayment(
+          item.tracking_key,
+          item.expected_amount,
+          item.receiver_clabe || undefined,
+          undefined,
+          receiverBankCode
+        );
 
         if (result.matched && result.status === 'liquidated') {
           const conn = await pool.getConnection();

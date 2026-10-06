@@ -7,6 +7,7 @@ import signal
 import sys
 import time
 from typing import Dict, Any, List, Optional
+import uuid
 import dotenv
 import pymysql
 import redis
@@ -305,7 +306,7 @@ class ReceiptWorker:
                     self._approve_and_liquidate_order(
                         order=order,
                         conn=conn,
-                        tracking_key=tracking_key or f"INTRA-{int(time.time())}",
+                        tracking_key=tracking_key or f"INTRA-{int(time.time())}-{uuid.uuid4().hex[:6].upper()}",
                         parsed=parsed,
                         validation=validation,
                         banxico_res={

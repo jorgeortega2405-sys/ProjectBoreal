@@ -119,8 +119,22 @@ function getDrawerConfigForRoute(path: string): DrawerPageConfig | null {
 }
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
-  const isHome = path === '/' || path === '';
-  const isSettings = path === '/settings' || path.startsWith('/settings');
+  const isHome =
+    path === '/' ||
+    path === '' ||
+    path === '/sorteo-diario' ||
+    path === '/diario' ||
+    path === '/daily' ||
+    path.startsWith('/s/') ||
+    path.startsWith('/sorteo/') ||
+    path.startsWith('/giveaway/');
+  const isSettings =
+    path === '/settings' ||
+    path.startsWith('/settings') ||
+    path === '/ajustes' ||
+    path.startsWith('/ajustes') ||
+    path === '/configuracion' ||
+    path.startsWith('/configuracion');
   const isValidate =
     path === '/validate-payment' ||
     path === '/validar-pago' ||

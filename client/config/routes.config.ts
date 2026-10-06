@@ -61,7 +61,7 @@ export const APP_ROUTES: RouteDefinition[] = [
     },
     id: 'giveaway-detail',
     match: (path) => {
-      const match = path.match(/^\/s\/([a-zA-Z0-9-]+)$/);
+      const match = path.match(/^\/(?:s|sorteo|giveaway)\/([a-zA-Z0-9-]+)$/);
       if (!match) return false;
       return { uuid: match[1] };
     },
@@ -72,7 +72,13 @@ export const APP_ROUTES: RouteDefinition[] = [
       return await createSettingsView();
     },
     id: 'settings',
-    match: (path) => path === '/settings' || path.startsWith('/settings'),
+    match: (path) =>
+      path === '/settings' ||
+      path.startsWith('/settings') ||
+      path === '/ajustes' ||
+      path.startsWith('/ajustes') ||
+      path === '/configuracion' ||
+      path.startsWith('/configuracion'),
   },
   {
     handler: async () => {
@@ -80,7 +86,12 @@ export const APP_ROUTES: RouteDefinition[] = [
       return await createDrawingView();
     },
     id: 'drawing',
-    match: (path) => path === '/drawing' || path === '/canvas' || path === '/draw',
+    match: (path) =>
+      path === '/drawing' ||
+      path === '/canvas' ||
+      path === '/draw' ||
+      path === '/sorteo' ||
+      path === '/animacion',
   },
   {
     handler: async () => {

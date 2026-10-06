@@ -6,7 +6,8 @@ export type AuditAction =
   | 'PAYMENT_REJECTED'
   | 'ORDER_EXPIRED'
   | 'ORDER_LOOKUP'
-  | 'ORDER_DETAILS_ACCESSED';
+  | 'ORDER_DETAILS_ACCESSED'
+  | 'GIVEAWAY_WINNER_DRAWN';
 
 export type AuditActorType = 'customer' | 'system' | 'admin';
 

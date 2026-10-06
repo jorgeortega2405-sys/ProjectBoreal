@@ -84,7 +84,8 @@ def clean_orphaned_receipts():
                 continue
 
             if mtime < cutoff and f.startswith("receipt-"):
-                pass
+                os.remove(file_path)
+                logger.info(f"Comprobante antiguo purgado: {file_path}")
         except OSError:
             continue
 

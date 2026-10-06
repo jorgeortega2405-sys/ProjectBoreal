@@ -1,3 +1,4 @@
+import { navigate } from '../app-router.js';
 import { t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { renderEmptyState } from '../utils/dom.util.js';
@@ -14,13 +15,27 @@ export class DrawingController {
     this.abortController = new AbortController();
     const workspace = this.container.querySelector<HTMLElement>('[data-ref="drawing-workspace"]');
     if (workspace) {
-      renderEmptyState({
+      const emptyState = renderEmptyState({
         container: workspace,
         dataRef: 'drawing-empty-state',
         desc: t('drawing.workspace_placeholder') || 'Actualmente no hay ninguna extracción o sorteo en vivo.',
         graphicType: 'drawing',
         title: t('drawing.no_active_drawing_title') || 'Espacio de Sorteo',
       });
+
+      const actionBtn = document.createElement('button');
+      actionBtn.type = 'button';
+      actionBtn.className = 'component-button component-button--black component-button--h44';
+      actionBtn.setAttribute('data-ref', 'btn-drawing-explore');
+      actionBtn.textContent = t('nav.home') || 'Explorar Sorteos Activos';
+      actionBtn.addEventListener(
+        'click',
+        () => {
+          navigate('/');
+        },
+        { signal: this.abortController.signal }
+      );
+      emptyState.appendChild(actionBtn);
     }
   }
 
