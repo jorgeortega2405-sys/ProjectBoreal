@@ -1,6 +1,6 @@
 import { navigate } from '../app-router.js';
-import { renderIcons } from '../services/icon.service.js';
 import { translateElement } from '../services/i18n.service.js';
+import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 
 export let isDrawerOpen = false;

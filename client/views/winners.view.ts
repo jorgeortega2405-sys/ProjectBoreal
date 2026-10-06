@@ -4,32 +4,9 @@ import { t, translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { DailyGiveawayWinnerItem, WinnerGiveawayItem } from '../types/giveaway.types.js';
-import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
+import { formatDate } from '../utils/date.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { formatCurrency, formatNumber } from '../utils/number.util.js';
-
-function escapeHtml(str: string | null | undefined): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr);
-    return new Intl.DateTimeFormat('es-MX', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(d);
-  } catch (_) {
-    return '';
-  }
-}
 
 export class WinnersView {
   private abortController = new AbortController();

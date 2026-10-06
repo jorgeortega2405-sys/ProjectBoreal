@@ -1,10 +1,10 @@
-import crypto from 'crypto';
-import { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { deleteCache, getCache, publishGiveawayEvent, setCache } from '../config/redis.config.js';
 import { Giveaway, WinnerGiveawayItem } from '../types/giveaway.types.js';
 import { ensureCurrentDailyGiveaway } from './daily-giveaway.service.js';
 import { logger } from './logger.service.js';
+import crypto from 'crypto';
+import { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 interface GiveawayRow extends RowDataPacket, Giveaway {}
 
@@ -157,15 +157,28 @@ export async function getGiveawayByUuid(uuid: string): Promise<Giveaway | null> 
 
     if (rows.length === 0) return null;
     const row = rows[0];
-    const result = {
+
+    let currentPot: number | undefined;
+    if (row.type === 'daily') {
+      const [countRows] = await pool.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS paid_count FROM giveaway_tickets WHERE giveaway_id = ? AND status = 'paid'`,
+        [row.id]
+      );
+      const paidCount = Number(countRows[0]?.paid_count || 0);
+      currentPot = Math.round(paidCount * (Number(row.ticket_price) * 0.50));
+    }
+
+    const result: Giveaway = {
       ...row,
+      current_pot: currentPot,
       image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
       package_options: row.package_options
         ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
-        : [1, 3, 5, 10, 20],
+        : (row.type === 'daily' ? [5, 10, 25, 50, 100] : [1, 3, 5, 10, 20]),
     };
 
-    await setCache(cacheKey, result, 60);
+    const ttl = row.type === 'daily' ? 10 : 60;
+    await setCache(cacheKey, result, ttl);
     return result;
   } catch (error) {
     logger.db.error('Error al consultar sorteo por UUID en MySQL', error);
@@ -292,7 +305,7 @@ export async function drawGiveawayWinners(): Promise<void> {
   let connection;
   try {
     const [giveawaysToDraw] = await pool.query<GiveawayRow[]>(
-      `SELECT id, uuid, title, end_date, type
+      `SELECT id, uuid, title, end_date, type, CAST(ticket_price AS DOUBLE) AS ticket_price
        FROM giveaways
        WHERE status = 'active'
          AND (min_threshold_pct = 0 OR threshold_reached_at IS NOT NULL)
@@ -309,7 +322,7 @@ export async function drawGiveawayWinners(): Promise<void> {
 
       try {
         const [lockedGiveaways] = await connection.query<GiveawayRow[]>(
-          `SELECT id, status, min_threshold_pct, threshold_reached_at FROM giveaways WHERE id = ? FOR UPDATE`,
+          `SELECT id, status, min_threshold_pct, threshold_reached_at, CAST(ticket_price AS DOUBLE) AS ticket_price FROM giveaways WHERE id = ? FOR UPDATE`,
           [giveaway.id]
         );
 
@@ -320,6 +333,7 @@ export async function drawGiveawayWinners(): Promise<void> {
         ) {
           await connection.rollback();
           connection.release();
+          connection = undefined;
           continue;
         }
 
@@ -380,8 +394,12 @@ export async function drawGiveawayWinners(): Promise<void> {
           }
         }
 
+        const ticketPrice = Number(lockedGiveaways[0]?.ticket_price ?? giveaway.ticket_price ?? 0);
         const prizeAmount = giveaway.type === 'daily'
-          ? Math.round(totalPaid * (Number(giveaway.ticket_price) * 0.50))
+          ? Math.round(totalPaid * (ticketPrice * 0.50))
+          : null;
+        const safePrizeAmount = typeof prizeAmount === 'number' && Number.isFinite(prizeAmount)
+          ? prizeAmount
           : null;
 
         await connection.query(
@@ -393,7 +411,7 @@ export async function drawGiveawayWinners(): Promise<void> {
                winner_announced_at = NOW(),
                prize_amount = ?
            WHERE id = ?`,
-          [winnerTicketNumber, winnerName, winnerOrderId, prizeAmount, giveaway.id]
+          [winnerTicketNumber, winnerName, winnerOrderId, safePrizeAmount, giveaway.id]
         );
 
         await connection.commit();
@@ -418,7 +436,7 @@ export async function drawGiveawayWinners(): Promise<void> {
         await publishGiveawayEvent('boreal:giveaways', {
           giveaway_title: giveaway.title,
           giveaway_uuid: giveaway.uuid,
-          prize_amount: prizeAmount,
+          prize_amount: safePrizeAmount,
           type: 'GIVEAWAY_WINNER_DRAWN',
           winner_announced_at: new Date().toISOString(),
           winner_name: winnerName,

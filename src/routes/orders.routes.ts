@@ -1,6 +1,6 @@
-import { Router } from 'express';
 import { getBankAccountsHandler, getOrderDetailHandler, getOrderReceiptHandler, lookupOrdersHandler, reserveOrderHandler, uploadReceiptHandler } from '../controllers/orders.controller.js';
 import { createRateLimiter } from '../middlewares/rate-limit.middleware.js';
+import { Router } from 'express';
 
 const router = Router();
 

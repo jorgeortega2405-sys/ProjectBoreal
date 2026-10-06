@@ -1,14 +1,13 @@
-import crypto from 'crypto';
-import { Request, Response } from 'express';
-import fs from 'fs';
-import path from 'path';
 import { redis } from '../config/redis.config.js';
 import { recordAudit } from '../services/audit.service.js';
 import { processBanxicoBatch } from '../services/banxico.service.js';
 import { logger } from '../services/logger.service.js';
 import { attachReceipt, getActiveBankAccounts, getOrderByUuid, getOrdersByPhone, reserveTickets } from '../services/orders.service.js';
 import { Order } from '../types/order.types.js';
-import { normalizeMexicanPhone } from '../utils/phone.util.js';
+import { validateAndCleanPhone } from '../utils/phone.util.js';
+import { deleteReceiptFile, getReceiptFilePath, processReceiptBuffer } from '../utils/receipt-storage.util.js';
+import { Request, Response } from 'express';
+import fs from 'fs';
 
 function getClientIp(req: Request): string {
   const forwarded = req.headers['x-forwarded-for'];
@@ -37,14 +36,8 @@ export async function reserveOrderHandler(req: Request, res: Response): Promise<
       return;
     }
 
-    let cleanPhone = normalizeMexicanPhone(customerPhone);
-    if (!cleanPhone || cleanPhone.length !== 10) {
-      const rawDigits = String(customerPhone || '').replace(/\D/g, '');
-      if (rawDigits.length >= 10 && rawDigits.length <= 15) {
-        cleanPhone = rawDigits;
-      }
-    }
-    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 15) {
+    const cleanPhone = validateAndCleanPhone(customerPhone);
+    if (!cleanPhone) {
       res.status(400).json({
         error: 'El número de teléfono debe ser un número celular válido (entre 10 y 15 dígitos).',
         success: false,
@@ -183,14 +176,8 @@ function maskOrder(order: Order): Order {
 export async function lookupOrdersHandler(req: Request, res: Response): Promise<void> {
   try {
     const { phone } = req.body;
-    let cleanPhone = normalizeMexicanPhone(phone);
-    if (!cleanPhone || cleanPhone.length !== 10) {
-      const rawDigits = String(phone || '').replace(/\D/g, '');
-      if (rawDigits.length >= 10 && rawDigits.length <= 15) {
-        cleanPhone = rawDigits;
-      }
-    }
-    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 15) {
+    const cleanPhone = validateAndCleanPhone(phone);
+    if (!cleanPhone) {
       res.status(400).json({
         error: 'Debes proporcionar un número de teléfono válido (entre 10 y 15 dígitos).',
         success: false,
@@ -315,27 +302,22 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
       return;
     }
 
-    const storageDir = path.join(process.cwd(), 'storage', 'receipts');
-    if (!fs.existsSync(storageDir)) {
-      fs.mkdirSync(storageDir, { recursive: true });
-    }
-
-    const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    const rawBase64 = matches && matches.length === 3 ? matches[2] : imageBase64;
-    const buffer = Buffer.from(rawBase64, 'base64');
-
-    if (buffer.length > 5 * 1024 * 1024) {
+    const processResult = processReceiptBuffer(orderUuid, imageBase64);
+    if (processResult.error || !processResult.receipt) {
       res.status(400).json({
-        error: 'El comprobante excede el tamaño máximo permitido de 5 MB.',
+        error: processResult.error || 'El formato del archivo no es válido. Solo se aceptan imágenes JPG, PNG, WebP o documentos PDF.',
         success: false,
       });
       return;
     }
 
-    const fileHash = crypto.createHash('sha256').update(buffer).digest('hex');
+    const { fileHash, fileName, filePath } = processResult.receipt;
+    createdFilePath = filePath;
+
     try {
       const existingOrderUuid = await redis.get(`boreal:receipt_hash:${fileHash}`);
       if (existingOrderUuid && existingOrderUuid !== orderUuid) {
+        deleteReceiptFile(createdFilePath);
         res.status(400).json({
           error: 'Este comprobante ya fue registrado previamente para otra orden. No se admiten comprobantes duplicados.',
           success: false,
@@ -345,37 +327,6 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     } catch (redisErr) {
       logger.app.warn('Advertencia al verificar hash anti-replay en Redis:', redisErr);
     }
-
-    let ext = '';
-    if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
-      ext = 'jpg';
-    } else if (
-      buffer.length >= 8 &&
-      buffer[0] === 0x89 &&
-      buffer[1] === 0x50 &&
-      buffer[2] === 0x4e &&
-      buffer[3] === 0x47
-    ) {
-      ext = 'png';
-    } else if (
-      buffer.length >= 12 &&
-      buffer.subarray(0, 4).toString() === 'RIFF' &&
-      buffer.subarray(8, 12).toString() === 'WEBP'
-    ) {
-      ext = 'webp';
-    } else if (buffer.length >= 4 && buffer.subarray(0, 4).toString() === '%PDF') {
-      ext = 'pdf';
-    } else {
-      res.status(400).json({
-        error: 'El formato del archivo no es válido. Solo se aceptan imágenes JPG, PNG, WebP o documentos PDF.',
-        success: false,
-      });
-      return;
-    }
-
-    const fileName = `receipt-${orderUuid}-${Date.now()}.${ext}`;
-    createdFilePath = path.join(storageDir, fileName);
-    fs.writeFileSync(createdFilePath, buffer);
 
     const receiptUrl = `/api/orders/${orderUuid}/receipt`;
 
@@ -390,8 +341,8 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     });
 
     if (!updatedOrder) {
-      if (createdFilePath && fs.existsSync(createdFilePath)) {
-        fs.unlinkSync(createdFilePath);
+      if (createdFilePath) {
+        deleteReceiptFile(createdFilePath);
       }
       res.status(404).json({
         error: 'La orden indicada no fue encontrada o ya no está disponible.',
@@ -416,10 +367,8 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
       success: true,
     });
   } catch (error) {
-    if (createdFilePath && fs.existsSync(createdFilePath)) {
-      try {
-        fs.unlinkSync(createdFilePath);
-      } catch (_) {}
+    if (createdFilePath) {
+      deleteReceiptFile(createdFilePath);
     }
     if ((error as Error).message === 'ORDER_EXPIRED') {
       res.status(400).json({
@@ -455,7 +404,7 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
     }
 
     const order = await getOrderByUuid(uuid);
-    if (!order || !order.receipt_url) {
+    if (!order || !order.receipt_url || !order.receipt_filename) {
       res.status(404).json({
         error: 'El comprobante solicitado no fue encontrado o no está disponible.',
         success: false,
@@ -463,24 +412,11 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
       return;
     }
 
-    const storageDir = path.join(process.cwd(), 'storage', 'receipts');
-    if (order.receipt_filename) {
-      const directPath = path.join(storageDir, order.receipt_filename);
-      if (fs.existsSync(directPath)) {
-        res.setHeader('Cache-Control', 'private, no-cache');
-        res.sendFile(directPath);
-        return;
-      }
-    }
-
-    const publicLegacyDir = path.join(process.cwd(), 'public', 'uploads', 'receipts');
-    if (order.receipt_filename) {
-      const directLegacyPath = path.join(publicLegacyDir, order.receipt_filename);
-      if (fs.existsSync(directLegacyPath)) {
-        res.setHeader('Cache-Control', 'private, no-cache');
-        res.sendFile(directLegacyPath);
-        return;
-      }
+    const directPath = getReceiptFilePath(order.receipt_filename);
+    if (fs.existsSync(directPath)) {
+      res.setHeader('Cache-Control', 'private, no-cache');
+      res.sendFile(directPath);
+      return;
     }
 
     res.status(404).json({
@@ -495,4 +431,3 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
     });
   }
 }
-

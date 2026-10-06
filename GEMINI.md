@@ -45,7 +45,7 @@ Este archivo complementa a `AGENTS.md` y es cargado directamente por Antigravity
     - Los roles solo agrupan permisos. Las suscripciones otorgan permisos activos (`subscription:feature:*`). Todo acceso se rige por permisos (`hasPermission`, `requirePermission`, `hasSubscriptionFeature`, `requireFeature`).
 
 11. **CERO DDL Inline en Código de Base de Datos**:
-    - Todo esquema, tabla, columna e índice debe residir en los scripts de arranque en `database/` (`database/db_identity.sql`, `database/db_canvas.sql` y `database/db_cassandra.cql`). Prohibido `CREATE TABLE` o `ALTER TABLE` en `database.config.ts` o servicios backend.
+    - Todo esquema, tabla, columna e índice debe residir en los scripts de arranque en `database/` (`database/db_lottery.sql` y `database/db_cassandra.cql`). Prohibido `CREATE TABLE` o `ALTER TABLE` en `database.config.ts` o servicios backend.
 
 Consulta las especificaciones completas en [AGENTS.md](file:///f:/ProjectBoreal/AGENTS.md).
 

@@ -11,6 +11,15 @@ import urllib.request
 import urllib.error
 
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+env_file = os.path.join(PROJECT_DIR, ".env")
+if os.path.isfile(env_file):
+    try:
+        import dotenv
+        dotenv.load_dotenv(env_file)
+    except ImportError:
+        pass
+
 LOG_DIR = os.path.join(PROJECT_DIR, "logs", "watchdog")
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "watchdog.log")
@@ -30,7 +39,7 @@ NODE_HEALTH_URL = os.getenv("WATCHDOG_NODE_URL", "http://127.0.0.1:3000/api/heal
 WS_HEALTH_URL = os.getenv("WATCHDOG_WS_URL", "http://127.0.0.1:3008/health")
 REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "boreal_redis_auth_key_2026!")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 MAX_HEARTBEAT_AGE = int(os.getenv("WATCHDOG_WORKER_TIMEOUT", "60"))
 DISK_MIN_FREE_PCT = float(os.getenv("WATCHDOG_DISK_MIN_FREE_PCT", "15.0"))
 

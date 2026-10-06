@@ -55,12 +55,3 @@ export function formatCurrency(
 
   return `$${formatted} ${currency}`;
 }
-
-export function parseNumber(value: number | string | null | undefined, fallback = 0): number {
-  if (typeof value === 'number') {
-    return isNaN(value) ? fallback : value;
-  }
-  if (!value) return fallback;
-  const parsed = Number(String(value).replace(/,/g, '').trim());
-  return isNaN(parsed) ? fallback : parsed;
-}

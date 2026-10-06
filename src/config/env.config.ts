@@ -13,18 +13,15 @@ export const config = {
     enabled: process.env.CLUSTER_ENABLED === 'true',
     workers: parseInt(process.env.CLUSTER_WORKERS || '0', 10),
   },
+  cors: {
+    allowedOrigins: (process.env.ALLOWED_ORIGINS || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+  },
   db: {
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT || '20', 10),
     host: process.env.DB_LOTTERY_HOST || process.env.DB_HOST || '127.0.0.1',
-    identity: {
-      connectionLimit: parseInt(process.env.DB_IDENTITY_CONNECTION_LIMIT || process.env.DB_CONNECTION_LIMIT || '10', 10),
-      host: process.env.DB_IDENTITY_HOST || process.env.DB_HOST || '127.0.0.1',
-      name: process.env.DB_IDENTITY_NAME || 'db_identity',
-      password: process.env.DB_IDENTITY_PASSWORD || process.env.DB_PASSWORD || '',
-      port: parseInt(process.env.DB_IDENTITY_PORT || process.env.DB_PORT || '3306', 10),
-      queueLimit: parseInt(process.env.DB_IDENTITY_QUEUE_LIMIT || '100', 10),
-      user: process.env.DB_IDENTITY_USER || process.env.DB_USER || '',
-    },
     lottery: {
       connectionLimit: parseInt(process.env.DB_LOTTERY_CONNECTION_LIMIT || process.env.DB_CONNECTION_LIMIT || '20', 10),
       host: process.env.DB_LOTTERY_HOST || process.env.DB_HOST || '127.0.0.1',
@@ -52,3 +49,17 @@ export const config = {
     port: parseInt(process.env.WEBSOCKET_PORT || '3008', 10),
   },
 };
+
+export function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin || typeof origin !== 'string') return false;
+  if (
+    origin.startsWith('http://localhost:') ||
+    origin.startsWith('https://localhost:') ||
+    origin.startsWith('http://127.0.0.1:') ||
+    origin.endsWith('.projectboreal.internal') ||
+    origin.includes('projectboreal.com')
+  ) {
+    return true;
+  }
+  return config.cors.allowedOrigins.some((allowed) => origin === allowed || origin.startsWith(allowed));
+}

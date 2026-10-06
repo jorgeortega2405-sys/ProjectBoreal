@@ -1,6 +1,6 @@
 import { checkCassandraConnection, closeCassandraConnection } from './config/cassandra.config.js';
 import { checkDbConnection, closeDbConnections } from './config/database.config.js';
-import { config } from './config/env.config.js';
+import { config, isAllowedOrigin } from './config/env.config.js';
 import { acquireDistributedLock, checkRedisConnection, closeRedisConnection, releaseDistributedLock } from './config/redis.config.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
 import giveawaysRoutes from './routes/giveaways.routes.js';
@@ -161,16 +161,9 @@ function createExpressApp(): express.Express {
       return next();
     }
     const origin = (req.headers['origin'] || req.headers['referer']) as string | undefined;
-    if (origin && typeof origin === 'string') {
-      const isAllowed = origin.startsWith('http://localhost:')
-        || origin.startsWith('https://localhost:')
-        || origin.startsWith('http://127.0.0.1:')
-        || origin.endsWith('.projectboreal.internal')
-        || origin.includes('projectboreal.com');
-      if (!isAllowed) {
-        res.status(403).json({ error: 'Acceso denegado por verificación de origen (CSRF).' });
-        return;
-      }
+    if (origin && typeof origin === 'string' && !isAllowedOrigin(origin)) {
+      res.status(403).json({ error: 'Acceso denegado por verificación de origen (CSRF).' });
+      return;
     }
     next();
   });
@@ -205,17 +198,10 @@ function configureWebSocketUpgrade(server: http.Server): void {
     const url = req.url || '';
     if (url === '/ws' || url.startsWith('/ws?') || url.startsWith('/ws/')) {
       const origin = req.headers.origin;
-      if (origin && typeof origin === 'string') {
-        const isAllowed = origin.startsWith('http://localhost:')
-          || origin.startsWith('https://localhost:')
-          || origin.startsWith('http://127.0.0.1:')
-          || origin.endsWith('.projectboreal.internal')
-          || origin.includes('projectboreal.com');
-        if (!isAllowed) {
-          clientSocket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
-          clientSocket.destroy();
-          return;
-        }
+      if (origin && typeof origin === 'string' && !isAllowedOrigin(origin)) {
+        clientSocket.write('HTTP/1.1 403 Forbidden\r\n\r\n');
+        clientSocket.destroy();
+        return;
       }
 
       clientSocket.pause();

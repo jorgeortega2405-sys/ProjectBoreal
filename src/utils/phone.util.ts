@@ -16,9 +16,17 @@ export function normalizeMexicanPhone(phone: string | null | undefined): string 
   return digits;
 }
 
-export function formatMexicanPhone(phone: string | null | undefined): string {
-  const digits = normalizeMexicanPhone(phone);
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
-  return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 10)}`;
+export function validateAndCleanPhone(phone: unknown): string | null {
+  if (!phone || typeof phone !== 'string') return null;
+  let clean = normalizeMexicanPhone(phone);
+  if (!clean || clean.length !== 10) {
+    const rawDigits = phone.replace(/\D/g, '');
+    if (rawDigits.length >= 10 && rawDigits.length <= 15) {
+      clean = rawDigits;
+    }
+  }
+  if (!clean || clean.length < 10 || clean.length > 15) {
+    return null;
+  }
+  return clean;
 }

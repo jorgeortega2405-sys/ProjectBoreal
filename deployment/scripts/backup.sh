@@ -18,18 +18,23 @@ if [ -f "${PROJECT_DIR}/.env" ]; then
     set +a
 fi
 
-DB_USER="${DB_USER:-sprite_user}"
-DB_PASSWORD="${DB_PASSWORD:-sprite_password}"
+DB_USER="${DB_USER:-}"
+DB_PASSWORD="${DB_PASSWORD:-}"
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-3306}"
-REDIS_PASSWORD="${REDIS_PASSWORD:-boreal_redis_auth_key_2026!}"
+REDIS_PASSWORD="${REDIS_PASSWORD:-}"
+
+if [ -z "${DB_USER}" ] || [ -z "${DB_PASSWORD}" ]; then
+    echo "[ERROR] DB_USER o DB_PASSWORD no configurados en .env" >&2
+    exit 1
+fi
 
 mkdir -p "${BACKUP_DEST}"
 
 echo "[${TIMESTAMP}] Iniciando respaldo de Project Boreal en: ${BACKUP_DEST}"
 
 # 1. Respaldo de Bases de Datos MySQL
-for DB_NAME in db_identity db_lottery; do
+for DB_NAME in db_lottery; do
     echo "[INFO] Respaldando base de datos MySQL '${DB_NAME}'..."
     if command -v mysqldump &>/dev/null; then
         mysqldump -h "${DB_HOST}" -P "${DB_PORT}" -u "${DB_USER}" -p"${DB_PASSWORD}" \

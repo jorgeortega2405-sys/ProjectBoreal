@@ -1,12 +1,12 @@
 import { navigate } from '../app-router.js';
-import { getGiveawayCategory, renderPrizeCategoryBadgesHtml } from '../config/prize-categories.config.js';
 import { fetchActiveGiveaways } from '../services/giveaways.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { onWebSocketEvent } from '../services/websocket.service.js';
 import { Giveaway } from '../types/giveaway.types.js';
-import { removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
+import { formatShortDate } from '../utils/date.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { formatCurrency, formatNumber } from '../utils/number.util.js';
 
 function sortGiveaways(list: Giveaway[]): Giveaway[] {
@@ -54,27 +54,6 @@ function sortGiveaways(list: Giveaway[]): Giveaway[] {
     const bEnd = parseMs(b.end_date);
     return aEnd - bEnd;
   });
-}
-
-function escapeHtml(str: string | null | undefined): string {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function formatShortDate(dateStr: string, lang = 'es-419'): string {
-  const clean = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
-  const d = new Date(clean);
-  if (isNaN(d.getTime())) return dateStr;
-  const locale = lang.startsWith('en') ? 'en-US' : 'es-MX';
-  const day = d.getDate();
-  const monthName = d.toLocaleDateString(locale, { month: 'short' });
-  const capitalizedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1).replace('.', '');
-  return `${day} ${capitalizedMonth}`;
 }
 
 function computeThresholdBadge(item: Giveaway): string | null {
@@ -162,7 +141,6 @@ function computeTimerInfo(item: Giveaway): { isEnded: boolean; text: string } {
 
 export class HomeController {
   private abortController: AbortController | null = null;
-  private activeCategory = 'all';
   private cardHoverImages: string[] = [];
   private cardHoverIndex = 0;
   private cardHoverInterval: ReturnType<typeof setInterval> | null = null;
@@ -182,102 +160,18 @@ export class HomeController {
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
-    this.initCategoryBadges();
     this.bindEvents(this.container);
     await this.loadData();
     this.startCountdownLoop();
     this.subscribeWebSocketEvents();
   }
 
-  private initCategoryBadges(): void {
-    const badgesContainer = this.container.querySelector<HTMLElement>('[data-ref="home-categories-badges"]');
-    if (!badgesContainer) return;
-    badgesContainer.innerHTML = renderPrizeCategoryBadgesHtml(this.activeCategory);
-
-    const btnLeft = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tags-scroll-left"]');
-    const btnRight = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-tags-scroll-right"]');
-
-    const updateNavBtns = () => {
-      if (btnLeft) {
-        btnLeft.classList.toggle('is-disabled', badgesContainer.scrollLeft <= 4);
-      }
-      if (btnRight) {
-        const maxScroll = badgesContainer.scrollWidth - badgesContainer.clientWidth - 4;
-        btnRight.classList.toggle('is-disabled', badgesContainer.scrollLeft >= maxScroll);
-      }
-    };
-
-    badgesContainer.addEventListener('scroll', updateNavBtns, { passive: true });
-    updateNavBtns();
-
-    btnLeft?.addEventListener('click', () => {
-      badgesContainer.scrollBy({ left: -220, behavior: 'smooth' });
-    });
-
-    btnRight?.addEventListener('click', () => {
-      badgesContainer.scrollBy({ left: 220, behavior: 'smooth' });
-    });
-
-    let isDown = false;
-    let hasMoved = false;
-    let startX = 0;
-    let scrollLeft = 0;
-
-    badgesContainer.addEventListener('mousedown', (e) => {
-      isDown = true;
-      hasMoved = false;
-      startX = e.pageX - badgesContainer.offsetLeft;
-      scrollLeft = badgesContainer.scrollLeft;
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (!isDown) return;
-      isDown = false;
-      badgesContainer.classList.remove('is-dragging');
-    });
-
-    badgesContainer.addEventListener('mousemove', (e) => {
-      if (!isDown) return;
-      const x = e.pageX - badgesContainer.offsetLeft;
-      const diff = Math.abs(x - startX);
-      if (diff > 5) {
-        hasMoved = true;
-        badgesContainer.classList.add('is-dragging');
-        e.preventDefault();
-        const walk = (x - startX) * 1.5;
-        badgesContainer.scrollLeft = scrollLeft - walk;
-      }
-    });
-
-    badgesContainer.addEventListener('click', (e) => {
-      if (hasMoved) {
-        hasMoved = false;
-        return;
-      }
-      const badgeBtn = (e.target as HTMLElement | null)?.closest<HTMLButtonElement>('.component-badge');
-      if (!badgeBtn) return;
-      const categoryId = badgeBtn.getAttribute('data-category');
-      if (!categoryId) return;
-
-      this.activeCategory = categoryId;
-      badgesContainer.querySelectorAll('.component-badge').forEach((btn) => {
-        btn.classList.toggle('is-active', btn.getAttribute('data-category') === this.activeCategory);
-      });
-      this.filterGiveaways();
-    });
-  }
-
   private filterGiveaways(): void {
     const query = this.searchQuery.trim().toLowerCase();
     const filtered = this.giveaways.filter((g) => {
-      const matchesSearch = !query ||
+      return !query ||
         g.title.toLowerCase().includes(query) ||
         Boolean(g.description && g.description.toLowerCase().includes(query));
-
-      const category = getGiveawayCategory(g);
-      const matchesCategory = this.activeCategory === 'all' || category.id === this.activeCategory;
-
-      return matchesSearch && matchesCategory;
     });
     this.filteredGiveaways = sortGiveaways(filtered);
     this.renderGiveaways(this.filteredGiveaways);
@@ -403,12 +297,12 @@ export class HomeController {
 
     if (list.length === 0) {
       grid.innerHTML = '';
-      const isFiltered = Boolean(this.searchQuery.trim() || this.activeCategory !== 'all');
+      const isFiltered = Boolean(this.searchQuery.trim());
       if (isFiltered) {
         renderEmptyState({
           container: grid,
           dataRef: 'empty-giveaways-search',
-          desc: t('home.search_no_results_desc') || 'No se encontraron sorteos que coincidan con tu búsqueda o categoría seleccionada.',
+          desc: t('home.search_no_results_desc') || 'No se encontraron sorteos que coincidan con tu búsqueda.',
           graphicType: 'search',
           title: t('home.search_no_results') || 'Sin resultados',
         });
@@ -433,7 +327,6 @@ export class HomeController {
           : t('home.tickets_left', { count: formatNumber(item.available_tickets) });
         const timerInfo = computeTimerInfo(item);
         const thresholdText = computeThresholdBadge(item);
-        const category = getGiveawayCategory(item);
         const currency = item.currency || 'MXN';
         const isSalesClosed = item.status === 'completed' || (new Date(item.end_date).getTime() - Date.now() <= 3600 * 1000 && (item.min_threshold_pct === 0 || !!item.threshold_reached_at));
         const actionLabel = item.status === 'completed'
@@ -459,10 +352,8 @@ export class HomeController {
             <div class="canvas-card__info">
               <h3 class="canvas-card__name" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
               <div class="canvas-card__meta">
-                <span class="canvas-card__category-icon" title="${escapeHtml(category.label)}" aria-label="${escapeHtml(category.label)}">
-                  ${category.iconSvg}
-                </span>
-                <span>• ${escapeHtml(ticketsLeft)}</span>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+                <span>${escapeHtml(ticketsLeft)}</span>
               </div>
             </div>
           </div>
@@ -607,7 +498,6 @@ export class HomeController {
     window.addEventListener(
       'languagechange',
       () => {
-        this.initCategoryBadges();
         this.filterGiveaways();
       },
       { signal }

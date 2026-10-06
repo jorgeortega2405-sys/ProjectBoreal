@@ -1,4 +1,5 @@
 import { BankAccount, Order, ReservationResult } from '../types/order.types.js';
+import { getApi, postApi } from './api.service.js';
 
 export async function reserveTicketsApi(payload: {
   customerName: string;
@@ -9,42 +10,25 @@ export async function reserveTicketsApi(payload: {
 }): Promise<{
   data?: ReservationResult;
   error?: string;
+  salesClosed?: boolean;
   success: boolean;
   unavailableTickets?: number[];
 }> {
-  try {
-    const res = await fetch('/api/orders/reserve', {
-      body: JSON.stringify(payload),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      return {
-        error: json.error || 'No fue posible apartar los boletos.',
-        success: false,
-        unavailableTickets: json.data?.unavailableTickets,
-      };
-    }
-    return { data: json.data, success: true };
-  } catch (_) {
-    return { error: 'Error de conexión al procesar el apartado.', success: false };
+  const res = await postApi<ReservationResult>('/api/orders/reserve', payload);
+  if (!res.success) {
+    return {
+      error: res.error || 'No fue posible apartar los boletos.',
+      salesClosed: res.salesClosed,
+      success: false,
+      unavailableTickets: res.unavailableTickets,
+    };
   }
+  return { data: res.data, success: true };
 }
 
 export async function lookupOrdersApi(phone: string): Promise<Order[]> {
-  try {
-    const res = await fetch('/api/orders/lookup', {
-      body: JSON.stringify({ phone }),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-    });
-    if (!res.ok) return [];
-    const json = await res.json();
-    return json.success && Array.isArray(json.data) ? json.data : [];
-  } catch (_) {
-    return [];
-  }
+  const res = await postApi<Order[]>('/api/orders/lookup', { phone });
+  return res.success && Array.isArray(res.data) ? res.data : [];
 }
 
 export async function uploadReceiptApi(payload: {
@@ -53,43 +37,22 @@ export async function uploadReceiptApi(payload: {
   orderUuid: string;
   trackingKey?: string;
 }): Promise<{ error?: string; order?: Order; success: boolean }> {
-  try {
-    const res = await fetch('/api/orders/upload-receipt', {
-      body: JSON.stringify(payload),
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      return { error: json.error || 'Fallo al subir el comprobante.', success: false };
-    }
-    return { order: json.data, success: true };
-  } catch (_) {
-    return { error: 'Error de red al enviar el comprobante.', success: false };
+  const res = await postApi<Order>('/api/orders/upload-receipt', payload);
+  if (!res.success) {
+    return { error: res.error || 'Fallo al subir el comprobante.', success: false };
   }
+  return { order: res.data, success: true };
 }
 
 export async function fetchBankAccountsApi(giveawayUuid?: string): Promise<BankAccount[]> {
-  try {
-    const url = giveawayUuid
-      ? `/api/orders/bank-accounts?giveaway=${encodeURIComponent(giveawayUuid)}`
-      : '/api/orders/bank-accounts';
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    const json = await res.json();
-    return json.success && Array.isArray(json.data) ? json.data : [];
-  } catch (_) {
-    return [];
-  }
+  const url = giveawayUuid
+    ? `/api/orders/bank-accounts?giveaway=${encodeURIComponent(giveawayUuid)}`
+    : '/api/orders/bank-accounts';
+  const res = await getApi<BankAccount[]>(url);
+  return res.success && Array.isArray(res.data) ? res.data : [];
 }
 
 export async function fetchOrderDetailApi(uuid: string): Promise<Order | null> {
-  try {
-    const res = await fetch(`/api/orders/${encodeURIComponent(uuid)}`);
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.success && json.data ? json.data : null;
-  } catch (_) {
-    return null;
-  }
+  const res = await getApi<Order>(`/api/orders/${encodeURIComponent(uuid)}`);
+  return res.success && res.data ? res.data : null;
 }

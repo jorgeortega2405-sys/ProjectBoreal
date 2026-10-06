@@ -1,5 +1,5 @@
 import { isCassandraConnected } from '../config/cassandra.config.js';
-import { poolIdentity, poolLottery } from '../config/database.config.js';
+import { poolLottery } from '../config/database.config.js';
 import { config } from '../config/env.config.js';
 import { redis } from '../config/redis.config.js';
 import { logger } from '../services/logger.service.js';
@@ -12,11 +12,8 @@ export async function getHealthStatus(_req: Request, res: Response): Promise<voi
   let redisHealthy = false;
 
   try {
-    const [lotteryPing, identityPing] = await Promise.all([
-      poolLottery.query('SELECT 1'),
-      poolIdentity.query('SELECT 1'),
-    ]);
-    dbHealthy = Boolean(lotteryPing && identityPing);
+    const [lotteryPing] = await poolLottery.query('SELECT 1');
+    dbHealthy = Boolean(lotteryPing);
   } catch (err) {
     logger.app.error('Fallo de comprobación en MySQL', err);
     dbHealthy = false;

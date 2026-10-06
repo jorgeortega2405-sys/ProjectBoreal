@@ -1,6 +1,6 @@
-import mysql, { PoolConnection } from 'mysql2/promise';
-import { config } from './env.config.js';
 import { logger } from '../services/logger.service.js';
+import { config } from './env.config.js';
+import mysql, { PoolConnection } from 'mysql2/promise';
 
 export const poolLottery = mysql.createPool({
   charset: 'utf8mb4',
@@ -17,21 +17,6 @@ export const poolLottery = mysql.createPool({
   waitForConnections: true,
 });
 
-export const poolIdentity = mysql.createPool({
-  charset: 'utf8mb4',
-  connectionLimit: config.db.identity.connectionLimit,
-  database: config.db.identity.name,
-  enableKeepAlive: true,
-  host: config.db.identity.host,
-  keepAliveInitialDelay: 10000,
-  password: config.db.identity.password,
-  port: config.db.identity.port,
-  queueLimit: config.db.identity.queueLimit,
-  timezone: 'Z',
-  user: config.db.identity.user,
-  waitForConnections: true,
-});
-
 export const pool = poolLottery;
 
 poolLottery.on('connection', (connection: any) => {
@@ -40,44 +25,31 @@ poolLottery.on('connection', (connection: any) => {
   });
 });
 
-poolIdentity.on('connection', (connection: any) => {
-  connection.on('error', (err: any) => {
-    logger.db.warn('Error en socket de conexión MySQL (Identity):', err);
-  });
-});
-
 export async function checkDbConnection(retries = 10, delayMs = 2000): Promise<void> {
-  const poolsToCheck = [
-    { name: config.db.lottery.name, pool: poolLottery, type: 'Lottery' },
-    { name: config.db.identity.name, pool: poolIdentity, type: 'Identity' },
-  ];
-
-  for (const item of poolsToCheck) {
-    for (let i = 1; i <= retries; i++) {
-      let conn: PoolConnection | null = null;
-      try {
-        conn = await item.pool.getConnection();
-        await conn.ping();
-        logger.db.info(`Conexión establecida exitosamente con MySQL ${item.type} (${item.name}).`);
-        break;
-      } catch (err) {
-        logger.db.warn(`Esperando a MySQL ${item.type} en ${item.name} (intento ${i}/${retries})...`);
-        if (i === retries) {
-          logger.db.error(`No se pudo conectar a la base de datos MySQL ${item.type} (${item.name}).`, err);
-          throw err;
-        }
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-      } finally {
-        if (conn) {
-          conn.release();
-        }
+  for (let i = 1; i <= retries; i++) {
+    let conn: PoolConnection | null = null;
+    try {
+      conn = await poolLottery.getConnection();
+      await conn.ping();
+      logger.db.info(`Conexión establecida exitosamente con MySQL Lottery (${config.db.lottery.name}).`);
+      break;
+    } catch (err) {
+      logger.db.warn(`Esperando a MySQL Lottery en ${config.db.lottery.name} (intento ${i}/${retries})...`);
+      if (i === retries) {
+        logger.db.error(`No se pudo conectar a la base de datos MySQL Lottery (${config.db.lottery.name}).`, err);
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    } finally {
+      if (conn) {
+        conn.release();
       }
     }
   }
 }
 
 export async function closeDbConnections(): Promise<void> {
-  await Promise.allSettled([poolLottery.end(), poolIdentity.end()]);
+  await poolLottery.end();
   logger.db.info('Conexiones a MySQL cerradas exitosamente.');
 }
 

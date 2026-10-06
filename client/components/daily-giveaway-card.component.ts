@@ -3,29 +3,9 @@ import { fetchDailyGiveaway } from '../services/giveaways.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { onWebSocketEvent } from '../services/websocket.service.js';
 import { DailyGiveawayWinnerItem, Giveaway } from '../types/giveaway.types.js';
+import { formatWinnerDate } from '../utils/date.util.js';
+import { escapeHtml } from '../utils/dom.util.js';
 import { formatNumber } from '../utils/number.util.js';
-
-function escapeHtml(str: string | null | undefined): string {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-function formatWinnerDate(dateStr: string | null | undefined, lang = 'es-419'): string {
-  if (!dateStr) return '';
-  const clean = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
-  const d = new Date(clean);
-  if (isNaN(d.getTime())) return '';
-  const locale = lang.startsWith('en') ? 'en-US' : 'es-MX';
-  const day = d.getDate();
-  const month = d.toLocaleDateString(locale, { month: 'short' });
-  const capMonth = month.charAt(0).toUpperCase() + month.slice(1).replace('.', '');
-  return `${day} ${capMonth}`;
-}
 
 export class DailyGiveawayCardComponent {
   private abortController: AbortController | null = null;

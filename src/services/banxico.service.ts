@@ -1,9 +1,9 @@
-import { RowDataPacket } from 'mysql2/promise';
 import { pool } from '../config/database.config.js';
 import { deleteCache, deleteCachePattern, publishGiveawayEvent } from '../config/redis.config.js';
 import { recordAudit } from './audit.service.js';
 import { checkAndTriggerGiveawayThreshold } from './giveaways.service.js';
 import { logger } from './logger.service.js';
+import { RowDataPacket } from 'mysql2/promise';
 
 interface QueueRow extends RowDataPacket {
   attempts: number;

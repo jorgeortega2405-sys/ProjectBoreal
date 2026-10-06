@@ -23,7 +23,7 @@ Este documento define las reglas estrictas de desarrollo, seguridad, arquitectur
    - Queda estrictamente prohibido utilizar `console.log`, `console.warn`, `console.error`, `console.info` o `console.debug` tanto en el backend (`src/`) como en el frontend (`client/`).
    - **Excepción Única**: Exclusivamente en `client/services/websocket.service.ts` se permite el uso de `console.log`, `console.warn` y `console.error` para monitoreo y depuración en tiempo real del ciclo de vida y eventos de la conexión WebSocket.
 2. **Uso Obligatorio de `Logger`**:
-   - En el backend, todos los registros deben realizarse a través del servicio centralizado `Logger` ([src/services/logger.service.ts](file:///f:/Spriteboard/src/services/logger.service.ts)), el cual escribe en archivos diarios en el directorio `logs/`.
+   - En el backend, todos los registros deben realizarse a través del servicio centralizado `Logger` ([src/services/logger.service.ts](file:///f:/ProjectBoreal/src/services/logger.service.ts)), el cual escribe en archivos diarios en el directorio `logs/`.
    - Categorías disponibles:
      - `logger.app`: Eventos generales del ciclo de vida de la aplicación, inicio del servidor, rutas y peticiones.
      - `logger.db`: Conexiones a bases de datos (MySQL, Redis, futuras NoSQL), ejecuciones de queries, migraciones y errores de persistencia.
@@ -160,5 +160,5 @@ import { debounce, setupDropdown, withButtonLoading } from '../utils/dom.util.js
 ## 11. Esquemas de Base de Datos y Scripts de Arranque (CERO DDL Inline)
 
 1. **Scripts SQL como Única Autoridad**:
-   - Toda creación o modificación de tablas, columnas e índices debe residir exclusivamente en los scripts de arranque en `database/` (`database/db_identity.sql`, `database/db_canvas.sql` y `database/db_cassandra.cql`).
+   - Toda creación o modificación de tablas, columnas e índices debe residir exclusivamente en los scripts de arranque en `database/` (`database/db_lottery.sql` y `database/db_cassandra.cql`).
    - Queda estrictamente prohibido colocar sentencias DDL (`CREATE TABLE`, `ALTER TABLE`) o migraciones automáticas inline dentro de `src/config/database.config.ts` o servicios backend.

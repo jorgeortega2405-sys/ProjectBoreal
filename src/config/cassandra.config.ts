@@ -1,6 +1,6 @@
-import cassandra from 'cassandra-driver';
-import { config } from './env.config.js';
 import { logger } from '../services/logger.service.js';
+import { config } from './env.config.js';
+import cassandra from 'cassandra-driver';
 
 const authProvider = config.cassandra.user
   ? new cassandra.auth.PlainTextAuthProvider(config.cassandra.user, config.cassandra.password)

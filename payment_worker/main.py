@@ -52,9 +52,9 @@ def get_db_connection(max_retries: int = 3, retry_delay: float = 1.0):
     elif primary_host in ("127.0.0.1", "localhost") and "mysql" not in hosts_to_try:
         hosts_to_try.append("mysql")
 
-    port = int(os.getenv("DB_PORT", 3306))
-    user = os.getenv("DB_USER", "sprite_user")
-    password = os.getenv("DB_PASSWORD", "sprite_password")
+    port = int(os.getenv("DB_LOTTERY_PORT") or os.getenv("DB_PORT", 3306))
+    user = os.getenv("DB_LOTTERY_USER") or os.getenv("DB_USER", "")
+    password = os.getenv("DB_LOTTERY_PASSWORD") or os.getenv("DB_PASSWORD", "")
     database = os.getenv("DB_LOTTERY_NAME") or os.getenv("DB_NAME", "db_lottery")
 
     last_err = None
@@ -81,7 +81,7 @@ def get_db_connection(max_retries: int = 3, retry_delay: float = 1.0):
     raise last_err or pymysql.err.OperationalError(2003, f"No se pudo conectar a MySQL en los hosts: {hosts_to_try}")
 
 def get_redis_client():
-    pwd = os.getenv("REDIS_PASSWORD", "boreal_redis_auth_key_2026!")
+    pwd = os.getenv("REDIS_PASSWORD", "")
     primary_host = os.getenv("REDIS_HOST", "127.0.0.1")
     hosts_to_try = [primary_host]
     if primary_host == "redis" and "127.0.0.1" not in hosts_to_try:
@@ -462,9 +462,20 @@ class ReceiptWorker:
 
         try:
             g_uuid = order.get("giveaway_uuid")
-            to_delete = ["giveaways:active", "giveaways:winners"]
+            to_delete = [
+                "boreal:cache:giveaways:active",
+                "boreal:cache:giveaways:winners",
+                "boreal:cache:giveaway:daily:current",
+                "giveaways:active",
+                "giveaways:winners",
+            ]
             if g_uuid:
-                to_delete.extend([f"giveaway:{g_uuid}", f"giveaway:{g_uuid}:tickets"])
+                to_delete.extend([
+                    f"boreal:cache:giveaway:{g_uuid}",
+                    f"boreal:cache:giveaway:{g_uuid}:tickets",
+                    f"giveaway:{g_uuid}",
+                    f"giveaway:{g_uuid}:tickets",
+                ])
             self.redis.delete(*to_delete)
 
             self.redis.publish("boreal:giveaways", json.dumps({
@@ -538,9 +549,20 @@ class ReceiptWorker:
 
         try:
             g_uuid = order.get("giveaway_uuid")
-            to_delete = ["giveaways:active", "giveaways:winners"]
+            to_delete = [
+                "boreal:cache:giveaways:active",
+                "boreal:cache:giveaways:winners",
+                "boreal:cache:giveaway:daily:current",
+                "giveaways:active",
+                "giveaways:winners",
+            ]
             if g_uuid:
-                to_delete.extend([f"giveaway:{g_uuid}", f"giveaway:{g_uuid}:tickets"])
+                to_delete.extend([
+                    f"boreal:cache:giveaway:{g_uuid}",
+                    f"boreal:cache:giveaway:{g_uuid}:tickets",
+                    f"giveaway:{g_uuid}",
+                    f"giveaway:{g_uuid}:tickets",
+                ])
             self.redis.delete(*to_delete)
 
             self.redis.publish("boreal:giveaways", json.dumps({
@@ -649,9 +671,18 @@ class ReceiptWorker:
 
                     try:
                         g_uuid = exp_order.get("giveaway_uuid")
-                        to_delete = ["giveaways:active"]
+                        to_delete = [
+                            "boreal:cache:giveaways:active",
+                            "boreal:cache:giveaway:daily:current",
+                            "giveaways:active",
+                        ]
                         if g_uuid:
-                            to_delete.extend([f"giveaway:{g_uuid}", f"giveaway:{g_uuid}:tickets"])
+                            to_delete.extend([
+                                f"boreal:cache:giveaway:{g_uuid}",
+                                f"boreal:cache:giveaway:{g_uuid}:tickets",
+                                f"giveaway:{g_uuid}",
+                                f"giveaway:{g_uuid}:tickets",
+                            ])
                         self.redis.delete(*to_delete)
 
                         self.redis.publish("boreal:giveaways", json.dumps({

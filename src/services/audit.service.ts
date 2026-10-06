@@ -1,8 +1,8 @@
+import { cassandraClient, isCassandraConnected, markCassandraDisconnected } from '../config/cassandra.config.js';
+import { AuditLogRecord, CreateAuditLogInput } from '../types/audit.types.js';
+import { logger } from './logger.service.js';
 import cassandra, { types } from 'cassandra-driver';
 import crypto from 'crypto';
-import { cassandraClient, isCassandraConnected, markCassandraDisconnected } from '../config/cassandra.config.js';
-import { logger } from './logger.service.js';
-import { AuditLogRecord, CreateAuditLogInput } from '../types/audit.types.js';
 
 function parseAuditDetails(raw: unknown): Record<string, unknown> | null {
   if (!raw) return null;
