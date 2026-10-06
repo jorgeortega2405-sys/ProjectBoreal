@@ -78,7 +78,7 @@ class BanxicoClient:
         # Si emisor y receptor son idénticos, es transferencia intrabancaria (mismo banco)
         if sender_bank_code and receiver_bank_code and sender_bank_code == receiver_bank_code:
             return {
-                "verified": True,
+                "verified": False,
                 "is_intrabank": True,
                 "status": "intrabank",
                 "retryable": False,

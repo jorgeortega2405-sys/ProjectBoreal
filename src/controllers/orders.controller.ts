@@ -1,6 +1,8 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
+import { redis } from '../config/redis.config.js';
 import { recordAudit } from '../services/audit.service.js';
 import { processBanxicoBatch } from '../services/banxico.service.js';
 import { logger } from '../services/logger.service.js';
@@ -330,6 +332,20 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
       return;
     }
 
+    const fileHash = crypto.createHash('sha256').update(buffer).digest('hex');
+    try {
+      const existingOrderUuid = await redis.get(`boreal:receipt_hash:${fileHash}`);
+      if (existingOrderUuid && existingOrderUuid !== orderUuid) {
+        res.status(400).json({
+          error: 'Este comprobante ya fue registrado previamente para otra orden. No se admiten comprobantes duplicados.',
+          success: false,
+        });
+        return;
+      }
+    } catch (redisErr) {
+      logger.app.warn('Advertencia al verificar hash anti-replay en Redis:', redisErr);
+    }
+
     let ext = '';
     if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
       ext = 'jpg';
@@ -383,6 +399,10 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
       });
       return;
     }
+
+    try {
+      await redis.set(`boreal:receipt_hash:${fileHash}`, orderUuid, 'EX', 90 * 86400);
+    } catch (_) {}
 
     if (trackingKey) {
       void processBanxicoBatch().catch((batchErr) => {

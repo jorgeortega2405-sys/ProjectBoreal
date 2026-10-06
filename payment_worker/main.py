@@ -290,22 +290,32 @@ class ReceiptWorker:
 
             # Caso 1: Transferencia Intrabancaria (Mismo Banco, ej. BBVA -> BBVA)
             is_intrabank = validation.get("is_intrabank", False)
-            if is_intrabank and validation["valid"]:
-                logger.info(f"[{order_uuid}] Transferencia intrabancaria confirmada ({validation.get('sender_bank')}). Monto y comprobante validados.")
-                self._approve_and_liquidate_order(
-                    order=order,
-                    conn=conn,
-                    tracking_key=tracking_key or f"INTRA-{int(time.time())}",
-                    parsed=parsed,
-                    validation=validation,
-                    banxico_res={
-                        "verified": True,
-                        "is_intrabank": True,
-                        "status": "liquidated",
-                        "message": "Acreditado por coincidencia intrabancaria directa."
-                    }
-                )
-                return True
+            dest_verified = validation.get("destination_verified", False)
+            if is_intrabank:
+                if not dest_verified:
+                    logger.warning(f"[{order_uuid}] RECHAZO FATAL: Transferencia intrabancaria hacia cuenta no autorizada.")
+                    self._cancel_and_release_order(
+                        order, conn,
+                        ["Transferencia entre cuentas del mismo banco rechazada: la cuenta, tarjeta o titular receptor no corresponde a las cuentas oficiales del organizador."],
+                        parsed=parsed
+                    )
+                    return False
+                elif validation["valid"]:
+                    logger.info(f"[{order_uuid}] Transferencia intrabancaria confirmada con destino verificado ({validation.get('matched_account', {}).get('bank_name')}). Monto y cuenta receptora autorizada validados.")
+                    self._approve_and_liquidate_order(
+                        order=order,
+                        conn=conn,
+                        tracking_key=tracking_key or f"INTRA-{int(time.time())}",
+                        parsed=parsed,
+                        validation=validation,
+                        banxico_res={
+                            "verified": True,
+                            "is_intrabank": True,
+                            "status": "liquidated",
+                            "message": "Acreditado por coincidencia intrabancaria directa con cuenta receptora autorizada del organizador."
+                        }
+                    )
+                    return True
 
             # Caso 2: Transferencia Interbancaria SPEI
             if not tracking_key:

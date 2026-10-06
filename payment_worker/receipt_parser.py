@@ -22,6 +22,14 @@ SPANISH_MONTHS = {
     "dic": "12", "diciembre": "12"
 }
 
+def normalize_text(text: str) -> str:
+    if not text:
+        return ""
+    text = text.lower()
+    for src, dst in [('á', 'a'), ('é', 'e'), ('í', 'i'), ('ó', 'o'), ('ú', 'u'), ('ü', 'u'), ('ñ', 'n')]:
+        text = text.replace(src, dst)
+    return text
+
 class ReceiptParser:
     @staticmethod
     def clean_text(text: str) -> str:
@@ -169,31 +177,79 @@ class ReceiptParser:
             except Exception:
                 pass
 
-        # 2. Identificar Cuenta y Banco Receptor Autorizado
+        # 2. Identificar y Verificar Cuenta y Beneficiario Receptor Autorizado del Organizador
         bank_accounts = bank_account_or_list if isinstance(bank_account_or_list, list) else [bank_account_or_list]
-        full_text_lower = parsed.get("full_text", "").lower()
-        dest_text_lower = str(parsed.get("destination") or "").lower()
+        full_text_norm = normalize_text(parsed.get("full_text", ""))
+        dest_text_norm = normalize_text(str(parsed.get("destination") or ""))
+        full_digits = re.sub(r'\D', '', full_text_norm)
 
         matched_account = None
+        destination_verified = False
+        verification_details: List[str] = []
+
         for acc in bank_accounts:
             if not acc:
                 continue
-            clabe = str(acc.get("clabe") or "")
-            card = str(acc.get("card_number") or "")
+            clabe = re.sub(r'\D', '', str(acc.get("clabe") or ""))
+            card = re.sub(r'\D', '', str(acc.get("card_number") or ""))
+            account_num = re.sub(r'\D', '', str(acc.get("account_number") or ""))
+            holder = normalize_text(str(acc.get("account_holder") or ""))
+            bank_name = normalize_text(str(acc.get("bank_name") or ""))
+
+            # A. Verificación por Dígitos de Cuenta / CLABE / Tarjeta
             clabe_last4 = clabe[-4:] if len(clabe) >= 4 else ""
             card_last4 = card[-4:] if len(card) >= 4 else ""
-            bank_name_lower = str(acc.get("bank_name") or "").lower()
 
-            has_clabe_digits = (clabe_last4 in dest_text_lower or clabe_last4 in full_text_lower) if clabe_last4 else False
-            has_card_digits = (card_last4 in dest_text_lower or card_last4 in full_text_lower) if card_last4 else False
-            has_bank_name = any(part in full_text_lower for part in bank_name_lower.split() if len(part) > 3)
+            has_clabe_full = bool(clabe and clabe in full_digits)
+            has_clabe_last4 = False
+            if clabe_last4:
+                has_clabe_last4 = (clabe_last4 in dest_text_norm) or bool(
+                    re.search(r'(?:[\*\•\-\#\s]|^)' + clabe_last4 + r'(?:[^\d]|$)', full_text_norm)
+                )
 
-            if has_clabe_digits or has_card_digits or has_bank_name:
+            has_card_full = bool(card and card in full_digits)
+            has_card_last4 = False
+            if card_last4:
+                has_card_last4 = (card_last4 in dest_text_norm) or bool(
+                    re.search(r'(?:[\*\•\-\#\s]|^)' + card_last4 + r'(?:[^\d]|$)', full_text_norm)
+                )
+
+            has_account_num = bool(account_num and len(account_num) >= 4 and account_num in full_text_norm)
+
+            digits_matched = has_clabe_full or has_clabe_last4 or has_card_full or has_card_last4 or has_account_num
+
+            # B. Verificación por Nombre del Titular / Beneficiario del Organizador
+            holder_matched = False
+            if holder:
+                stop_words = {'de', 'del', 'la', 'las', 'los', 'san'}
+                holder_words = [w for w in re.findall(r'[a-z]+', holder) if len(w) >= 3 and w not in stop_words]
+                if len(holder_words) >= 2:
+                    matched_words = [w for w in holder_words if (w in dest_text_norm or w in full_text_norm)]
+                    holder_matched = len(matched_words) >= 2
+                elif len(holder_words) == 1:
+                    holder_matched = (holder_words[0] in dest_text_norm) or (holder_words[0] in full_text_norm)
+
+            # C. Presencia del nombre del banco
+            bank_matched = any(p in full_text_norm for p in bank_name.split() if len(p) >= 4) if bank_name else False
+
+            if digits_matched or holder_matched:
                 matched_account = acc
+                destination_verified = True
+                verification_details.append(
+                    f"Cuenta {acc.get('bank_name')} autorizada verificada (dígitos={digits_matched}, titular={holder_matched})"
+                )
                 break
+            elif bank_matched and not matched_account:
+                matched_account = acc
+
+        # Si no se verificaron los dígitos ni el titular oficial del organizador:
+        if not destination_verified:
+            errors.append(
+                "La cuenta, tarjeta o beneficiario receptor en el comprobante no coincide con ninguna de las cuentas oficiales autorizadas del organizador. Verifica haber transferido a la cuenta correcta."
+            )
+            fatal_error = True
 
         if not matched_account and bank_accounts:
-            # Si solo hay una cuenta configurada o no se especifica, usar la primera por defecto
             matched_account = bank_accounts[0]
 
         receiver_clabe = str(matched_account.get("clabe") or "") if matched_account else ""
@@ -204,6 +260,13 @@ class ReceiptParser:
 
         sender_code = parsed.get("sender_bank_code")
         is_intrabank = bool(sender_code and receiver_bank_code and sender_code == receiver_bank_code)
+
+        if is_intrabank and not destination_verified:
+            fatal_error = True
+            if "Transferencia entre cuentas del mismo banco rechazada" not in str(errors):
+                errors.append(
+                    "Transferencia entre cuentas del mismo banco rechazada: la cuenta o titular receptor no corresponde a las cuentas autorizadas del organizador."
+                )
 
         return {
             "valid": len(errors) == 0,
@@ -217,5 +280,7 @@ class ReceiptParser:
             "receiver_bank_code": receiver_bank_code,
             "receiver_clabe": receiver_clabe,
             "is_intrabank": is_intrabank,
+            "destination_verified": destination_verified,
+            "verification_details": verification_details,
             "matched_account": matched_account
         }
