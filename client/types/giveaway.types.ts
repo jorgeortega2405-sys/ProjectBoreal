@@ -1,4 +1,5 @@
 export type GiveawayStatus = 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
+export type GiveawayType = 'standard' | 'daily';
 
 export interface Giveaway {
   available_tickets: number;
@@ -20,6 +21,7 @@ export interface Giveaway {
   ticket_price: number;
   title: string;
   total_tickets: number;
+  type?: GiveawayType;
   updated_at: string;
   uuid: string;
   winner_announced_at?: string | null;
@@ -39,6 +41,17 @@ export interface WinnerGiveawayItem {
   ticket_price: number;
   title: string;
   total_tickets: number;
+  uuid: string;
+  winner_announced_at: string | null;
+  winner_name: string | null;
+  winner_ticket_number: number | null;
+}
+
+export interface DailyGiveawayWinnerItem {
+  customer_state?: string | null;
+  draw_date: string | null;
+  prize_amount: number;
+  title: string;
   uuid: string;
   winner_announced_at: string | null;
   winner_name: string | null;

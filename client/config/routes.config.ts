@@ -39,6 +39,14 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/winners' || path === '/ganadores',
   },
   {
+    handler: async () => {
+      const { createDailyGiveawayView } = await import('../views/daily-giveaway.view.js');
+      return await createDailyGiveawayView();
+    },
+    id: 'daily-giveaway',
+    match: (path) => path === '/sorteo-diario' || path === '/diario' || path === '/daily',
+  },
+  {
     handler: async (ctx) => {
       const { createGiveawayDetailView } = await import('../views/giveaway-detail.view.js');
       return await createGiveawayDetailView(ctx.params.uuid);

@@ -431,6 +431,25 @@
     "view_giveaway": "Ver Sorteo",
     "winner_label": "Ganador(a)"
   },
+  "daily": {
+    "badge_frequency": "Lunes a Viernes",
+    "badge_title": "Sorteo Diario 10k",
+    "buy_btn": "Elegir Boletos • $5 c/u",
+    "closing_today": "Cierre hoy a las 23:59 hrs",
+    "closing_monday": "Cierre el Lunes a las 23:59 hrs",
+    "countdown_label": "Tiempo restante",
+    "drawing_in_progress": "¡Sorteo en curso!",
+    "empty_winners": "¡El próximo ganador podrías ser tú! Participa por solo $5 MXN.",
+    "hours_label": "Horas",
+    "minutes_label": "Min",
+    "next_cycle_note": "Al concluir, el siguiente sorteo inicia inmediatamente.",
+    "prize_amount": "$10,000 MXN en Efectivo",
+    "prize_subtitle": "10,000 boletos a solo $5 MXN cada uno",
+    "recent_winners_title": "Últimos 5 Ganadores",
+    "seconds_label": "Seg",
+    "tickets_progress": "{available} de {total} boletos disponibles",
+    "view_all_winners": "Ver todos los ganadores"
+  },
   "error": {
     "back_to_home": "Volver al inicio",
     "not_found_desc": "La página que estás buscando no existe, ha sido movida o la dirección es incorrecta.",

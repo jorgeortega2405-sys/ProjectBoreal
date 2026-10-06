@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { getCurrentDailyGiveaway, getRecentDailyWinners } from '../services/daily-giveaway.service.js';
 import { getActiveGiveaways, getCompletedGiveawaysWithWinners, getGiveawayByUuid, getGiveawayTakenTickets } from '../services/giveaways.service.js';
 import { logger } from '../services/logger.service.js';
 
@@ -100,4 +101,50 @@ export async function getGiveawayTicketsHandler(req: Request, res: Response): Pr
     });
   }
 }
+
+export async function getDailyGiveawayHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const dailyGiveaway = await getCurrentDailyGiveaway();
+    const recentWinners = await getRecentDailyWinners(5);
+
+    if (!dailyGiveaway) {
+      res.status(404).json({
+        error: 'El sorteo diario no se encuentra disponible en este momento.',
+        success: false,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      data: {
+        giveaway: dailyGiveaway,
+        recentWinners,
+      },
+      success: true,
+    });
+  } catch (error) {
+    logger.app.error('Fallo al obtener sorteo diario', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+}
+
+export async function getDailyWinnersHandler(_req: Request, res: Response): Promise<void> {
+  try {
+    const winners = await getRecentDailyWinners(5);
+    res.status(200).json({
+      data: winners,
+      success: true,
+    });
+  } catch (error) {
+    logger.app.error('Fallo al obtener ganadores del sorteo diario', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+}
+
 

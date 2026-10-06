@@ -1,0 +1,492 @@
+/* ==========================================================================
+   ProjectBoreal - Sorteo Diario 10k (Daily Giveaway Component)
+   Metodología BEM, Responsive y Tokens de Diseño Enterprise
+   ========================================================================== */
+
+.daily-hero-container {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto 28px auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.daily-hero-card {
+  position: relative;
+  width: 100%;
+  border-radius: 24px;
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(245, 158, 11, 0.12);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+html[data-theme="dark"] .daily-hero-card,
+html.dark-theme .daily-hero-card {
+  background: linear-gradient(135deg, rgba(24, 24, 27, 0.95) 0%, rgba(18, 18, 20, 0.98) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  box-shadow: 0 14px 40px -10px rgba(0, 0, 0, 0.5), 0 0 25px -5px rgba(245, 158, 11, 0.12);
+}
+
+.daily-hero-card__glow {
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Sección Principal: Info del Sorteo Activo y Temporizador
+   -------------------------------------------------------------------------- */
+
+.daily-hero-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  padding: 28px 24px 24px 24px;
+  align-items: center;
+}
+
+@media (min-width: 992px) {
+  .daily-hero-body {
+    grid-template-columns: 1.25fr 1fr;
+    gap: 36px;
+    padding: 32px 36px 28px 36px;
+  }
+}
+
+.daily-hero-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.daily-hero-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.daily-hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: var(--sl-border-radius-pill, 9999px);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+html[data-theme="dark"] .daily-hero-pill,
+html.dark-theme .daily-hero-pill {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.daily-hero-pill__pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+  animation: dailyPulse 2s infinite ease-in-out;
+}
+
+@keyframes dailyPulse {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 1;
+  }
+}
+
+.daily-hero-pill--secondary {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  color: var(--text-secondary, #6b7280);
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.daily-hero-title {
+  font-size: clamp(22px, 3vw, 32px);
+  font-weight: 800;
+  line-height: 1.15;
+  margin: 0;
+  color: var(--text-primary, #111827);
+  letter-spacing: -0.02em;
+}
+
+.daily-hero-title-accent {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+html[data-theme="dark"] .daily-hero-title-accent,
+html.dark-theme .daily-hero-title-accent {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.daily-hero-desc {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--text-secondary, #6b7280);
+  margin: 0;
+  max-width: 580px;
+}
+
+.daily-hero-specs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin-top: 2px;
+}
+
+.daily-hero-spec-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.daily-hero-spec-item .component-icon {
+  width: 16px;
+  height: 16px;
+  color: #f59e0b;
+}
+
+/* Barra de progreso de boletos */
+.daily-hero-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.daily-hero-progress__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.daily-hero-progress__strong {
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+}
+
+.daily-hero-progress__track {
+  width: 100%;
+  height: 8px;
+  border-radius: var(--sl-border-radius-pill, 9999px);
+  background: var(--bg-hover, rgba(0, 0, 0, 0.08));
+  overflow: hidden;
+  position: relative;
+}
+
+.daily-hero-progress__bar {
+  height: 100%;
+  border-radius: var(--sl-border-radius-pill, 9999px);
+  background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%);
+  transition: width 0.4s ease;
+}
+
+.daily-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.daily-hero-btn-play {
+  font-size: 15px;
+  font-weight: 700;
+  padding: 0 24px;
+}
+
+/* --------------------------------------------------------------------------
+   Columna Derecha: Bloque de Temporizador (Countdown)
+   -------------------------------------------------------------------------- */
+
+.daily-hero-timer-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px;
+  border-radius: 18px;
+  background: var(--bg-surface, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--border-color, #e5e7eb);
+  text-align: center;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+html[data-theme="dark"] .daily-hero-timer-box,
+html.dark-theme .daily-hero-timer-box {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.daily-hero-timer-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary, #6b7280);
+}
+
+.daily-hero-timer-units {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daily-timer-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 60px;
+}
+
+.daily-timer-digit {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text-primary, #111827);
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  padding: 6px 10px;
+  border-radius: 10px;
+  min-width: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+html[data-theme="dark"] .daily-timer-digit,
+html.dark-theme .daily-timer-digit {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #fbbf24;
+}
+
+.daily-timer-sub {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.daily-timer-sep {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-secondary, #6b7280);
+  margin-top: -16px;
+}
+
+.daily-hero-timer-note {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Sección Inferior Integrada: Últimos 5 Ganadores
+   -------------------------------------------------------------------------- */
+
+.daily-hero-winners-panel {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-surface, rgba(0, 0, 0, 0.015));
+  padding: 20px 24px 24px 24px;
+}
+
+html[data-theme="dark"] .daily-hero-winners-panel,
+html.dark-theme .daily-hero-winners-panel {
+  border-top-color: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+@media (min-width: 992px) {
+  .daily-hero-winners-panel {
+    padding: 20px 36px 26px 36px;
+  }
+}
+
+.daily-hero-winners__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.daily-hero-winners__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-primary, #111827);
+  margin: 0;
+}
+
+.daily-hero-winners__trophy {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.daily-hero-winners__link {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #f59e0b;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: opacity 0.15s ease;
+}
+
+.daily-hero-winners__link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.daily-hero-winners__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.daily-winner-card {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  gap: 6px;
+}
+
+html[data-theme="dark"] .daily-winner-card,
+html.dark-theme .daily-winner-card {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.daily-winner-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.daily-winner-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.daily-winner-card__date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  text-transform: uppercase;
+}
+
+.daily-winner-card__prize {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.daily-winner-card__ticket {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 4px;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+}
+
+html[data-theme="dark"] .daily-winner-card__ticket,
+html.dark-theme .daily-winner-card__ticket {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+.daily-winner-card__name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.daily-winner-card__state {
+  font-size: 11.5px;
+  color: var(--text-secondary, #6b7280);
+  margin: 0;
+}
+
+/* Estado vacío de ganadores */
+.daily-hero-winners__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg-surface-elevated, #ffffff);
+  border: 1px dashed var(--border-color, #e5e7eb);
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+  text-align: center;
+}
+
+html[data-theme="dark"] .daily-hero-winners__empty,
+html.dark-theme .daily-hero-winners__empty {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
+}

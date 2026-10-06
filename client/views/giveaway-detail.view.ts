@@ -870,7 +870,8 @@ export class GiveawayDetailController {
           : isTaken
             ? 'is-taken'
             : 'is-available';
-        const formattedNumber = num.toString().padStart(3, '0');
+        const padLen = (this.giveaway?.total_tickets || 100) >= 1000 ? 4 : 3;
+        const formattedNumber = num.toString().padStart(padLen, '0');
         const isDisabled = isClosed || isTaken ? 'disabled' : '';
         const disabledClass = isClosed ? 'is-disabled' : '';
         return `

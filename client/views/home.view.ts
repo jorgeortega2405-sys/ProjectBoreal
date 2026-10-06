@@ -1,4 +1,5 @@
 import { navigate } from '../app-router.js';
+import { DailyGiveawayCardComponent } from '../components/daily-giveaway-card.component.js';
 import { getGiveawayCategory, renderPrizeCategoryBadgesHtml } from '../config/prize-categories.config.js';
 import { fetchActiveGiveaways } from '../services/giveaways.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
@@ -162,6 +163,7 @@ export class HomeController {
   private cardHoverTargetImg: HTMLImageElement | null = null;
   private cardImagesMap: Map<string, string[]> = new Map();
   private container: HTMLElement;
+  private dailyCardComponent: DailyGiveawayCardComponent | null = null;
   private filteredGiveaways: Giveaway[] = [];
   private giveaways: Giveaway[] = [];
   private isCheckingEndingGiveaways = false;
@@ -177,6 +179,13 @@ export class HomeController {
     this.abortController = new AbortController();
     this.initCategoryBadges();
     this.bindEvents(this.container);
+
+    const dailySection = this.container.querySelector<HTMLElement>('[data-ref="daily-giveaway-section"]');
+    if (dailySection) {
+      this.dailyCardComponent = new DailyGiveawayCardComponent(dailySection);
+      await this.dailyCardComponent.init();
+    }
+
     await this.loadData();
     this.startCountdownLoop();
     this.subscribeWebSocketEvents();
@@ -263,6 +272,8 @@ export class HomeController {
   private filterGiveaways(): void {
     const query = this.searchQuery.trim().toLowerCase();
     const filtered = this.giveaways.filter((g) => {
+      if (g.type === 'daily') return false;
+
       const matchesSearch = !query ||
         g.title.toLowerCase().includes(query) ||
         Boolean(g.description && g.description.toLowerCase().includes(query));
@@ -609,6 +620,10 @@ export class HomeController {
 
   destroy(): void {
     this.stopCardHover();
+    if (this.dailyCardComponent) {
+      this.dailyCardComponent.destroy();
+      this.dailyCardComponent = null;
+    }
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
       this.timerInterval = null;

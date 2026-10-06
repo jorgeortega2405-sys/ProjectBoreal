@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getGiveawayDetail, getGiveawayTicketsHandler, listActiveGiveaways, listWinnersHandler } from '../controllers/giveaways.controller.js';
+import { getDailyGiveawayHandler, getDailyWinnersHandler, getGiveawayDetail, getGiveawayTicketsHandler, listActiveGiveaways, listWinnersHandler } from '../controllers/giveaways.controller.js';
 import { createRateLimiter } from '../middlewares/rate-limit.middleware.js';
 
 const router = Router();
@@ -17,6 +17,8 @@ const giveawayDetailLimiter = createRateLimiter({
 });
 
 router.get('/', giveawayListLimiter, listActiveGiveaways);
+router.get('/daily', giveawayListLimiter, getDailyGiveawayHandler);
+router.get('/daily/winners', giveawayListLimiter, getDailyWinnersHandler);
 router.get('/winners', giveawayListLimiter, listWinnersHandler);
 router.get('/:uuid/tickets', giveawayDetailLimiter, getGiveawayTicketsHandler);
 router.get('/:uuid', giveawayDetailLimiter, getGiveawayDetail);

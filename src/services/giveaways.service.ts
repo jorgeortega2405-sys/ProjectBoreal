@@ -3,6 +3,7 @@ import { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/pro
 import { pool } from '../config/database.config.js';
 import { deleteCache, getCache, publishGiveawayEvent, setCache } from '../config/redis.config.js';
 import { Giveaway, WinnerGiveawayItem } from '../types/giveaway.types.js';
+import { ensureCurrentDailyGiveaway } from './daily-giveaway.service.js';
 import { logger } from './logger.service.js';
 
 interface GiveawayRow extends RowDataPacket, Giveaway {}
@@ -21,13 +22,13 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
     const [rows] = await pool.query<GiveawayRow[]>(
       `SELECT id, uuid, title, slug, description, primary_image_url, image_urls, package_options,
               CAST(ticket_price AS DOUBLE) AS ticket_price,
-              total_tickets, available_tickets, currency, status,
+              total_tickets, available_tickets, currency, type, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
               winner_ticket_number, winner_name, winner_order_id, winner_announced_at,
               draw_date, created_at, updated_at
        FROM giveaways
-       WHERE status = 'active' 
-          OR (status = 'completed' AND end_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR))
+       WHERE (status = 'active' OR (status = 'completed' AND end_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)))
+         AND (type != 'daily' OR type IS NULL)
        ORDER BY 
           CASE 
             WHEN status = 'active' AND (start_date IS NULL OR start_date <= NOW()) THEN 0
@@ -129,7 +130,7 @@ export async function getGiveawayByUuid(uuid: string): Promise<Giveaway | null> 
     const [rows] = await pool.query<GiveawayRow[]>(
       `SELECT id, uuid, title, slug, description, primary_image_url, image_urls, package_options,
               CAST(ticket_price AS DOUBLE) AS ticket_price,
-              total_tickets, available_tickets, currency, status,
+              total_tickets, available_tickets, currency, type, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
               winner_ticket_number, winner_name, winner_order_id, winner_announced_at,
               draw_date, created_at, updated_at
@@ -276,7 +277,7 @@ export async function drawGiveawayWinners(): Promise<void> {
   let connection;
   try {
     const [giveawaysToDraw] = await pool.query<GiveawayRow[]>(
-      `SELECT id, uuid, title, end_date
+      `SELECT id, uuid, title, end_date, type
        FROM giveaways
        WHERE status = 'active'
          AND (min_threshold_pct = 0 OR threshold_reached_at IS NOT NULL)
@@ -383,6 +384,12 @@ export async function drawGiveawayWinners(): Promise<void> {
         await deleteCache(`giveaway:${giveaway.uuid}`);
         await deleteCache(`giveaway:${giveaway.uuid}:tickets`);
         await deleteCache('giveaways:winners');
+
+        if (giveaway.type === 'daily') {
+          await deleteCache('giveaway:daily:current');
+          await deleteCache('giveaway:daily:recent_winners:5');
+          await ensureCurrentDailyGiveaway();
+        }
 
         logger.app.info(
           `Sorteo concluido exitosamente para '${giveaway.title}' (ID: ${giveaway.id}). Ganador: ${winnerName}, Boleto: #${winnerTicketNumber ?? 'N/A'}`

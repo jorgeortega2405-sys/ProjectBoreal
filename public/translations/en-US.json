@@ -292,6 +292,25 @@
     "view_giveaway": "View Giveaway",
     "winner_label": "Winner"
   },
+  "daily": {
+    "badge_frequency": "Monday to Friday",
+    "badge_title": "Daily 10k Giveaway",
+    "buy_btn": "Pick Tickets • $5 each",
+    "closing_today": "Closes today at 11:59 PM",
+    "closing_monday": "Closes on Monday at 11:59 PM",
+    "countdown_label": "Time Remaining",
+    "drawing_in_progress": "Drawing in progress!",
+    "empty_winners": "You could be the next winner! Join today for only $5 MXN.",
+    "hours_label": "Hours",
+    "minutes_label": "Min",
+    "next_cycle_note": "Once concluded, the next cycle starts immediately.",
+    "prize_amount": "$10,000 MXN in Cash",
+    "prize_subtitle": "10,000 tickets available at only $5 MXN each",
+    "recent_winners_title": "Last 5 Winners",
+    "seconds_label": "Sec",
+    "tickets_progress": "{available} of {total} tickets available",
+    "view_all_winners": "View all winners"
+  },
   "error": {
     "back_to_home": "Back to Home",
     "not_found_desc": "The page you are looking for does not exist, has been moved, or the URL is incorrect.",

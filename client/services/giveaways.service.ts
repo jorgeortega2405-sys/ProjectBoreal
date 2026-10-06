@@ -1,4 +1,4 @@
-import { Giveaway, WinnerGiveawayItem } from '../types/giveaway.types.js';
+import { DailyGiveawayWinnerItem, Giveaway, WinnerGiveawayItem } from '../types/giveaway.types.js';
 
 export async function fetchActiveGiveaways(): Promise<Giveaway[]> {
   try {
@@ -85,4 +85,36 @@ export async function fetchGiveawayTickets(uuid: string): Promise<GiveawayTicket
     return null;
   }
 }
+
+export interface DailyGiveawayPayload {
+  giveaway: Giveaway;
+  recentWinners: DailyGiveawayWinnerItem[];
+}
+
+export async function fetchDailyGiveaway(): Promise<DailyGiveawayPayload | null> {
+  try {
+    const res = await fetch('/api/giveaways/daily');
+    if (!res.ok) {
+      return null;
+    }
+    const json = await res.json();
+    return json.success && json.data ? (json.data as DailyGiveawayPayload) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+export async function fetchDailyWinners(limit = 5): Promise<DailyGiveawayWinnerItem[]> {
+  try {
+    const res = await fetch(`/api/giveaways/daily/winners?limit=${limit}`);
+    if (!res.ok) {
+      return [];
+    }
+    const json = await res.json();
+    return json.success && Array.isArray(json.data) ? (json.data as DailyGiveawayWinnerItem[]) : [];
+  } catch (_) {
+    return [];
+  }
+}
+
 
