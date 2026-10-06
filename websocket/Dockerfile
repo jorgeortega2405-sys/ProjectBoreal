@@ -25,9 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /app/target/release/projectboreal-websocket /app/projectboreal-websocket
 
-ENV PORT=3005
-ENV REDIS_HOST=boreal-redis
+ENV PORT=3008
+ENV REDIS_HOST=redis
 ENV REDIS_PORT=6379
-EXPOSE 3005
+EXPOSE 3008
 
 CMD ["/app/projectboreal-websocket"]

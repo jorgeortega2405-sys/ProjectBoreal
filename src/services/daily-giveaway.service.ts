@@ -200,6 +200,20 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
       [row.id]
     );
 
+    const ticketBatchSize = 2000;
+    const totalDailyTickets = 20000;
+    for (let i = 1; i <= totalDailyTickets; i += ticketBatchSize) {
+      const batchValues: [number, number, string][] = [];
+      const end = Math.min(i + ticketBatchSize - 1, totalDailyTickets);
+      for (let num = i; num <= end; num++) {
+        batchValues.push([row.id, num, 'available']);
+      }
+      await pool.query(
+        `INSERT IGNORE INTO giveaway_tickets (giveaway_id, ticket_number, status) VALUES ?`,
+        [batchValues]
+      );
+    }
+
     const newGiveaway: Giveaway = {
       ...row,
       current_pot: 0,

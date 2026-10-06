@@ -22,12 +22,24 @@ const uploadLimiter = createRateLimiter({
   windowSeconds: 300,
 });
 
+const detailLimiter = createRateLimiter({
+  keyPrefix: 'order_detail',
+  maxRequests: 30,
+  windowSeconds: 60,
+});
+
+const receiptLimiter = createRateLimiter({
+  keyPrefix: 'order_receipt',
+  maxRequests: 10,
+  windowSeconds: 60,
+});
+
 router.post('/reserve', reserveLimiter, reserveOrderHandler);
 router.post('/lookup', lookupLimiter, lookupOrdersHandler);
 router.post('/upload-receipt', uploadLimiter, uploadReceiptHandler);
 router.get('/bank-accounts', getBankAccountsHandler);
-router.get('/:uuid', getOrderDetailHandler);
-router.get('/:uuid/receipt', getOrderReceiptHandler);
+router.get('/:uuid', detailLimiter, getOrderDetailHandler);
+router.get('/:uuid/receipt', receiptLimiter, getOrderReceiptHandler);
 
 export default router;
 

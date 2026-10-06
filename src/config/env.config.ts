@@ -50,16 +50,21 @@ export const config = {
   },
 };
 
+const ALLOWED_ORIGIN_REGEX = /^https?:\/\/(?:[a-zA-Z0-9-]+\.)*(?:projectboreal\.com|boreal\.com|boreal\.local)(?::\d+)?$/;
+
 export function isAllowedOrigin(origin: string | undefined): boolean {
   if (!origin || typeof origin !== 'string') return false;
   if (
     origin.startsWith('http://localhost:') ||
     origin.startsWith('https://localhost:') ||
     origin.startsWith('http://127.0.0.1:') ||
+    origin === 'http://localhost' ||
+    origin === 'https://localhost' ||
+    origin === 'http://127.0.0.1' ||
     origin.endsWith('.projectboreal.internal') ||
-    origin.includes('projectboreal.com')
+    ALLOWED_ORIGIN_REGEX.test(origin)
   ) {
     return true;
   }
-  return config.cors.allowedOrigins.some((allowed) => origin === allowed || origin.startsWith(allowed));
+  return config.cors.allowedOrigins.some((allowed) => origin === allowed);
 }

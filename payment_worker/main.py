@@ -706,12 +706,6 @@ class ReceiptWorker:
 
     def run_cycle(self):
         try:
-            self.sweep_expired_orders()
-        except pymysql.err.OperationalError as db_err:
-            logger.warning(f"Aviso de conexión BD en barrido: {db_err}")
-            return
-
-        try:
             batch = self.fetch_and_reserve_batch()
         except pymysql.err.OperationalError as db_err:
             logger.warning(f"Aviso de conexión BD al obtener lote: {db_err}")

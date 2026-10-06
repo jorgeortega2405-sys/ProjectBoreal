@@ -251,10 +251,7 @@ export async function getOrderDetailHandler(req: Request, res: Response): Promis
     });
 
     res.status(200).json({
-      data: {
-        ...maskOrder(order),
-        customer_phone: order.customer_phone,
-      },
+      data: maskOrder(order),
       success: true,
     });
   } catch (error) {
@@ -358,17 +355,15 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
       await redis.set(`boreal:receipt_hash:${fileHash}`, orderUuid, 'EX', 90 * 86400);
     } catch (_) {}
 
-    if (trackingKey) {
+    const cleanKeyUpper = trackingKey ? String(trackingKey).trim().toUpperCase() : '';
+    if (cleanKeyUpper && !cleanKeyUpper.startsWith('INTRA-') && cleanKeyUpper !== 'PENDING_OCR') {
       void processBanxicoBatch().catch((batchErr) => {
         logger.app.error('Error al procesar lote Banxico tras recepción de comprobante', batchErr);
       });
     }
 
     res.status(200).json({
-      data: {
-        ...maskOrder(updatedOrder),
-        customer_phone: updatedOrder.customer_phone,
-      },
+      data: maskOrder(updatedOrder),
       message: 'Comprobante registrado exitosamente. Tu pago pasará a validación Banxico.',
       success: true,
     });
@@ -413,6 +408,17 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
     if (!order || !order.receipt_url || !order.receipt_filename) {
       res.status(404).json({
         error: 'El comprobante solicitado no fue encontrado o no está disponible.',
+        success: false,
+      });
+      return;
+    }
+
+    const phoneQuery = typeof req.query.phone === 'string' ? req.query.phone.replace(/\D/g, '') : '';
+    const orderPhone = (order.customer_phone || '').replace(/\D/g, '');
+    const isOwner = Boolean(phoneQuery && (orderPhone.endsWith(phoneQuery) || phoneQuery.endsWith(orderPhone.slice(-4))));
+    if (!isOwner) {
+      res.status(403).json({
+        error: 'Verificación requerida para consultar el comprobante.',
         success: false,
       });
       return;

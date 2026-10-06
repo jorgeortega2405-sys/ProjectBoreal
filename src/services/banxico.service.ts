@@ -50,9 +50,9 @@ export async function validateSpeiPayment(
   if (cleanKey.startsWith('INTRA-')) {
     return {
       details: { trackingKey: cleanKey },
-      matched: true,
-      message: 'Transferencia intrabancaria confirmada.',
-      status: 'liquidated',
+      matched: false,
+      message: 'Las transferencias intrabancarias no son certificables en Banxico CEP; requieren validación documental directa.',
+      status: 'pending',
     };
   }
 

@@ -433,11 +433,6 @@ export class ValidatePaymentController {
           previewImg.src = selectedBase64;
           previewBox.classList.remove('is-hidden');
         }
-
-        if (trackingInput && !trackingInput.value) {
-          const autoKey = `SPEI-${Date.now().toString().slice(-8)}`;
-          trackingInput.value = autoKey;
-        }
       };
       reader.readAsDataURL(file);
     });
