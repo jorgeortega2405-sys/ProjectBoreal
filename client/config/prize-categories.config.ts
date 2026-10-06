@@ -88,6 +88,10 @@ export const PRIZE_CATEGORIES: PrizeCategoryItem[] = [
 ];
 
 export function getGiveawayCategory(giveaway: Giveaway): PrizeCategoryItem {
+  if (giveaway.type === 'daily') {
+    return PRIZE_CATEGORIES.find((c) => c.id === 'cash')!;
+  }
+
   const text = `${giveaway.title} ${giveaway.slug} ${giveaway.description || ''}`.toLowerCase();
 
   if (/playstation|ps5|xbox|nintendo|switch|gamer|rtx|consola|videojuego/.test(text)) {

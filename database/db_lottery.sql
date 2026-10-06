@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS `giveaways` (
   `winner_name` VARCHAR(150) NULL,
   `winner_order_id` BIGINT UNSIGNED NULL,
   `winner_announced_at` DATETIME NULL,
+  `prize_amount` DECIMAL(12, 2) NULL DEFAULT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_giveaways_type_status` (`type`, `status`),

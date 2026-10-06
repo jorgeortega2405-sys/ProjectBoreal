@@ -27,10 +27,10 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
               winner_ticket_number, winner_name, winner_order_id, winner_announced_at,
               draw_date, created_at, updated_at
        FROM giveaways
-       WHERE (status = 'active' OR (status = 'completed' AND end_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)))
-         AND (type != 'daily' OR type IS NULL)
+       WHERE (status = 'active' OR (status = 'completed' AND type != 'daily' AND end_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)))
        ORDER BY 
           CASE 
+            WHEN type = 'daily' AND status = 'active' THEN -1
             WHEN status = 'active' AND (start_date IS NULL OR start_date <= NOW()) THEN 0
             WHEN status = 'active' AND start_date > NOW() THEN 1
             ELSE 2 
@@ -46,13 +46,28 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
           end_date ASC`
     );
 
-    const list = rows.map((row) => ({
-      ...row,
-      image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
-      package_options: row.package_options
-        ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
-        : [1, 3, 5, 10, 20],
-    }));
+    const list = await Promise.all(
+      rows.map(async (row) => {
+        let currentPot: number | undefined;
+        if (row.type === 'daily') {
+          const [countRows] = await pool.query<RowDataPacket[]>(
+            `SELECT COUNT(*) AS paid_count FROM giveaway_tickets WHERE giveaway_id = ? AND status = 'paid'`,
+            [row.id]
+          );
+          const paidCount = Number(countRows[0]?.paid_count || 0);
+          currentPot = Math.round(paidCount * (Number(row.ticket_price) * 0.50));
+        }
+
+        return {
+          ...row,
+          current_pot: currentPot,
+          image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
+          package_options: row.package_options
+            ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
+            : (row.type === 'daily' ? [5, 10, 25, 50, 100] : [1, 3, 5, 10, 20]),
+        };
+      })
+    );
 
     await setCache('giveaways:active', list, 30);
     return list;
@@ -365,15 +380,20 @@ export async function drawGiveawayWinners(): Promise<void> {
           }
         }
 
+        const prizeAmount = giveaway.type === 'daily'
+          ? Math.round(totalPaid * (Number(giveaway.ticket_price) * 0.50))
+          : null;
+
         await connection.query(
           `UPDATE giveaways 
            SET status = 'completed',
                winner_ticket_number = ?,
                winner_name = ?,
                winner_order_id = ?,
-               winner_announced_at = NOW()
+               winner_announced_at = NOW(),
+               prize_amount = ?
            WHERE id = ?`,
-          [winnerTicketNumber, winnerName, winnerOrderId, giveaway.id]
+          [winnerTicketNumber, winnerName, winnerOrderId, prizeAmount, giveaway.id]
         );
 
         await connection.commit();
@@ -398,6 +418,7 @@ export async function drawGiveawayWinners(): Promise<void> {
         await publishGiveawayEvent('boreal:giveaways', {
           giveaway_title: giveaway.title,
           giveaway_uuid: giveaway.uuid,
+          prize_amount: prizeAmount,
           type: 'GIVEAWAY_WINNER_DRAWN',
           winner_announced_at: new Date().toISOString(),
           winner_name: winnerName,

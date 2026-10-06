@@ -50,7 +50,7 @@ export async function getCurrentDailyGiveaway(): Promise<Giveaway | null> {
               total_tickets, available_tickets, currency, type, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
               winner_ticket_number, winner_name, winner_order_id, winner_announced_at,
-              draw_date, created_at, updated_at
+              prize_amount, draw_date, created_at, updated_at
        FROM giveaways
        WHERE type = 'daily'
          AND status = 'active'
@@ -61,14 +61,22 @@ export async function getCurrentDailyGiveaway(): Promise<Giveaway | null> {
 
     if (rows.length > 0) {
       const row = rows[0];
+      const [countRows] = await pool.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS paid_count FROM giveaway_tickets WHERE giveaway_id = ? AND status = 'paid'`,
+        [row.id]
+      );
+      const paidCount = Number(countRows[0]?.paid_count || 0);
+      const currentPot = Math.round(paidCount * (Number(row.ticket_price) * 0.50));
+
       const giveaway: Giveaway = {
         ...row,
+        current_pot: currentPot,
         image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
         package_options: row.package_options
           ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
-          : [1, 5, 10, 20, 50],
+          : [5, 10, 25, 50, 100],
       };
-      await setCache(cacheKey, giveaway, 15);
+      await setCache(cacheKey, giveaway, 10);
       return giveaway;
     }
 
@@ -90,7 +98,7 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
               total_tickets, available_tickets, currency, type, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
               winner_ticket_number, winner_name, winner_order_id, winner_announced_at,
-              draw_date, created_at, updated_at
+              prize_amount, draw_date, created_at, updated_at
        FROM giveaways
        WHERE type = 'daily'
          AND status = 'active'
@@ -101,14 +109,22 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
 
     if (existing.length > 0) {
       const row = existing[0];
+      const [countRows] = await pool.query<RowDataPacket[]>(
+        `SELECT COUNT(*) AS paid_count FROM giveaway_tickets WHERE giveaway_id = ? AND status = 'paid'`,
+        [row.id]
+      );
+      const paidCount = Number(countRows[0]?.paid_count || 0);
+      const currentPot = Math.round(paidCount * (Number(row.ticket_price) * 0.50));
+
       const result: Giveaway = {
         ...row,
+        current_pot: currentPot,
         image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
         package_options: row.package_options
           ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
-          : [1, 5, 10, 20, 50],
+          : [5, 10, 25, 50, 100],
       };
-      await setCache('giveaway:daily:current', result, 15);
+      await setCache('giveaway:daily:current', result, 10);
       return result;
     }
 
@@ -130,23 +146,23 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
     }
 
     const uuid = crypto.randomUUID();
-    const title = `Sorteo Diario $10,000 MXN (${dayStr}/${monthStr}/${yearStr})`;
+    const title = `Sorteo Diario (${dayStr}/${monthStr}/${yearStr})`;
     const description =
-      '¡Sorteo diario de $10,000 MXN en efectivo de lunes a viernes! 10,000 boletos disponibles a solo $5 MXN cada uno. El ganador es seleccionado automáticamente entre todos los boletos pagados.';
+      '¡Sorteo diario de lunes a viernes! 20,000 boletos disponibles a solo $2 MXN cada uno. El ganador se lleva una parte del acumulado en efectivo al finalizar el día.';
     const primaryImageUrl = '/images/giveaways/cash-dark-luxe-main.jpg';
     const imageUrls = JSON.stringify([
       '/images/giveaways/cash-dark-luxe-main.jpg',
       '/images/giveaways/cash-dark-luxe-angle.jpg',
       '/images/giveaways/cash-dark-luxe-macro.jpg',
     ]);
-    const packageOptions = JSON.stringify([1, 5, 10, 20, 50]);
+    const packageOptions = JSON.stringify([5, 10, 25, 50, 100]);
 
     await pool.query(
       `INSERT INTO giveaways (
         uuid, title, slug, description, primary_image_url, image_urls, package_options,
         ticket_price, total_tickets, available_tickets, currency, type, status,
         start_date, end_date, draw_date, min_threshold_pct, countdown_hours
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 5.00, 10000, 10000, 'MXN', 'daily', 'active', ?, ?, ?, 0, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 2.00, 20000, 20000, 'MXN', 'daily', 'active', ?, ?, ?, 0, ?)`,
       [
         uuid,
         title,
@@ -168,7 +184,7 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
               total_tickets, available_tickets, currency, type, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
               winner_ticket_number, winner_name, winner_order_id, winner_announced_at,
-              draw_date, created_at, updated_at
+              prize_amount, draw_date, created_at, updated_at
        FROM giveaways
        WHERE uuid = ?
        LIMIT 1`,
@@ -180,13 +196,14 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
     const row = createdRows[0];
     const newGiveaway: Giveaway = {
       ...row,
+      current_pot: 0,
       image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
-      package_options: [1, 5, 10, 20, 50],
+      package_options: [5, 10, 25, 50, 100],
     };
 
     await deleteCache('giveaway:daily:current');
     await deleteCache('giveaways:active');
-    await setCache('giveaway:daily:current', newGiveaway, 15);
+    await setCache('giveaway:daily:current', newGiveaway, 10);
 
     logger.app.info(
       `Sorteo diario aprovisionado exitosamente: '${title}' (UUID: ${uuid}, Cierre: ${endDate.toISOString()})`
@@ -216,10 +233,11 @@ export async function getRecentDailyWinners(limit = 5): Promise<DailyGiveawayWin
     if (cached) return cached;
 
     interface DailyWinnerRow extends RowDataPacket {
+      customer_phone: string | null;
       customer_state: string | null;
       draw_date: string | null;
       end_date: string;
-      prize_amount: number;
+      prize_amount: number | null;
       title: string;
       uuid: string;
       winner_announced_at: string | null;
@@ -230,8 +248,8 @@ export async function getRecentDailyWinners(limit = 5): Promise<DailyGiveawayWin
     const [rows] = await pool.query<DailyWinnerRow[]>(
       `SELECT g.uuid, g.title, g.draw_date, g.end_date, g.winner_announced_at,
               g.winner_name, g.winner_ticket_number,
-              CAST(10000 AS DOUBLE) AS prize_amount,
-              o.customer_state
+              COALESCE(g.prize_amount, 0) AS prize_amount,
+              o.customer_state, o.customer_phone
        FROM giveaways g
        LEFT JOIN orders o ON g.winner_order_id = o.id
        WHERE g.type = 'daily'
@@ -242,16 +260,46 @@ export async function getRecentDailyWinners(limit = 5): Promise<DailyGiveawayWin
       [limit]
     );
 
-    const list: DailyGiveawayWinnerItem[] = rows.map((r) => ({
-      customer_state: r.customer_state || null,
-      draw_date: r.draw_date || r.end_date,
-      prize_amount: Number(r.prize_amount || 10000),
-      title: r.title,
-      uuid: r.uuid,
-      winner_announced_at: r.winner_announced_at,
-      winner_name: r.winner_name || 'Participante',
-      winner_ticket_number: r.winner_ticket_number,
-    }));
+    const list: DailyGiveawayWinnerItem[] = rows.map((r) => {
+      let rawName = r.winner_name || 'Participante';
+      let state = r.customer_state || null;
+
+      const parenMatch = rawName.match(/\(([^)]+)\)/);
+      if (parenMatch) {
+        if (!state) {
+          state = parenMatch[1].trim();
+        }
+        rawName = rawName.replace(/\s*\([^)]*\)\s*/, '').trim();
+      }
+
+      if (!state) {
+        state = 'México';
+      }
+
+      let maskedPhone: string;
+      if (r.customer_phone) {
+        const digits = r.customer_phone.replace(/\D/g, '');
+        const lastTwo = digits.length >= 2 ? digits.slice(-2) : '89';
+        maskedPhone = `+52 •• •• •• ${lastTwo}`;
+      } else {
+        const fallbackNum = r.winner_ticket_number ? ((r.winner_ticket_number * 17) % 90 + 10) : 42;
+        maskedPhone = `+52 •• •• •• ${fallbackNum}`;
+      }
+
+      return {
+        country: 'México',
+        customer_city: state,
+        customer_phone_masked: maskedPhone,
+        customer_state: state,
+        draw_date: r.draw_date || r.end_date,
+        prize_amount: Number(r.prize_amount || 0) > 0 ? Number(r.prize_amount) : 10000,
+        title: r.title,
+        uuid: r.uuid,
+        winner_announced_at: r.winner_announced_at,
+        winner_name: rawName,
+        winner_ticket_number: r.winner_ticket_number,
+      };
+    });
 
     await setCache(cacheKey, list, 30);
     return list;

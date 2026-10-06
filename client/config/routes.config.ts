@@ -31,9 +31,10 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/validate-payment' || path === '/validar-pago',
   },
   {
-    handler: async () => {
+    handler: async (ctx) => {
       const { createWinnersView } = await import('../views/winners.view.js');
-      return await createWinnersView();
+      const initialTab = ctx?.query?.get('tab') || new URLSearchParams(window.location.search).get('tab') || 'standard';
+      return await createWinnersView(initialTab);
     },
     id: 'winners',
     match: (path) => path === '/winners' || path === '/ganadores',

@@ -85,6 +85,7 @@ export async function reserveTickets(data: {
 
     const [giveaways] = await conn.query<RowDataPacket[]>(
       `SELECT id, title, ticket_price, currency, status, total_tickets, end_date, start_date, min_threshold_pct, threshold_reached_at,
+              package_options, type,
               (NOW() >= DATE_SUB(end_date, INTERVAL 1 HOUR)) AS is_sales_closed,
               (start_date IS NOT NULL AND NOW() < start_date) AS is_not_started
        FROM giveaways
@@ -132,11 +133,17 @@ export async function reserveTickets(data: {
       return { bankAccounts: [], success: false };
     }
 
-    if (cleanNumbers.length > 20) {
+    const packageOpts = giveaway.package_options
+      ? (typeof giveaway.package_options === 'string' ? JSON.parse(giveaway.package_options) : giveaway.package_options)
+      : [];
+    const maxPkg = Array.isArray(packageOpts) && packageOpts.length > 0 ? Math.max(...packageOpts) : 20;
+    const maxAllowed = Math.max(20, maxPkg, giveaway.type === 'daily' ? 100 : 20);
+
+    if (cleanNumbers.length > maxAllowed) {
       await conn.rollback();
       return {
         bankAccounts: [],
-        error: 'No puedes apartar más de 20 boletos en una sola orden.',
+        error: `No puedes apartar más de ${maxAllowed} boletos en una sola orden.`,
         success: false,
       };
     }

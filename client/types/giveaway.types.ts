@@ -6,6 +6,7 @@ export interface Giveaway {
   countdown_hours: number;
   created_at: string;
   currency: string;
+  current_pot?: number;
   description: string | null;
   draw_date: string | null;
   end_date: string;
@@ -14,6 +15,7 @@ export interface Giveaway {
   min_threshold_pct: number;
   package_options?: number[] | null;
   primary_image_url: string;
+  prize_amount?: number | null;
   slug: string;
   start_date: string;
   status: GiveawayStatus;
@@ -48,6 +50,9 @@ export interface WinnerGiveawayItem {
 }
 
 export interface DailyGiveawayWinnerItem {
+  country?: string | null;
+  customer_city?: string | null;
+  customer_phone_masked?: string | null;
   customer_state?: string | null;
   draw_date: string | null;
   prize_amount: number;

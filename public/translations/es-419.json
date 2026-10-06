@@ -25,6 +25,26 @@
     "validate_payment": "Validar Pago",
     "winners": "Ganadores"
   },
+  "daily": {
+    "badge_frequency": "Lunes a Viernes",
+    "badge_title": "Sorteo Diario",
+    "buy_btn": "Jugar Ahora ($2 MXN)",
+    "closing_monday": "Venta cierra 1 hora antes (22:59 hrs)",
+    "closing_today": "Venta cierra 1 hora antes (22:59 hrs)",
+    "countdown_label": "Cierre y Sorteo Oficial en:",
+    "drawing_in_progress": "¡Sorteo en curso! Seleccionando ganador...",
+    "empty_winners": "Sé el primer ganador de hoy",
+    "hours_label": "Horas",
+    "live_pot_badge": "Bolsa En Vivo",
+    "minutes_label": "Minutos",
+    "pot_label": "Bolsa Acumulada Hoy",
+    "prize_amount": "${amount} MXN",
+    "prize_subtitle": "¡El ganador se lleva una parte del acumulado de hoy! Boletos a solo $2 MXN.",
+    "recent_winners_title": "Últimos Ganadores",
+    "seconds_label": "Segundos",
+    "tickets_progress": "{available} de {total} boletos disponibles",
+    "view_all_winners": "Ver todos"
+  },
   "home": {
     "active_badge": "Activo",
     "cat_all": "Todos",

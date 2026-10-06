@@ -158,16 +158,30 @@ export class DailyGiveawayCardComponent {
         if (data.giveaway_id === this.giveaway.id || data.giveaway_uuid === this.giveaway.uuid) {
           if (typeof data.ticket_count === 'number') {
             this.giveaway.available_tickets = Math.max(0, this.giveaway.available_tickets - data.ticket_count);
+            const potGain = Math.round(data.ticket_count * (Number(this.giveaway.ticket_price || 2) * 0.50));
+            this.giveaway.current_pot = (this.giveaway.current_pot || 0) + potGain;
             this.updateProgressDisplay();
+            this.updatePotDisplay();
           }
         }
       })
     );
   }
 
+  private updatePotDisplay(): void {
+    if (!this.giveaway) return;
+    const potEl = this.container.querySelector<HTMLElement>('[data-ref="daily-pot-amount"]');
+    if (potEl) {
+      potEl.textContent = `$${formatNumber(this.giveaway.current_pot || 0)} MXN`;
+      potEl.classList.remove('daily-hero-pot-pulse');
+      void potEl.offsetWidth;
+      potEl.classList.add('daily-hero-pot-pulse');
+    }
+  }
+
   private updateProgressDisplay(): void {
     if (!this.giveaway) return;
-    const total = this.giveaway.total_tickets || 10000;
+    const total = this.giveaway.total_tickets || 20000;
     const available = this.giveaway.available_tickets ?? total;
     const sold = total - available;
     const pct = Math.min(100, Math.round((sold / total) * 100));
@@ -193,7 +207,7 @@ export class DailyGiveawayCardComponent {
     }
 
     const g = this.giveaway;
-    const total = g.total_tickets || 10000;
+    const total = g.total_tickets || 20000;
     const available = g.available_tickets ?? total;
     const sold = total - available;
     const pct = Math.min(100, Math.round((sold / total) * 100));
@@ -218,10 +232,17 @@ export class DailyGiveawayCardComponent {
               <span class="daily-hero-pill daily-hero-pill--secondary">
                 <span>${escapeHtml(t('daily.badge_frequency'))}</span>
               </span>
+              <span class="daily-hero-pill daily-hero-pill--live">
+                <span>⚡ ${escapeHtml(t('daily.live_pot_badge'))}</span>
+              </span>
+            </div>
+
+            <div class="daily-hero-pot-header">
+              <span class="daily-hero-pot-label">${escapeHtml(t('daily.pot_label'))}</span>
             </div>
 
             <h2 class="daily-hero-title">
-              <span class="daily-hero-title-accent">${escapeHtml(t('daily.prize_amount'))}</span>
+              <span class="daily-hero-title-accent" data-ref="daily-pot-amount">$${formatNumber(g.current_pot || 0)} MXN</span>
             </h2>
 
             <p class="daily-hero-desc">
@@ -301,17 +322,19 @@ export class DailyGiveawayCardComponent {
     const itemsHtml = this.recentWinners
       .map((w) => {
         const dateText = formatWinnerDate(w.winner_announced_at || w.draw_date, lang);
+        const ticketPad = typeof w.winner_ticket_number === 'number' && w.winner_ticket_number > 9999 ? 5 : 4;
         const ticketNum = typeof w.winner_ticket_number === 'number'
-          ? `#${String(w.winner_ticket_number).padStart(4, '0')}`
+          ? `#${String(w.winner_ticket_number).padStart(ticketPad, '0')}`
           : '#----';
         const winnerName = w.winner_name || 'Participante';
         const stateText = w.customer_state ? `(${escapeHtml(w.customer_state)})` : '';
+        const prizeText = `$${formatNumber(w.prize_amount || 10000)} MXN`;
 
         return `
           <div class="daily-winner-card" data-ref="daily-winner-card-${escapeHtml(w.uuid)}">
             <div class="daily-winner-card__header">
               <span class="daily-winner-card__date">${escapeHtml(dateText)}</span>
-              <span class="daily-winner-card__prize">$10,000 MXN</span>
+              <span class="daily-winner-card__prize">${escapeHtml(prizeText)}</span>
             </div>
             <span class="daily-winner-card__ticket">${escapeHtml(ticketNum)}</span>
             <div class="daily-winner-card__name" title="${escapeHtml(winnerName)}">

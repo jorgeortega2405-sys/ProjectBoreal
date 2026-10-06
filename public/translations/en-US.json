@@ -23,6 +23,26 @@
     "toggle_drawer": "Toggle side menu",
     "validate_payment": "Validate Payment"
   },
+  "daily": {
+    "badge_frequency": "Mon to Fri",
+    "badge_title": "Daily Draw",
+    "buy_btn": "Play Now ($2 MXN)",
+    "closing_monday": "Sales close 1 hour early (22:59)",
+    "closing_today": "Sales close 1 hour early (22:59)",
+    "countdown_label": "Official Draw Countdown:",
+    "drawing_in_progress": "Drawing in progress! Selecting winner...",
+    "empty_winners": "Be today's first winner",
+    "hours_label": "Hours",
+    "live_pot_badge": "Live Pot",
+    "minutes_label": "Minutes",
+    "pot_label": "Today's Progressive Pot",
+    "prize_amount": "${amount} MXN",
+    "prize_subtitle": "Winner takes a share of today's accumulated prize pot! Tickets just $2 MXN.",
+    "recent_winners_title": "Recent Winners",
+    "seconds_label": "Seconds",
+    "tickets_progress": "{available} of {total} tickets available",
+    "view_all_winners": "View all"
+  },
   "home": {
     "active_badge": "Active",
     "cat_all": "All",

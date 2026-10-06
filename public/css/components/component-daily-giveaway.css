@@ -126,8 +126,46 @@ html.dark-theme .daily-hero-pill {
   border: 1px solid var(--border-color, #e5e7eb);
 }
 
+.daily-hero-pill--live {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+html[data-theme="dark"] .daily-hero-pill--live,
+html.dark-theme .daily-hero-pill--live {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.daily-hero-pot-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: -6px;
+}
+
+.daily-hero-pot-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary, #6b7280);
+}
+
+.daily-hero-pot-pulse {
+  animation: potPulseAnim 0.6s ease-out;
+}
+
+@keyframes potPulseAnim {
+  0% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.06); filter: brightness(1.25); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
 .daily-hero-title {
-  font-size: clamp(22px, 3vw, 32px);
+  font-size: clamp(24px, 3.5vw, 36px);
   font-weight: 800;
   line-height: 1.15;
   margin: 0;

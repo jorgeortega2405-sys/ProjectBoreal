@@ -29,6 +29,20 @@
 
             <h1 class="giveaway-info__title" data-ref="giveaway-title"></h1>
 
+            <!-- Banner Sorteo Diario (Bolsa en vivo y regla) -->
+            <div class="giveaway-daily-banner" data-ref="banner-daily-pot" style="display: none;">
+              <div class="giveaway-daily-banner__header">
+                <span class="giveaway-daily-banner__pill">
+                  <span class="giveaway-daily-banner__pulse"></span>
+                  <span>Bolsa Acumulada</span>
+                </span>
+                <span class="giveaway-daily-banner__amount" data-ref="daily-banner-pot-amount">$0 MXN</span>
+              </div>
+              <p class="giveaway-daily-banner__text">
+                El ganador se lleva una parte del acumulado de boletos de hoy. Sorteo automático hoy a las 23:59 hrs.
+              </p>
+            </div>
+
             <!-- Banner Ganador Oficial (si el sorteo concluyó) -->
             <div class="banner banner--winner" data-ref="banner-giveaway-winner" style="display: none; padding: 14px 18px; border-radius: 12px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.16), rgba(59, 130, 246, 0.24)); border: 1px solid rgba(59, 130, 246, 0.45);">
               <div class="banner-title" style="font-size: 15px; font-weight: 800; color: #3b82f6; margin-bottom: 4px;">
@@ -127,6 +141,14 @@
             <!-- Descripción -->
             <div class="giveaway-info__desc-box" data-ref="giveaway-desc-box">
               <p class="giveaway-info__desc-text" data-ref="giveaway-description"></p>
+            </div>
+
+            <!-- Último Ganador (Solo Sorteo Diario) -->
+            <div class="giveaway-daily-last-winner" data-ref="section-daily-winners" style="display: none;">
+              <div class="giveaway-daily-last-winner__header" data-ref="daily-last-winner-header">
+                <span class="giveaway-daily-last-winner__label" data-ref="daily-last-winner-label">Último ganador</span>
+              </div>
+              <div class="giveaway-daily-last-winner__badges" data-ref="daily-last-winner-badges"></div>
             </div>
           </div>
         </div>

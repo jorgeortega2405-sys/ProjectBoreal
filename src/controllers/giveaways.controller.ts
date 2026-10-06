@@ -131,9 +131,11 @@ export async function getDailyGiveawayHandler(_req: Request, res: Response): Pro
   }
 }
 
-export async function getDailyWinnersHandler(_req: Request, res: Response): Promise<void> {
+export async function getDailyWinnersHandler(req: Request, res: Response): Promise<void> {
   try {
-    const winners = await getRecentDailyWinners(5);
+    const rawLimit = typeof req.query.limit === 'string' ? parseInt(req.query.limit, 10) : 20;
+    const limit = Math.min(50, Math.max(1, isNaN(rawLimit) ? 20 : rawLimit));
+    const winners = await getRecentDailyWinners(limit);
     res.status(200).json({
       data: winners,
       success: true,

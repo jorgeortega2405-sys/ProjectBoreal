@@ -1,6 +1,6 @@
 import { navigate } from '../app-router.js';
 import { openModal } from '../components/modal.component.js';
-import { fetchGiveawayDetail, fetchGiveawayTickets } from '../services/giveaways.service.js';
+import { fetchDailyWinners, fetchGiveawayDetail, fetchGiveawayTickets } from '../services/giveaways.service.js';
 import { getCurrentLanguage, t } from '../services/i18n.service.js';
 import { reserveTicketsApi } from '../services/orders.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -235,6 +235,10 @@ export class GiveawayDetailController {
         }
         if (typeof data.ticket_count === 'number' && this.giveaway.available_tickets !== undefined) {
           this.giveaway.available_tickets = Math.max(0, this.giveaway.available_tickets - data.ticket_count);
+          if (this.giveaway.type === 'daily') {
+            const addedPot = Number((data.ticket_count * (this.giveaway.ticket_price * 0.5)).toFixed(2));
+            this.giveaway.current_pot = Number(((this.giveaway.current_pot || 0) + addedPot).toFixed(2));
+          }
         }
         this.renderInfo();
         this.updateCountdownDisplay();
@@ -559,6 +563,8 @@ export class GiveawayDetailController {
         statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.completed_badge'))}</span>`;
       } else if (isUpcoming) {
         statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.upcoming_status'))}</span>`;
+      } else if (g.type === 'daily') {
+        statusBadgeEl.innerHTML = `<span>⚡ Sorteo Diario</span>`;
       } else {
         statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.active_badge'))}</span>`;
       }
@@ -571,6 +577,9 @@ export class GiveawayDetailController {
         drawBadgeEl.style.display = 'inline-flex';
         const dateText = formatShortDate(g.start_date, getCurrentLanguage());
         dateTextEl.textContent = t('giveaway.upcoming_badge', { date: dateText });
+      } else if (g.type === 'daily') {
+        drawBadgeEl.style.display = 'inline-flex';
+        dateTextEl.textContent = 'Hoy 23:59 hrs';
       } else if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
         drawBadgeEl.style.display = 'inline-flex';
         dateTextEl.textContent = t('home.threshold_target', { target: g.min_threshold_pct });
@@ -623,6 +632,58 @@ export class GiveawayDetailController {
       } else {
         thresholdHintEl.style.display = 'none';
       }
+    }
+
+    const dailyPotBanner = this.container.querySelector<HTMLElement>('[data-ref="banner-daily-pot"]');
+    const dailyWinnersSection = this.container.querySelector<HTMLElement>('[data-ref="section-daily-winners"]');
+    if (g.type === 'daily') {
+      if (dailyPotBanner) {
+        dailyPotBanner.style.display = 'block';
+        const potAmountEl = dailyPotBanner.querySelector<HTMLElement>('[data-ref="daily-banner-pot-amount"]');
+        if (potAmountEl) {
+          potAmountEl.textContent = formatCurrency(g.current_pot || 0, g.currency || 'MXN');
+        }
+      }
+      if (dailyWinnersSection) {
+        void this.loadDailyLastWinner(dailyWinnersSection);
+      }
+    } else {
+      if (dailyPotBanner) dailyPotBanner.style.display = 'none';
+      if (dailyWinnersSection) dailyWinnersSection.style.display = 'none';
+    }
+  }
+
+  private async loadDailyLastWinner(sectionEl: HTMLElement): Promise<void> {
+    try {
+      const winners = await fetchDailyWinners(1);
+      if (!winners || winners.length === 0) {
+        sectionEl.style.display = 'none';
+        return;
+      }
+
+      const item = winners[0];
+      const badgesContainer = sectionEl.querySelector<HTMLElement>('[data-ref="daily-last-winner-badges"]');
+      if (!badgesContainer) return;
+
+      const name = escapeHtml(item.winner_name || 'Participante');
+      const state = escapeHtml(item.customer_state || item.customer_city || 'México');
+      const phone = escapeHtml(item.customer_phone_masked || '•• •• •• --');
+      const ticketNum = item.winner_ticket_number != null ? `#${String(item.winner_ticket_number).padStart(5, '0')}` : 'N/A';
+      const prize = formatCurrency(item.prize_amount || 0, 'MXN');
+      const date = formatShortDate(item.draw_date || item.winner_announced_at || '', getCurrentLanguage());
+
+      badgesContainer.innerHTML = `
+        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-name">${name}</span>
+        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-location">🇲🇽 ${state}</span>
+        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-phone">${phone}</span>
+        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-ticket">${ticketNum}</span>
+        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-prize">${prize}</span>
+        <span class="component-badge component-badge--sm" data-ref="badge-last-winner-date">${date}</span>
+      `;
+
+      sectionEl.style.display = 'block';
+    } catch (_) {
+      sectionEl.style.display = 'none';
     }
   }
 
@@ -870,7 +931,8 @@ export class GiveawayDetailController {
           : isTaken
             ? 'is-taken'
             : 'is-available';
-        const padLen = (this.giveaway?.total_tickets || 100) >= 1000 ? 4 : 3;
+        const totalT = this.giveaway?.total_tickets || 100;
+        const padLen = totalT > 9999 ? 5 : totalT >= 1000 ? 4 : 3;
         const formattedNumber = num.toString().padStart(padLen, '0');
         const isDisabled = isClosed || isTaken ? 'disabled' : '';
         const disabledClass = isClosed ? 'is-disabled' : '';
@@ -1245,6 +1307,16 @@ export class GiveawayDetailController {
       (e) => {
         e.preventDefault();
         navigate('/validate-payment');
+      },
+      { signal }
+    );
+
+    const gotoDailyWinnersLink = this.container.querySelector<HTMLAnchorElement>('[data-ref="link-goto-daily-winners"]');
+    gotoDailyWinnersLink?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        navigate('/winners?tab=daily');
       },
       { signal }
     );
