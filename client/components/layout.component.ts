@@ -464,3 +464,44 @@ export async function ensureSidebarMounted(layoutContent: HTMLElement): Promise<
   return sidebar;
 }
 
+let activeResizeObserver: ResizeObserver | null = null;
+
+export function setupLayoutScrollSync(): void {
+  const layoutContent = document.querySelector<HTMLElement>('.layout-content:has(.layout-nav)');
+  if (activeResizeObserver) {
+    activeResizeObserver.disconnect();
+    activeResizeObserver = null;
+  }
+  if (!layoutContent) return;
+
+  const scrollableBody = layoutContent.querySelector<HTMLElement>(
+    '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
+  );
+  if (!scrollableBody) {
+    layoutContent.style.removeProperty('--layout-scroll-height');
+    return;
+  }
+
+  const updateScrollHeight = () => {
+    const maxScroll = Math.max(0, Math.ceil(scrollableBody.scrollHeight - scrollableBody.clientHeight));
+    if (maxScroll === 0) {
+      layoutContent.style.removeProperty('--layout-scroll-height');
+      return;
+    }
+    const neededHeight = layoutContent.clientHeight + maxScroll;
+    layoutContent.style.setProperty('--layout-scroll-height', `${neededHeight}px`);
+  };
+
+  updateScrollHeight();
+
+  activeResizeObserver = new ResizeObserver(() => {
+    updateScrollHeight();
+  });
+
+  activeResizeObserver.observe(scrollableBody);
+  activeResizeObserver.observe(layoutContent);
+  for (const child of scrollableBody.children) {
+    activeResizeObserver.observe(child);
+  }
+}
+

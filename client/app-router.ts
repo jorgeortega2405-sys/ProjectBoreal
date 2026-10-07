@@ -1,4 +1,4 @@
-import { ensureSidebarMounted, updateSidebarActiveState } from './components/layout.component.js';
+import { ensureSidebarMounted, setupLayoutScrollSync, updateSidebarActiveState } from './components/layout.component.js';
 import { closeAllModals } from './components/modal.component.js';
 import { findRoute } from './config/routes.config.js';
 import { translateElement } from './services/i18n.service.js';
@@ -127,7 +127,13 @@ export async function render(rawPath = window.location.pathname): Promise<void> 
   layoutContent.appendChild(nextViewElement);
 
   layoutContent.scrollTop = 0;
-  window.scrollTo(0, 0);
+  const scrollable = nextViewElement.querySelector<HTMLElement>(
+    '.view-scrollable, .home-scrollable, .layout-scrollable, .layout-body--scrollable'
+  );
+  if (scrollable) {
+    scrollable.scrollTop = 0;
+  }
+  setupLayoutScrollSync();
   previousPath = path;
 }
 

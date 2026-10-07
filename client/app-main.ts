@@ -1,16 +1,41 @@
 import { initRouter, navigate } from './app-router.js';
+import { setupLayoutScrollSync } from './components/layout.component.js';
 import { initI18n, translateElement } from './services/i18n.service.js';
 import { initTheme } from './services/theme.service.js';
 import { initTooltips } from './services/tooltip.service.js';
 import { initWebSocket } from './services/websocket.service.js';
 
-let scrollTicking = false;
+let isSyncing = false;
 
 function handleScrollEvent(e: Event): void {
   const target = e.target as HTMLElement | null;
   if (!target || target.nodeType !== 1) return;
 
   if (target.classList.contains('layout-content')) {
+    if (!isSyncing) {
+      const scrollableBody = target.querySelector<HTMLElement>(
+        '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
+      );
+      if (scrollableBody) {
+        const maxScrollLayout = target.scrollHeight - target.clientHeight;
+        const maxScrollBody = scrollableBody.scrollHeight - scrollableBody.clientHeight;
+
+        if (maxScrollLayout > 0 && maxScrollBody > 0) {
+          const ratio = Math.max(0, Math.min(1, target.scrollTop / maxScrollLayout));
+          const targetOffset = ratio * maxScrollBody;
+          if (Math.abs(scrollableBody.scrollTop - targetOffset) > 0.25) {
+            isSyncing = true;
+            scrollableBody.scrollTop = targetOffset;
+            isSyncing = false;
+          }
+        } else {
+          isSyncing = true;
+          scrollableBody.scrollTop = target.scrollTop;
+          isSyncing = false;
+        }
+      }
+    }
+
     const isScrolled = target.scrollTop > 0;
     const componentWrapper = target.querySelector<HTMLElement>('.component-wrapper');
     const componentTop = componentWrapper
@@ -36,19 +61,9 @@ function handleScrollEvent(e: Event): void {
 }
 
 function initScrollShadow(): void {
-  document.addEventListener(
-    'scroll',
-    (e: Event) => {
-      if (!scrollTicking) {
-        scrollTicking = true;
-        requestAnimationFrame(() => {
-          handleScrollEvent(e);
-          scrollTicking = false;
-        });
-      }
-    },
-    { capture: true, passive: true }
-  );
+  setupLayoutScrollSync();
+
+  document.addEventListener('scroll', handleScrollEvent, { capture: true, passive: true });
 }
 
 function setupGlobalLinks(): void {
