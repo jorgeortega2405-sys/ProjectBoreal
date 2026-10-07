@@ -1627,21 +1627,6 @@ export class GiveawayDetailController {
       },
       { signal }
     );
-
-    const trustAccordions = this.container.querySelectorAll<HTMLElement>('.giveaway-trust-accordion');
-    trustAccordions.forEach((accordion) => {
-      const trigger = accordion.querySelector<HTMLButtonElement>('.giveaway-trust-accordion__trigger');
-      trigger?.addEventListener(
-        'click',
-        (e) => {
-          e.preventDefault();
-          const isOpen = accordion.classList.contains('is-open');
-          accordion.classList.toggle('is-open', !isOpen);
-          trigger.setAttribute('aria-expanded', String(!isOpen));
-        },
-        { signal }
-      );
-    });
   }
 
   private openReservationModal(): void {
