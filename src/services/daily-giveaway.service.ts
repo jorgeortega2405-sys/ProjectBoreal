@@ -87,6 +87,28 @@ export async function getCurrentDailyGiveaway(): Promise<Giveaway | null> {
   }
 }
 
+export async function isDailyGiveawayPaused(): Promise<boolean> {
+  try {
+    const cached = await getCache<string>('boreal:settings:daily_giveaway_paused_next');
+    if (cached !== null && cached !== undefined) {
+      return cached === '1' || cached === 'true';
+    }
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'daily_giveaway_paused_next' LIMIT 1`
+    );
+    if (rows.length > 0) {
+      const val = String(rows[0].setting_value);
+      const isPaused = val === '1' || val === 'true';
+      await setCache('boreal:settings:daily_giveaway_paused_next', isPaused ? '1' : '0', 60);
+      return isPaused;
+    }
+    return false;
+  } catch (error) {
+    logger.db.warn('Error al consultar setting daily_giveaway_paused_next en MySQL/Redis', error);
+    return false;
+  }
+}
+
 export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
   const lockToken = crypto.randomUUID();
   const hasLock = await acquireDistributedLock('ensure_daily_giveaway', 10, lockToken);
@@ -126,6 +148,11 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
       };
       await setCache('giveaway:daily:current', result, 10);
       return result;
+    }
+
+    if (await isDailyGiveawayPaused()) {
+      logger.app.info('Aprovisionamiento de nuevo sorteo diario omitido: renovación automática en pausa.');
+      return null;
     }
 
     const { endDate, hours, startDate } = calculateDailyCycleDates();

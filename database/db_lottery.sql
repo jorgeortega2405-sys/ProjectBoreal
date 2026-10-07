@@ -239,6 +239,20 @@ INSERT INTO `giveaway_bank_accounts` (`giveaway_id`, `bank_account_id`, `is_acti
 SELECT 1, `id`, 1 FROM `bank_accounts` WHERE `is_active` = 1
 ON DUPLICATE KEY UPDATE `is_active` = 1;
 
+-- ============================================================================
+-- Tabla de Configuraciones del Sistema (Settings Globales)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `system_settings` (
+  `setting_key` VARCHAR(100) NOT NULL PRIMARY KEY,
+  `setting_value` TEXT NOT NULL,
+  `description` VARCHAR(255) NULL,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`)
+VALUES ('daily_giveaway_paused_next', '0', 'Indica si la regeneración automática del sorteo diario está en pausa')
+ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
+
 GRANT SELECT, INSERT, UPDATE, DELETE, INDEX, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
 

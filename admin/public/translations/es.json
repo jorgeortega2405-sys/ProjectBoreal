@@ -1,10 +1,10 @@
 {
   "admin": {
     "dashboard": "Dashboard",
-    "description": "Panel de administración y gestión para ProjectBoreal",
+    "description": "Métricas clave, analítica de ventas y monitoreo del sistema en tiempo real",
     "empty_desc": "El panel de administración está listo. Próximamente se integrará la gestión de sorteos.",
     "empty_title": "Dashboard Vacío",
-    "loading": "Cargando...",
+    "loading": "Cargando datos...",
     "title": "Panel de Control"
   },
   "common": {
@@ -12,10 +12,182 @@
     "cancel": "Cancelar",
     "close": "Cerrar",
     "continue": "Continuar",
+    "refresh": "Actualizar",
     "save": "Guardar"
+  },
+  "dashboard": {
+    "charts": {
+      "giveaways_desc": "Boletos pagados contra el cupo total del sorteo",
+      "giveaways_title": "Avance por Sorteo",
+      "metric_revenue": "Ingresos ($)",
+      "metric_tickets": "Boletos (#)",
+      "status_desc": "Distribución proporcional según el ciclo de compra",
+      "status_title": "Distribución de Órdenes",
+      "timeline_desc": "Evolución cronológica de ingresos recaudados y boletos",
+      "timeline_title": "Tendencia de Ventas y Boletos"
+    },
+    "gateways": {
+      "desc": "Monitoreo de latencia y disponibilidad de pasarelas",
+      "latency": "Latencia",
+      "success_rate": "Efectividad",
+      "title": "Estado de Pasarelas & SPEI"
+    },
+    "kpi": {
+      "active_gw_desc": "Sorteos en curso con venta abierta",
+      "aov_desc": "Monto medio pagado por orden",
+      "aov_title": "Ticket Promedio",
+      "conversion_desc": "Apartados convertidos a órdenes pagadas",
+      "conversion_title": "Tasa de Conversión",
+      "giveaways_title": "Sorteos Activos",
+      "pending_desc": "Requieren revisión de comprobante o conciliación",
+      "pending_title": "Órdenes en Revisión",
+      "revenue_desc": "Acumulado recaudado en órdenes pagadas",
+      "revenue_title": "Ingresos Totales",
+      "tickets_desc": "Boletos adquiridos por participantes",
+      "tickets_title": "Boletos Vendidos",
+      "vs_period": "vs periodo anterior"
+    },
+    "live_sync": "En vivo • Datos sincronizados",
+    "period": {
+      "d7": "7 días",
+      "d30": "30 días",
+      "d90": "90 días",
+      "year": "1 año"
+    },
+    "period_title": "Rango de tiempo",
+    "recent_orders": {
+      "col_amount": "Monto",
+      "col_customer": "Cliente",
+      "col_date": "Fecha",
+      "col_giveaway": "Sorteo",
+      "col_order": "Folio",
+      "col_status": "Estado",
+      "col_tickets": "Boletos",
+      "desc": "Últimas compras registradas en la plataforma",
+      "empty": "No hay órdenes recientes registradas en este periodo",
+      "status_cancelled": "Cancelado",
+      "status_completed": "Completado",
+      "status_expired": "Expirado",
+      "status_in_review": "En Revisión",
+      "status_pending_payment": "Pendiente",
+      "title": "Órdenes Recientes"
+    }
+  },
+  "giveaways": {
+    "actions": "Acciones",
+    "btn_cancel": "Cancelar",
+    "btn_confirm": "Confirmar",
+    "btn_create": "Crear Sorteo",
+    "btn_daily_config": "Ciclo Diario",
+    "btn_delete": "Eliminar",
+    "btn_draw_now": "Ejecutar Sorteo",
+    "btn_duplicate": "Duplicar",
+    "btn_edit": "Editar",
+    "btn_extend": "Extender Fecha",
+    "btn_pause": "Pausar Venta",
+    "btn_resume": "Reanudar Venta",
+    "btn_save": "Guardar Cambios",
+    "selected_actions": {
+      "cancel": "Cancelar sorteo",
+      "delete": "Eliminar borrador",
+      "deselect": "Cancelar selección",
+      "draw_now": "Ejecutar sorteo",
+      "duplicate": "Duplicar sorteo",
+      "edit": "Editar sorteo",
+      "pause": "Pausar venta",
+      "publish": "Publicar sorteo",
+      "resume": "Reanudar venta",
+      "schedule_pause": "Pausar siguiente ciclo",
+      "view": "Ver detalles"
+    },
+    "btn_schedule_pause": "Pausar Siguiente Ciclo",
+    "card": {
+      "draw_date": "Fecha de sorteo",
+      "empty_filter": "No se encontraron sorteos con los filtros seleccionados.",
+      "empty_title": "Sin sorteos disponibles",
+      "end_date": "Cierre",
+      "no_winner_yet": "Por definir",
+      "pot_label": "Bolsa acumulada",
+      "price_label": "Por boleto",
+      "progress_label": "Progreso de ventas",
+      "revenue_label": "Recaudación",
+      "tickets_label": "Boletos vendidos",
+      "winner_label": "Ganador"
+    },
+    "daily_banner": {
+      "active_desc": "La renovación automática del sorteo diario se encuentra activa. Al finalizar el ciclo actual, se creará el siguiente automáticamente.",
+      "btn_reactivate": "Reactivar Renovación",
+      "btn_suspend": "Suspender Tras Ciclo Actual",
+      "paused_desc": "El siguiente ciclo del sorteo diario está programado para suspenderse. El sorteo de hoy concluirá normalmente con su ganador.",
+      "title": "Control del Ciclo Diario"
+    },
+    "description": "Supervisión de sorteos activos, configuración del sorteo diario, catálogo y control de estados",
+    "filter": {
+      "all": "Todos",
+      "daily": "Diarios",
+      "standard": "Estándar"
+    },
+    "kpi": {
+      "active_desc": "Sorteos con venta abierta",
+      "active_title": "Sorteos Activos",
+      "daily_pot_desc": "Bolsa en efectivo estimada hoy",
+      "daily_pot_title": "Acumulado Diario",
+      "revenue_desc": "Acumulado en sorteos vigentes",
+      "revenue_title": "Recaudación Total",
+      "total_desc": "Catálogo histórico registrado",
+      "total_title": "Total Sorteos"
+    },
+    "modals": {
+      "create_title": "Crear Nuevo Sorteo",
+      "daily_pause_reason": "No es posible pausar un sorteo diario activo con boletos pagados. Para proteger a los participantes, debe concluir su ciclo. Puedes programar la suspensión del siguiente ciclo.",
+      "draw_confirm_desc": "¿Deseas ejecutar el sorteo ahora mismo? Se seleccionará un boleto ganador de forma aleatoria y se cerrará el sorteo.",
+      "draw_confirm_title": "Ejecución Manual de Sorteo",
+      "edit_restricted_notice": "Este sorteo ya posee boletos vendidos. El precio del boleto y el cupo total están bloqueados por seguridad e integridad.",
+      "edit_title": "Editar Sorteo",
+      "fields": {
+        "bank_accounts": "Cuentas Bancarias Receptoras",
+        "countdown_hours": "Horas de Cuenta Regresiva",
+        "description": "Descripción",
+        "draw_date": "Fecha Estimada de Sorteo",
+        "end_date": "Fecha y Hora de Cierre",
+        "image_urls": "Imágenes Secundarias (separadas por coma)",
+        "min_threshold_pct": "Umbral Mínimo de Venta (%)",
+        "package_options": "Paquetes Rápidos (ej: 1, 5, 10, 20)",
+        "primary_image_url": "URL de Imagen Principal",
+        "prize_amount": "Premio Estimado / Bolsa Fija (Opcional)",
+        "slug": "Slug / URL amigable (Opcional)",
+        "start_date": "Fecha de Inicio",
+        "status": "Estado Inicial",
+        "ticket_price": "Precio por Boleto (MXN)",
+        "title": "Título del Sorteo",
+        "total_tickets": "Total de Boletos",
+        "type": "Tipo de Sorteo"
+      },
+      "pause_confirm_desc": "Se suspenderá la venta de nuevos boletos para este sorteo. Los boletos ya comprados se mantendrán protegidos.",
+      "pause_confirm_title": "Pausar Venta del Sorteo"
+    },
+    "filter_status_title": "Estado",
+    "filter_type_title": "Tipo de Sorteo",
+    "search_placeholder": "Buscar por título, slug o ID...",
+    "status": {
+      "active": "Activo",
+      "all": "Todos",
+      "cancelled": "Cancelado",
+      "completed": "Concluido",
+      "draft": "Borrador",
+      "paused": "Pausado"
+    },
+    "title": "Gestión de Sorteos",
+    "type": {
+      "daily": "Sorteo Diario 50/50",
+      "standard": "Sorteo Estándar"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
-    "toggle_drawer": "Expandir navegación"
+    "giveaways": "Sorteos",
+    "theme": "Tema",
+    "toggle_drawer": "Expandir navegación",
+    "toggle_theme": "Cambiar tema"
   }
 }

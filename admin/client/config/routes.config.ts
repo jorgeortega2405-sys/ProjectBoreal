@@ -23,6 +23,29 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/' || path === '' || path === '/dashboard',
   },
   {
+    handler: async (ctx) => {
+      const { createGiveawayCreateView } = await import('../views/giveaway-create.view.js');
+      return await createGiveawayCreateView(ctx);
+    },
+    id: 'giveaway-create',
+    match: (path) =>
+      path === '/giveaways/create' ||
+      path === '/giveaways/new' ||
+      path === '/sorteos/crear',
+  },
+  {
+    handler: async () => {
+      const { createGiveawaysView } = await import('../views/giveaways.view.js');
+      return await createGiveawaysView();
+    },
+    id: 'giveaways',
+    match: (path) =>
+      path === '/giveaways' ||
+      path.startsWith('/giveaways') ||
+      path === '/sorteos' ||
+      path.startsWith('/sorteos'),
+  },
+  {
     handler: async () => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();

@@ -2,6 +2,7 @@ import { navigate } from '../app-router.js';
 import { translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
+import { getEffectiveTheme, getTheme, toggleTheme } from '../services/theme.service.js';
 
 export let isDrawerOpen = false;
 let sidebarInstance: HTMLElement | null = null;
@@ -12,15 +13,33 @@ export function getIsSidebarOpen(): boolean {
 }
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
-  const isDashboard = path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard');
+  const isGiveaways = path === '/giveaways' || path.startsWith('/giveaways') || path === '/sorteos' || path.startsWith('/sorteos');
+  const isDashboard = !isGiveaways && (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
 
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
   const btnDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-dashboard"]');
+  const itemGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-giveaways"]');
+  const btnGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-giveaways"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
   itemDashboard?.classList.toggle('is-active', isDashboard);
   btnDashboard?.classList.toggle('is-active', isDashboard);
+  itemGiveaways?.classList.toggle('is-active', isGiveaways);
+  btnGiveaways?.classList.toggle('is-active', isGiveaways);
   btnToggle?.classList.toggle('is-active', isDrawerOpen);
+}
+
+export function updateThemeButtonState(sidebar: HTMLElement): void {
+  const btnTheme = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-theme"]');
+  const iconUse = btnTheme?.querySelector<SVGUseElement>('[data-ref="icon-theme"] use, use');
+  const effective = getEffectiveTheme(getTheme());
+  const isDark = effective === 'dark';
+  if (iconUse) {
+    iconUse.setAttribute('href', isDark ? '/icons.svg#light_mode' : '/icons.svg#dark_mode');
+  }
+  const label = isDark ? 'Modo claro' : 'Modo oscuro';
+  btnTheme?.setAttribute('data-tooltip', label);
+  btnTheme?.setAttribute('aria-label', label);
 }
 
 export function toggleDrawer(forceState?: boolean): void {
@@ -36,6 +55,9 @@ export function toggleDrawer(forceState?: boolean): void {
 function setupRailNavigation(sidebar: HTMLElement): void {
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
+  const itemGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-giveaways"]');
+  const btnTheme = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-theme"]');
+  const itemTheme = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-theme"]');
 
   btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -46,11 +68,33 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     e.preventDefault();
     navigate('/');
   });
+
+  itemGiveaways?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/giveaways');
+  });
+
+  const handleToggleTheme = (e: Event) => {
+    e.preventDefault();
+    toggleTheme();
+  };
+
+  btnTheme?.addEventListener('click', handleToggleTheme);
+  itemTheme?.addEventListener('click', (e) => {
+    if (e.target !== btnTheme && !btnTheme?.contains(e.target as Node)) {
+      handleToggleTheme(e);
+    }
+  });
+
+  window.addEventListener('themechange', () => {
+    updateThemeButtonState(sidebar);
+  });
 }
 
 export async function createSidebar(): Promise<HTMLElement> {
   if (sidebarInstance) {
     updateSidebarActiveState(sidebarInstance, window.location.pathname);
+    updateThemeButtonState(sidebarInstance);
     return sidebarInstance;
   }
   if (sidebarInitPromise) {
@@ -61,6 +105,7 @@ export async function createSidebar(): Promise<HTMLElement> {
     const sidebar = await loadTemplate('/views/components/sidebar.html');
     setupRailNavigation(sidebar);
     updateSidebarActiveState(sidebar, window.location.pathname);
+    updateThemeButtonState(sidebar);
     renderIcons(sidebar);
     sidebarInstance = sidebar;
     return sidebar;

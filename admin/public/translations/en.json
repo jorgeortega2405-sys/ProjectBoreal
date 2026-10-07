@@ -1,10 +1,10 @@
 {
   "admin": {
     "dashboard": "Dashboard",
-    "description": "Administration and management panel for ProjectBoreal",
-    "empty_desc": "The administration panel is ready. Giveaway management tools will be integrated soon.",
+    "description": "Key metrics, sales analytics and real-time platform monitoring",
+    "empty_desc": "The admin panel is ready. Giveaways management will be integrated soon.",
     "empty_title": "Empty Dashboard",
-    "loading": "Loading...",
+    "loading": "Loading data...",
     "title": "Control Panel"
   },
   "common": {
@@ -12,10 +12,182 @@
     "cancel": "Cancel",
     "close": "Close",
     "continue": "Continue",
+    "refresh": "Refresh",
     "save": "Save"
+  },
+  "dashboard": {
+    "charts": {
+      "giveaways_desc": "Paid tickets compared to total giveaway capacity",
+      "giveaways_title": "Giveaway Progress",
+      "metric_revenue": "Revenue ($)",
+      "metric_tickets": "Tickets (#)",
+      "status_desc": "Proportional distribution according to order lifecycle",
+      "status_title": "Order Distribution",
+      "timeline_desc": "Chronological timeline of collected revenue and tickets",
+      "timeline_title": "Sales & Tickets Trend"
+    },
+    "gateways": {
+      "desc": "Latency and availability monitoring for gateways",
+      "latency": "Latency",
+      "success_rate": "Success Rate",
+      "title": "Gateways & SPEI Status"
+    },
+    "kpi": {
+      "active_gw_desc": "Active giveaways with ticket sales open",
+      "aov_desc": "Average amount paid per order",
+      "aov_title": "Average Order Value",
+      "conversion_desc": "Reservations converted to completed orders",
+      "conversion_title": "Conversion Rate",
+      "giveaways_title": "Active Giveaways",
+      "pending_desc": "Awaiting receipt review or bank reconciliation",
+      "pending_title": "Pending Review",
+      "revenue_desc": "Cumulative revenue from completed orders",
+      "revenue_title": "Total Revenue",
+      "tickets_desc": "Tickets purchased by players",
+      "tickets_title": "Tickets Sold",
+      "vs_period": "vs previous period"
+    },
+    "live_sync": "Live • Data synchronized",
+    "period": {
+      "d7": "7 days",
+      "d30": "30 days",
+      "d90": "90 days",
+      "year": "1 year"
+    },
+    "period_title": "Time Range",
+    "recent_orders": {
+      "col_amount": "Amount",
+      "col_customer": "Customer",
+      "col_date": "Date",
+      "col_giveaway": "Giveaway",
+      "col_order": "Order ID",
+      "col_status": "Status",
+      "col_tickets": "Tickets",
+      "desc": "Latest transactions recorded on the platform",
+      "empty": "No recent orders found in this time range",
+      "status_cancelled": "Cancelled",
+      "status_completed": "Completed",
+      "status_expired": "Expired",
+      "status_in_review": "In Review",
+      "status_pending_payment": "Pending",
+      "title": "Recent Orders"
+    }
+  },
+  "giveaways": {
+    "actions": "Actions",
+    "btn_cancel": "Cancel",
+    "btn_confirm": "Confirm",
+    "btn_create": "Create Giveaway",
+    "btn_daily_config": "Daily Cycle",
+    "btn_delete": "Delete",
+    "btn_draw_now": "Draw Winner Now",
+    "btn_duplicate": "Duplicate",
+    "btn_edit": "Edit",
+    "btn_extend": "Extend Date",
+    "btn_pause": "Pause Sales",
+    "btn_resume": "Resume Sales",
+    "btn_save": "Save Changes",
+    "selected_actions": {
+      "cancel": "Cancel giveaway",
+      "delete": "Delete draft",
+      "deselect": "Cancel selection",
+      "draw_now": "Execute draw now",
+      "duplicate": "Duplicate giveaway",
+      "edit": "Edit giveaway",
+      "pause": "Pause sales",
+      "publish": "Publish giveaway",
+      "resume": "Resume sales",
+      "schedule_pause": "Schedule pause for next cycle",
+      "view": "View details"
+    },
+    "btn_schedule_pause": "Pause Next Cycle",
+    "card": {
+      "draw_date": "Draw date",
+      "empty_filter": "No giveaways found with the chosen filters.",
+      "empty_title": "No giveaways available",
+      "end_date": "Closes",
+      "no_winner_yet": "To be determined",
+      "pot_label": "Accumulated pot",
+      "price_label": "Per ticket",
+      "progress_label": "Sales progress",
+      "revenue_label": "Revenue",
+      "tickets_label": "Tickets sold",
+      "winner_label": "Winner"
+    },
+    "daily_banner": {
+      "active_desc": "Automatic daily giveaway renewal is active. Once the current cycle ends, the next one will start automatically.",
+      "btn_reactivate": "Reactivate Renewal",
+      "btn_suspend": "Suspend After Current Cycle",
+      "paused_desc": "The next daily giveaway cycle is scheduled to pause. Today's draw will conclude normally with its winner.",
+      "title": "Daily Cycle Management"
+    },
+    "description": "Supervise active giveaways, configure daily draw cycle, manage catalog and lifecycle status",
+    "filter": {
+      "all": "All",
+      "daily": "Daily",
+      "standard": "Standard"
+    },
+    "kpi": {
+      "active_desc": "Giveaways with open sales",
+      "active_title": "Active Giveaways",
+      "daily_pot_desc": "Estimated cash pot today",
+      "daily_pot_title": "Daily Pot",
+      "revenue_desc": "Accumulated revenue from active giveaways",
+      "revenue_title": "Total Revenue",
+      "total_desc": "All catalog giveaways",
+      "total_title": "Total Giveaways"
+    },
+    "modals": {
+      "create_title": "Create New Giveaway",
+      "daily_pause_reason": "You cannot pause an active daily giveaway that already has paid tickets. To protect players, it must conclude normally. You can schedule the next cycle to pause.",
+      "draw_confirm_desc": "Do you want to draw the winner right now? A winning ticket will be randomly selected and the giveaway will be marked as completed.",
+      "draw_confirm_title": "Manual Draw Execution",
+      "edit_restricted_notice": "This giveaway already has sold tickets. Ticket price and total tickets are locked for integrity.",
+      "edit_title": "Edit Giveaway",
+      "fields": {
+        "bank_accounts": "Receiving Bank Accounts",
+        "countdown_hours": "Countdown Hours After Threshold",
+        "description": "Description",
+        "draw_date": "Estimated Draw Date",
+        "end_date": "End Date & Time",
+        "image_urls": "Secondary Images (comma separated)",
+        "min_threshold_pct": "Minimum Sales Threshold (%)",
+        "package_options": "Quick Packages (e.g. 1, 5, 10, 20)",
+        "primary_image_url": "Primary Image URL",
+        "prize_amount": "Estimated Prize / Fixed Pot (Optional)",
+        "slug": "Slug / Friendly URL (Optional)",
+        "start_date": "Start Date",
+        "status": "Initial Status",
+        "ticket_price": "Ticket Price (MXN)",
+        "title": "Giveaway Title",
+        "total_tickets": "Total Tickets",
+        "type": "Giveaway Type"
+      },
+      "pause_confirm_desc": "Ticket sales will be paused for this giveaway. Existing purchased tickets remain safe.",
+      "pause_confirm_title": "Pause Giveaway Sales"
+    },
+    "filter_status_title": "Status",
+    "filter_type_title": "Giveaway Type",
+    "search_placeholder": "Search by title, slug or ID...",
+    "status": {
+      "active": "Active",
+      "all": "All",
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "draft": "Draft",
+      "paused": "Paused"
+    },
+    "title": "Giveaways Management",
+    "type": {
+      "daily": "Daily 50/50 Cash Draw",
+      "standard": "Standard Giveaway"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
-    "toggle_drawer": "Expand navigation"
+    "giveaways": "Giveaways",
+    "theme": "Theme",
+    "toggle_drawer": "Toggle drawer",
+    "toggle_theme": "Toggle theme"
   }
 }

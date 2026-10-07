@@ -2,6 +2,8 @@ import { checkDbConnection, closeDbConnections } from './config/database.config.
 import { config, isAllowedOrigin } from './config/env.config.js';
 import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
+import giveawaysRoutes from './routes/giveaways.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import { logger } from './services/logger.service.js';
 import express, { NextFunction, Request, Response } from 'express';
@@ -89,6 +91,7 @@ function createExpressApp(): express.Express {
   const app = express();
 
   app.set('trust proxy', 1);
+  app.set('etag', false);
   app.disable('x-powered-by');
 
   app.use((_req: Request, res: Response, next: NextFunction) => {
@@ -118,10 +121,27 @@ function createExpressApp(): express.Express {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use(requestLogger);
 
+  app.use('/api', (_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  });
+
   app.use('/api/health', healthRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
+  app.use('/api/giveaways', giveawaysRoutes);
+
+  const adminPublicDir = path.join(process.cwd(), 'public');
+  const rootPublicDir = path.resolve(process.cwd(), '..', 'public');
+
+  app.use('/images', express.static(path.join(adminPublicDir, 'images')));
+  app.use('/images', express.static(path.join(rootPublicDir, 'images')));
+  app.use('/uploads', express.static(path.join(adminPublicDir, 'uploads')));
+  app.use('/uploads', express.static(path.join(rootPublicDir, 'uploads')));
 
   app.use(
-    express.static(path.join(process.cwd(), 'public'), {
+    express.static(adminPublicDir, {
       index: false,
       maxAge: config.nodeEnv === 'production' ? '7d' : '1h',
       setHeaders: (res, filePath) => {

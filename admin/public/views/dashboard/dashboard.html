@@ -1,17 +1,242 @@
-<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="dashboard-wrapper">
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="admin-dashboard-view">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="dashboard-scrollable">
-    <div class="view-body" data-ref="dashboard-container">
-      <div class="view-backdrop" data-ref="dashboard-gradient-backdrop"></div>
+      <div class="view-header" data-ref="dashboard-floating-top">
+        <div class="view-header__left" data-ref="dashboard-floating-left">
+          <h1 class="view-header__title" data-ref="dashboard-title" data-i18n="admin.title">Dashboard</h1>
+        </div>
 
-      <div class="view-hero" data-ref="dashboard-hero">
-        <div class="view-hero__content">
-          <h1 class="view-hero__title" data-ref="dashboard-title" data-i18n="admin.title"></h1>
-          <p class="view-hero__desc" data-ref="dashboard-desc" data-i18n="admin.description"></p>
+        <div class="view-header__right" data-ref="dashboard-floating-right">
+          <div class="view-header__actions" data-ref="dashboard-default-actions">
+            <div class="settings-dropdown-wrapper" data-ref="period-dropdown-wrapper">
+              <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-period" data-tooltip="Rango de tiempo" aria-label="Rango de tiempo">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#calendar_today"></use></svg>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="period-dropdown-backdrop">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="period-dropdown-menu">
+                  <div class="avatar-menu__section-header">
+                    <span class="drawer-section__title" data-i18n="dashboard.period_title">Rango de tiempo</span>
+                  </div>
+                  <div class="menu-panel__list" data-ref="period-list">
+                    <button type="button" class="menu-item" data-ref="btn-period-7d" data-period="7d">
+                      <span class="menu-item__text" data-i18n="dashboard.period.d7">7 días</span>
+                    </button>
+                    <button type="button" class="menu-item is-active" data-ref="btn-period-30d" data-period="30d">
+                      <span class="menu-item__text" data-i18n="dashboard.period.d30">30 días</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-period-90d" data-period="90d">
+                      <span class="menu-item__text" data-i18n="dashboard.period.d90">90 días</span>
+                    </button>
+                    <button type="button" class="menu-item" data-ref="btn-period-year" data-period="year">
+                      <span class="menu-item__text" data-i18n="dashboard.period.year">1 año</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-dashboard" data-tooltip="Actualizar" aria-label="Actualizar">
+              <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            </button>
+          </div>
         </div>
       </div>
 
-      <section class="canvas-section" data-ref="dashboard-content">
-      </section>
+      <div class="view-body" data-ref="dashboard-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+
+        <!-- 4 Metric Cards Grid (Spriteboard Admin Style - Monochromatic) -->
+        <div class="dashboard-stats-grid" data-ref="dashboard-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 20px; width: 100%;">
+          <!-- Card 1: Ingresos Totales -->
+          <div class="dashboard-stat-card" data-ref="card-stat-revenue" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span data-i18n="dashboard.kpi.revenue_title" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Ingresos Totales</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="stat-revenue-value" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 MXN</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                <span data-ref="stat-revenue-sub" style="font-size: 12px; color: var(--text-secondary);">Órdenes pagadas</span>
+                <span class="stat-trend-badge" data-ref="stat-revenue-trend" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">+14.8% vs mes</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Boletos Vendidos -->
+          <div class="dashboard-stat-card" data-ref="card-stat-tickets" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span data-i18n="dashboard.kpi.tickets_title" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Boletos Vendidos</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="stat-tickets-value" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                <span data-ref="stat-tickets-sub" style="font-size: 12px; color: var(--text-secondary);">Total emitidos</span>
+                <span class="stat-trend-badge" data-ref="stat-tickets-trend" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">+9.2% vs ayer</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Sorteos Activos -->
+          <div class="dashboard-stat-card" data-ref="card-stat-giveaways" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span data-i18n="dashboard.kpi.giveaways_title" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Sorteos Activos</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#insights"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="stat-giveaways-value" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                <span data-ref="stat-giveaways-sub" style="font-size: 12px; color: var(--text-secondary);">En venta abierta</span>
+                <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Operativos</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Órdenes en Revisión -->
+          <div class="dashboard-stat-card" data-ref="card-stat-pending" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+              <span data-i18n="dashboard.kpi.pending_title" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Órdenes en Revisión</span>
+              <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+                <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card-value" data-ref="stat-pending-value" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                <span data-ref="stat-pending-sub" style="font-size: 12px; color: var(--text-secondary);">Comprobante / SPEI</span>
+                <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">En atención</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Charts Grid (Spriteboard Admin Style) -->
+        <div class="dashboard-charts-grid" data-ref="dashboard-charts-grid" style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 20px; width: 100%;">
+
+          <!-- Chart 1: Time Series Area / Line Chart (Full Width) -->
+          <div class="dashboard-chart-card" data-ref="chart-card-trends" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); width: 100%; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+              <div>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;" data-i18n="dashboard.charts.timeline_title">Crecimiento y Actividad de Ventas</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;" data-i18n="dashboard.charts.timeline_desc">Ingresos recaudados ($ MXN) vs boletos vendidos en el tiempo.</p>
+              </div>
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+                  <span style="width: 9px; height: 9px; border-radius: 3px; background: #3b82f6; display: inline-block;"></span>
+                  <span data-i18n="dashboard.charts.metric_revenue">Ingresos ($)</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary);">
+                  <span style="width: 9px; height: 9px; border-radius: 3px; background: #ea580c; display: inline-block;"></span>
+                  <span data-i18n="dashboard.charts.metric_tickets">Boletos (#)</span>
+                </div>
+              </div>
+            </div>
+            <div class="dashboard-chart-wrapper" data-ref="wrapper-chart-trends" style="position: relative; width: 100%; height: 280px;">
+              <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-trends" style="width: 100%; height: 100%;"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart Row 2 (2 Columns: Distribution Doughnut & Giveaway Performance Bar) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; width: 100%;">
+
+            <!-- Chart 2: Order Distribution (Doughnut) with Spriteboard Legend -->
+            <div class="dashboard-chart-card" data-ref="chart-card-tiers" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="margin-bottom: 12px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;" data-i18n="dashboard.charts.status_title">Distribución de Órdenes</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;" data-i18n="dashboard.charts.status_desc">Distribución proporcional según el ciclo de compra.</p>
+              </div>
+              <div class="dashboard-chart-wrapper" data-ref="wrapper-chart-tiers" style="position: relative; width: 100%; height: 200px; display: flex; align-items: center; justify-content: center;">
+                <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-tiers" style="width: 100%; height: 100%;"></canvas>
+              </div>
+              <div class="dashboard-tier-legend" data-ref="dashboard-tier-legend" style="display: flex; justify-content: space-around; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color-subtle, var(--border-color));">
+                <div style="text-align: center;">
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                    <span>Pagadas</span>
+                  </div>
+                  <div data-ref="status-count-completed" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">-</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
+                    <span>En Revisión</span>
+                  </div>
+                  <div data-ref="status-count-in-review" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">-</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+                    <span>Pendientes</span>
+                  </div>
+                  <div data-ref="status-count-pending" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">-</div>
+                </div>
+                <div style="text-align: center;">
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-secondary); margin-bottom: 2px;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                    <span>Canceladas</span>
+                  </div>
+                  <div data-ref="status-count-cancelled" style="font-size: 15px; font-weight: 700; color: var(--text-primary);">-</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chart 3: Giveaway Performance (Bar Chart) -->
+            <div class="dashboard-chart-card" data-ref="chart-card-giveaways" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+              <div style="margin-bottom: 12px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;" data-i18n="dashboard.charts.giveaways_title">Avance por Sorteo</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;" data-i18n="dashboard.charts.giveaways_desc">Boletos pagados contra el cupo total del sorteo.</p>
+              </div>
+              <div class="dashboard-chart-wrapper" data-ref="wrapper-chart-giveaways" style="position: relative; width: 100%; height: 240px;">
+                <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-giveaways" style="width: 100%; height: 100%;"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Row 3: Recent Orders Table & Gateways Status -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; width: 100%;">
+
+          <!-- Recent Orders Table -->
+          <div class="dashboard-chart-card" data-ref="table-card-recent-orders" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box; grid-column: span 1;">
+            <div style="margin-bottom: 14px;">
+              <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;" data-i18n="dashboard.recent_orders.title">Órdenes Recientes</h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 0;" data-i18n="dashboard.recent_orders.desc">Últimas compras registradas en la plataforma.</p>
+            </div>
+            <div class="component-table-wrapper" style="border: 1px solid var(--border-color); border-radius: 12px;" data-ref="table-responsive-wrapper">
+              <table class="component-table" data-ref="table-recent-orders">
+                <thead>
+                  <tr>
+                    <th data-i18n="dashboard.recent_orders.col_order">Folio</th>
+                    <th data-i18n="dashboard.recent_orders.col_customer">Cliente</th>
+                    <th data-i18n="dashboard.recent_orders.col_giveaway">Sorteo</th>
+                    <th data-i18n="dashboard.recent_orders.col_tickets">Boletos</th>
+                    <th data-i18n="dashboard.recent_orders.col_amount">Monto</th>
+                    <th data-i18n="dashboard.recent_orders.col_status">Estado</th>
+                    <th data-i18n="dashboard.recent_orders.col_date">Fecha</th>
+                  </tr>
+                </thead>
+                <tbody data-ref="table-body-recent-orders">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Gateways Status -->
+          <div class="dashboard-chart-card" data-ref="gateways-card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 20px 22px; box-shadow: var(--shadow-sm); box-sizing: border-box;">
+            <div style="margin-bottom: 14px;">
+              <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px;" data-i18n="dashboard.gateways.title">Estado de Pasarelas & SPEI</h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 0;" data-i18n="dashboard.gateways.desc">Monitoreo de latencia y disponibilidad de pasarelas.</p>
+            </div>
+            <div class="dashboard-gateways-list" data-ref="gateway-status-list">
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
-</div>

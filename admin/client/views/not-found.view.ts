@@ -12,7 +12,7 @@ export class NotFoundController {
   async init(): Promise<void> {
     this.abortController = new AbortController();
     const btn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-404-dashboard"]');
-    btn?.addEventListener('click', () => navigate('/'), { signal: this.abortController.signal });
+    btn?.addEventListener('click', () => navigate('/', true), { signal: this.abortController.signal });
   }
 
   destroy(): void {
