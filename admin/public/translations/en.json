@@ -1,0 +1,21 @@
+{
+  "admin": {
+    "dashboard": "Dashboard",
+    "description": "Administration and management panel for ProjectBoreal",
+    "empty_desc": "The administration panel is ready. Giveaway management tools will be integrated soon.",
+    "empty_title": "Empty Dashboard",
+    "loading": "Loading...",
+    "title": "Control Panel"
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "continue": "Continue",
+    "save": "Save"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "toggle_drawer": "Expand navigation"
+  }
+}

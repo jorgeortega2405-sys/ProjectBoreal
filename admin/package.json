@@ -1,33 +1,27 @@
 {
-  "name": "project-boreal",
+  "name": "project-boreal-admin",
   "version": "1.0.0",
-  "description": "ProjectBoreal - SPA Application with modular design system",
+  "description": "ProjectBoreal Admin - Administrative panel with modular design system",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
     "dev": "tsx watch --exclude 'logs/**' --exclude 'dist/**' --exclude 'client/**' --exclude 'public/**' src/index.ts",
-    "dev:admin": "npm --prefix admin run dev",
     "dev:client": "vite",
     "build": "npm run build:server && npm run build:client",
     "build:server": "tsc -p tsconfig.server.json",
     "build:client": "vite build",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "typecheck:all": "npm run typecheck",
-    "worker:payment": "py payment_worker/main.py",
-    "watchdog": "py deployment/scripts/boreal_watchdog.py",
-    "maintenance": "py deployment/scripts/maintenance.py",
     "start": "node dist/index.js"
   },
   "dependencies": {
     "@popperjs/core": "^2.11.8",
-    "cassandra-driver": "^4.10.0",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "ioredis": "^6.0.0",
     "mysql2": "^3.24.5"
   },
   "devDependencies": {
-    "@types/cassandra-driver": "^4.1.1",
     "@types/express": "^4.17.21",
     "@types/ioredis": "^4.28.10",
     "@types/node": "^20.17.10",

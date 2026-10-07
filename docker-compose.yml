@@ -201,6 +201,46 @@ services:
       retries: 3
       start_period: 15s
 
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    container_name: boreal-admin
+    restart: unless-stopped
+    profiles: ["full", "admin"]
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_LOTTERY_NAME: ${DB_LOTTERY_NAME:-db_lottery}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    volumes:
+      - ./admin/logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 512m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:3001/api/health | grep -q '\"status\":\"healthy\"' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
 volumes:
   mysql_data:
   redis_data:
