@@ -1,3 +1,5 @@
+import { Request, Response } from 'express';
+import fs from 'fs';
 import { redis } from '../config/redis.config.js';
 import { recordAudit } from '../services/audit.service.js';
 import { processBanxicoBatch } from '../services/banxico.service.js';
@@ -6,10 +8,9 @@ import { attachReceipt, getActiveBankAccounts, getOrderByUuid, getOrdersByPhone,
 import { Order } from '../types/order.types.js';
 import { validateAndCleanPhone } from '../utils/phone.util.js';
 import { deleteReceiptFile, getReceiptFilePath, processReceiptBuffer } from '../utils/receipt-storage.util.js';
-import { Request, Response } from 'express';
-import fs from 'fs';
 
 function getClientIp(req: Request): string {
+  if (req.ip) return req.ip;
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
     return forwarded.split(',')[0].trim();
@@ -17,7 +18,7 @@ function getClientIp(req: Request): string {
   if (Array.isArray(forwarded) && forwarded.length > 0) {
     return forwarded[0].trim();
   }
-  return req.ip || req.socket.remoteAddress || '';
+  return req.socket.remoteAddress || '';
 }
 
 function getUserAgent(req: Request): string {
@@ -40,6 +41,31 @@ export async function reserveOrderHandler(req: Request, res: Response): Promise<
     if (!cleanPhone) {
       res.status(400).json({
         error: 'El número de teléfono debe ser un número celular válido (entre 10 y 15 dígitos).',
+        success: false,
+      });
+      return;
+    }
+
+    const rawDigits = cleanPhone.replace(/\D/g, '');
+    const isRepeated = /^(\d)\1{7,}$/.test(rawDigits);
+    const isSequential = '01234567890123456789'.includes(rawDigits) || '98765432109876543210'.includes(rawDigits);
+    if (isRepeated || isSequential) {
+      res.status(400).json({
+        error: 'Por favor introduce un número de teléfono móvil real y válido.',
+        success: false,
+      });
+      return;
+    }
+
+    const clientIp = getClientIp(req);
+    const ipKey = `boreal:reserve_limit:ip:${clientIp}`;
+    const currentReserves = await redis.incr(ipKey);
+    if (currentReserves === 1) {
+      await redis.expire(ipKey, 600);
+    }
+    if (currentReserves > 6) {
+      res.status(429).json({
+        error: 'Has alcanzado el límite de reservas por periodo de tiempo. Por favor intenta más tarde.',
         success: false,
       });
       return;
@@ -324,6 +350,36 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
         });
         return;
       }
+
+      if (trackingKey) {
+        const cleanKey = trackingKey.trim().toUpperCase();
+        if (cleanKey && !cleanKey.startsWith('INTRA-') && cleanKey !== 'PENDING_OCR') {
+          const existingTrackingOrder = await redis.get(`boreal:tracking_key:${cleanKey}`);
+          if (existingTrackingOrder && existingTrackingOrder !== orderUuid) {
+            deleteReceiptFile(createdFilePath);
+            res.status(400).json({
+              error: 'Esta clave de rastreo SPEI ya fue registrada para otra orden.',
+              success: false,
+            });
+            return;
+          }
+        }
+      }
+
+      if (bankReference) {
+        const cleanRef = bankReference.trim().toUpperCase();
+        if (cleanRef.length >= 6) {
+          const existingRefOrder = await redis.get(`boreal:bank_ref:${cleanRef}`);
+          if (existingRefOrder && existingRefOrder !== orderUuid) {
+            deleteReceiptFile(createdFilePath);
+            res.status(400).json({
+              error: 'Esta referencia bancaria ya fue registrada previamente.',
+              success: false,
+            });
+            return;
+          }
+        }
+      }
     } catch (redisErr) {
       logger.app.warn('Advertencia al verificar hash anti-replay en Redis:', redisErr);
     }
@@ -353,6 +409,18 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
 
     try {
       await redis.set(`boreal:receipt_hash:${fileHash}`, orderUuid, 'EX', 90 * 86400);
+      if (trackingKey) {
+        const cleanKey = trackingKey.trim().toUpperCase();
+        if (cleanKey && !cleanKey.startsWith('INTRA-') && cleanKey !== 'PENDING_OCR') {
+          await redis.set(`boreal:tracking_key:${cleanKey}`, orderUuid, 'EX', 90 * 86400);
+        }
+      }
+      if (bankReference) {
+        const cleanRef = bankReference.trim().toUpperCase();
+        if (cleanRef.length >= 6) {
+          await redis.set(`boreal:bank_ref:${cleanRef}`, orderUuid, 'EX', 90 * 86400);
+        }
+      }
     } catch (_) {}
 
     const cleanKeyUpper = trackingKey ? String(trackingKey).trim().toUpperCase() : '';
@@ -415,7 +483,10 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
 
     const phoneQuery = typeof req.query.phone === 'string' ? req.query.phone.replace(/\D/g, '') : '';
     const orderPhone = (order.customer_phone || '').replace(/\D/g, '');
-    const isOwner = Boolean(phoneQuery && (orderPhone.endsWith(phoneQuery) || phoneQuery.endsWith(orderPhone.slice(-4))));
+    const isOwner = Boolean(
+      phoneQuery.length >= 10 &&
+        (orderPhone === phoneQuery || orderPhone.endsWith(phoneQuery) || phoneQuery.endsWith(orderPhone))
+    );
     if (!isOwner) {
       res.status(403).json({
         error: 'Verificación requerida para consultar el comprobante.',

@@ -223,16 +223,27 @@ class ReceiptParser:
             if holder:
                 stop_words = {'de', 'del', 'la', 'las', 'los', 'san'}
                 holder_words = [w for w in re.findall(r'[a-z]+', holder) if len(w) >= 3 and w not in stop_words]
-                if len(holder_words) >= 2:
-                    matched_words = [w for w in holder_words if (w in dest_text_norm or w in full_text_norm)]
-                    holder_matched = len(matched_words) >= 2
-                elif len(holder_words) == 1:
-                    holder_matched = (holder_words[0] in dest_text_norm) or (holder_words[0] in full_text_norm)
+                if dest_text_norm:
+                    if len(holder_words) >= 2:
+                        matched_words = [w for w in holder_words if w in dest_text_norm]
+                        holder_matched = len(matched_words) >= 2
+                    elif len(holder_words) == 1:
+                        holder_matched = holder_words[0] in dest_text_norm
+                else:
+                    concept_norm = normalize_text(str(parsed.get("concept") or ""))
+                    filtered_text = full_text_norm
+                    if concept_norm:
+                        filtered_text = filtered_text.replace(concept_norm, "")
+                    if len(holder_words) >= 2:
+                        matched_words = [w for w in holder_words if w in filtered_text]
+                        holder_matched = len(matched_words) >= 2
+                    elif len(holder_words) == 1:
+                        holder_matched = holder_words[0] in filtered_text
 
             # C. Presencia del nombre del banco
             bank_matched = any(p in full_text_norm for p in bank_name.split() if len(p) >= 4) if bank_name else False
 
-            if digits_matched or holder_matched:
+            if digits_matched or (holder_matched and (dest_text_norm or bank_matched)):
                 matched_account = acc
                 destination_verified = True
                 verification_details.append(

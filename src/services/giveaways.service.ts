@@ -308,7 +308,7 @@ export async function drawGiveawayWinners(): Promise<void> {
   let connection;
   try {
     const [giveawaysToDraw] = await pool.query<GiveawayRow[]>(
-      `SELECT id, uuid, title, end_date, type, CAST(ticket_price AS DOUBLE) AS ticket_price
+      `SELECT id, uuid, title, end_date, draw_date, type, prize_amount, CAST(ticket_price AS DOUBLE) AS ticket_price
        FROM giveaways
        WHERE status = 'active'
          AND (min_threshold_pct = 0 OR threshold_reached_at IS NOT NULL)
@@ -325,7 +325,7 @@ export async function drawGiveawayWinners(): Promise<void> {
 
       try {
         const [lockedGiveaways] = await connection.query<GiveawayRow[]>(
-          `SELECT id, status, min_threshold_pct, threshold_reached_at, CAST(ticket_price AS DOUBLE) AS ticket_price FROM giveaways WHERE id = ? FOR UPDATE`,
+          `SELECT id, status, min_threshold_pct, threshold_reached_at, prize_amount, draw_date, CAST(ticket_price AS DOUBLE) AS ticket_price FROM giveaways WHERE id = ? FOR UPDATE`,
           [giveaway.id]
         );
 
@@ -348,6 +348,41 @@ export async function drawGiveawayWinners(): Promise<void> {
         );
 
         const totalPaid = Number(countRows[0]?.total_paid || 0);
+
+        const [inReviewRows] = await connection.query<RowDataPacket[]>(
+          `SELECT COUNT(*) AS in_review_count
+           FROM orders o
+           INNER JOIN spei_validation_queue q ON q.order_id = o.id
+           WHERE o.giveaway_id = ? AND o.status = 'in_review' AND o.receipt_url IS NOT NULL
+             AND q.status IN ('pending', 'verifying')
+             AND o.created_at >= NOW() - INTERVAL 30 MINUTE`,
+          [giveaway.id]
+        );
+        const inReviewCount = Number(inReviewRows[0]?.in_review_count || 0);
+
+        const originalTargetDate = lockedGiveaways[0]?.draw_date || lockedGiveaways[0]?.end_date || giveaway.end_date;
+        const maxGraceReached = originalTargetDate
+          ? new Date().getTime() >= new Date(originalTargetDate).getTime() + 60 * 60 * 1000
+          : false;
+
+        if (inReviewCount > 0 && !maxGraceReached) {
+          logger.app.info(
+            `Sorteo '${giveaway.title}' (ID: ${giveaway.id}) posee ${inReviewCount} órdenes en validación activa. Postergando 5 minutos (límite máximo: 60 minutos de gracia).`
+          );
+          await connection.query(
+            `UPDATE giveaways
+             SET end_date = DATE_ADD(GREATEST(end_date, NOW()), INTERVAL 5 MINUTE)
+             WHERE id = ? AND status = 'active'`,
+            [giveaway.id]
+          );
+          await connection.commit();
+          connection.release();
+          connection = undefined;
+          await deleteCache('giveaways:active');
+          await deleteCache(`giveaway:${giveaway.uuid}`);
+          continue;
+        }
+
         let winnerTicketNumber: number | null = null;
         let winnerName = 'Sin participantes';
         let winnerOrderId: number | null = null;
@@ -408,7 +443,9 @@ export async function drawGiveawayWinners(): Promise<void> {
         const ticketPrice = Number(lockedGiveaways[0]?.ticket_price ?? giveaway.ticket_price ?? 0);
         const prizeAmount = giveaway.type === 'daily'
           ? Math.round(totalPaid * (ticketPrice * 0.50))
-          : null;
+          : (lockedGiveaways[0]?.prize_amount !== null && lockedGiveaways[0]?.prize_amount !== undefined
+              ? Number(lockedGiveaways[0].prize_amount)
+              : (giveaway.prize_amount !== null && giveaway.prize_amount !== undefined ? Number(giveaway.prize_amount) : null));
         const safePrizeAmount = typeof prizeAmount === 'number' && Number.isFinite(prizeAmount)
           ? prizeAmount
           : null;
@@ -444,6 +481,14 @@ export async function drawGiveawayWinners(): Promise<void> {
           `Sorteo concluido exitosamente para '${giveaway.title}' (ID: ${giveaway.id}). Ganador: ${winnerName}, Boleto: #${winnerTicketNumber ?? 'N/A'}`
         );
 
+        const maskedWinnerName = winnerName && winnerName !== 'Sin participantes'
+          ? winnerName.trim().split(/\s+/).map((part) => {
+              if (part.length <= 1) return part;
+              if (part.length === 2) return `${part.charAt(0)}*`;
+              return `${part.charAt(0)}${'*'.repeat(Math.max(part.length - 2, 2))}${part.charAt(part.length - 1)}`;
+            }).join(' ')
+          : winnerName;
+
         await publishGiveawayEvent('boreal:giveaways', {
           draw_hash: drawHash,
           draw_seed: drawSeed,
@@ -452,7 +497,7 @@ export async function drawGiveawayWinners(): Promise<void> {
           prize_amount: safePrizeAmount,
           type: 'GIVEAWAY_WINNER_DRAWN',
           winner_announced_at: new Date().toISOString(),
-          winner_name: winnerName,
+          winner_name: maskedWinnerName,
           winner_ticket_number: winnerTicketNumber,
         });
 

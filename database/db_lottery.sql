@@ -69,6 +69,9 @@ CREATE TABLE IF NOT EXISTS `orders` (
   `receipt_url` VARCHAR(500) NULL,
   `receipt_filename` VARCHAR(255) NULL,
   `tracking_key` VARCHAR(50) NULL,
+  `active_tracking_key` VARCHAR(50) GENERATED ALWAYS AS (
+    CASE WHEN `status` IN ('completed', 'in_review') THEN `tracking_key` ELSE NULL END
+  ) VIRTUAL,
   `bank_reference` VARCHAR(100) NULL,
   `is_winner` TINYINT(1) NOT NULL DEFAULT 0,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -78,7 +81,8 @@ CREATE TABLE IF NOT EXISTS `orders` (
   INDEX `idx_orders_status` (`status`),
   INDEX `idx_orders_expires_at` (`expires_at`),
   INDEX `idx_orders_status_expires` (`status`, `expires_at`),
-  UNIQUE INDEX `idx_orders_tracking_key` (`tracking_key`),
+  INDEX `idx_orders_tracking_key` (`tracking_key`),
+  UNIQUE INDEX `idx_orders_active_tracking_key` (`active_tracking_key`),
   INDEX `idx_orders_is_winner` (`is_winner`),
   CONSTRAINT `fk_orders_giveaway` FOREIGN KEY (`giveaway_id`) REFERENCES `giveaways` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -235,6 +239,6 @@ INSERT INTO `giveaway_bank_accounts` (`giveaway_id`, `bank_account_id`, `is_acti
 SELECT 1, `id`, 1 FROM `bank_accounts` WHERE `is_active` = 1
 ON DUPLICATE KEY UPDATE `is_active` = 1;
 
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
+GRANT SELECT, INSERT, UPDATE, DELETE, INDEX, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
 

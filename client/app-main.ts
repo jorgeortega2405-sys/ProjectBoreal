@@ -1,11 +1,9 @@
 import { initRouter, navigate } from './app-router.js';
-import { setupLayoutScrollSync } from './components/layout.component.js';
 import { initI18n, translateElement } from './services/i18n.service.js';
 import { initTheme } from './services/theme.service.js';
 import { initTooltips } from './services/tooltip.service.js';
 import { initWebSocket } from './services/websocket.service.js';
 
-let isSyncingScroll = false;
 let scrollTicking = false;
 
 function handleScrollEvent(e: Event): void {
@@ -13,54 +11,11 @@ function handleScrollEvent(e: Event): void {
   if (!target || target.nodeType !== 1) return;
 
   if (target.classList.contains('layout-content')) {
-    if (!isSyncingScroll) {
-      const scrollableBody = target.querySelector<HTMLElement>(
-        '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable, .component-table-wrapper'
-      );
-      if (scrollableBody && Math.abs(scrollableBody.scrollTop - target.scrollTop) > 0.5) {
-        isSyncingScroll = true;
-        scrollableBody.scrollTop = target.scrollTop;
-        requestAnimationFrame(() => {
-          isSyncingScroll = false;
-        });
-      }
-    }
-  } else if (
-    target.classList.contains('view-scrollable') ||
-    target.classList.contains('home-scrollable') ||
-    target.classList.contains('layout-scrollable') ||
-    target.classList.contains('layout-body--scrollable') ||
-    target.classList.contains('component-table-wrapper')
-  ) {
-    if (!isSyncingScroll) {
-      const layoutContent = target.closest<HTMLElement>('.layout-content:has(.layout-nav)');
-      if (layoutContent && Math.abs(layoutContent.scrollTop - target.scrollTop) > 0.5) {
-        isSyncingScroll = true;
-        layoutContent.scrollTop = target.scrollTop;
-        requestAnimationFrame(() => {
-          isSyncingScroll = false;
-        });
-      }
-    }
-  }
-
-  if (
-    target.classList.contains('layout-content') ||
-    target.classList.contains('component-wrapper') ||
-    target.classList.contains('view-wrapper') ||
-    target.classList.contains('home-wrapper') ||
-    target.classList.contains('view-scrollable') ||
-    target.classList.contains('home-scrollable') ||
-    target.classList.contains('layout-scrollable') ||
-    target.classList.contains('layout-body--scrollable') ||
-    target.classList.contains('layout-content__scrollable') ||
-    target.classList.contains('component-table-wrapper')
-  ) {
     const isScrolled = target.scrollTop > 0;
-    const componentWrapper = target.closest('.component-wrapper') || target.querySelector<HTMLElement>('.component-wrapper');
+    const componentWrapper = target.querySelector<HTMLElement>('.component-wrapper');
     const componentTop = componentWrapper
       ? componentWrapper.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top')
-      : target.closest('.layout-content')?.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top');
+      : target.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top');
 
     if (componentTop) {
       componentTop.classList.toggle('shadow', isScrolled);
@@ -81,8 +36,6 @@ function handleScrollEvent(e: Event): void {
 }
 
 function initScrollShadow(): void {
-  setupLayoutScrollSync();
-
   document.addEventListener(
     'scroll',
     (e: Event) => {

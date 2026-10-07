@@ -289,7 +289,7 @@ class ReceiptWorker:
                 self._cancel_and_release_order(order, conn, validation["errors"], parsed=parsed)
                 return False
 
-            # Caso 1: Transferencia Intrabancaria (Mismo Banco, ej. BBVA -> BBVA)
+            # Caso 1: Transferencia Intrabancaria (Mismo Banco)
             is_intrabank = validation.get("is_intrabank", False)
             dest_verified = validation.get("destination_verified", False)
             if is_intrabank:
@@ -301,22 +301,21 @@ class ReceiptWorker:
                         parsed=parsed
                     )
                     return False
-                elif validation["valid"]:
-                    logger.info(f"[{order_uuid}] Transferencia intrabancaria confirmada con destino verificado ({validation.get('matched_account', {}).get('bank_name')}). Monto y cuenta receptora autorizada validados.")
-                    self._approve_and_liquidate_order(
-                        order=order,
-                        conn=conn,
-                        tracking_key=tracking_key or f"INTRA-{int(time.time())}-{uuid.uuid4().hex[:6].upper()}",
-                        parsed=parsed,
-                        validation=validation,
-                        banxico_res={
-                            "verified": True,
-                            "is_intrabank": True,
-                            "status": "liquidated",
-                            "message": "Acreditado por coincidencia intrabancaria directa con cuenta receptora autorizada del organizador."
-                        }
-                    )
-                    return True
+                else:
+                    logger.info(f"[{order_uuid}] Transferencia intrabancaria detectada ({validation.get('matched_account', {}).get('bank_name')}). No certificable en Banxico CEP. Enviando a revisión manual.")
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            UPDATE spei_validation_queue
+                            SET status = 'manual_review', last_checked_at = NOW(),
+                                banxico_response = %s
+                            WHERE order_id = %s
+                        """, (json.dumps({
+                            "ocr_parsed": parsed,
+                            "validation": validation,
+                            "notice": "Transferencia intrabancaria requiere validación manual por el organizador."
+                        }), order_id))
+                    conn.commit()
+                    return False
 
             # Caso 2: Transferencia Interbancaria SPEI
             if not tracking_key:
@@ -347,7 +346,7 @@ class ReceiptWorker:
             is_liquidated_by_banxico = bool(
                 banxico_res
                 and banxico_res.get("verified") is True
-                and banxico_res.get("status") in ("liquidated", "intrabank")
+                and banxico_res.get("status") == "liquidated"
             )
 
             if validation["valid"] and tracking_key and is_liquidated_by_banxico:
@@ -369,9 +368,25 @@ class ReceiptWorker:
                         err_list.append("Sin clave de rastreo SPEI válida.")
 
                 if current_attempts >= max_attempts:
-                    logger.warning(f"[{order_uuid}] Superó intentos máximos ({current_attempts}/{max_attempts}) sin confirmación de liquidación Banxico. Cancelando y liberando boletos.")
-                    self._cancel_and_release_order(order, conn, err_list, parsed=parsed, banxico_res=banxico_res)
-                    return False
+                    if not tracking_key:
+                        logger.warning(f"[{order_uuid}] Superó intentos máximos sin detección de clave de rastreo por OCR. Enviando a revisión manual.")
+                        with conn.cursor() as cur:
+                            cur.execute("""
+                                UPDATE spei_validation_queue
+                                SET status = 'manual_review', last_checked_at = NOW(),
+                                    banxico_response = %s
+                                WHERE order_id = %s
+                            """, (json.dumps({
+                                "ocr_parsed": parsed,
+                                "validation": validation,
+                                "notice": "Clave de rastreo no detectada por OCR. Requiere inspección manual del comprobante."
+                            }), order_id))
+                        conn.commit()
+                        return False
+                    else:
+                        logger.warning(f"[{order_uuid}] Superó intentos máximos ({current_attempts}/{max_attempts}) sin confirmación de liquidación Banxico. Cancelando y liberando boletos.")
+                        self._cancel_and_release_order(order, conn, err_list, parsed=parsed, banxico_res=banxico_res)
+                        return False
                 else:
                     logger.info(f"[{order_uuid}] Liquidación no confirmada por Banxico CEP (Intento {current_attempts}/{max_attempts}). Programando reintento...")
                     self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res})
@@ -394,6 +409,38 @@ class ReceiptWorker:
 
         with conn.cursor() as cur:
             cur.execute("""
+                SELECT id, status, total_tickets, min_threshold_pct, countdown_hours, threshold_reached_at, uuid
+                FROM giveaways
+                WHERE id = %s
+                FOR UPDATE
+            """, (order["giveaway_id"],))
+            g_row = cur.fetchone()
+
+            if not g_row or g_row["status"] != "active":
+                logger.error(f"[{order_uuid}] Intento de liquidar orden para sorteo inactivo o finalizado ({g_row['status'] if g_row else 'NO ENCONTRADO'}). Cancelando para reembolso.")
+                cur.execute("""
+                    UPDATE orders
+                    SET status = 'cancelled', tracking_key = %s, updated_at = NOW()
+                    WHERE id = %s
+                """, (tracking_key, order_id))
+                cur.execute("""
+                    UPDATE giveaway_tickets
+                    SET status = 'available', order_id = NULL, reserved_until = NULL, updated_at = NOW()
+                    WHERE order_id = %s AND status = 'reserved'
+                """, (order_id,))
+                cur.execute("""
+                    UPDATE spei_validation_queue
+                    SET status = 'failed', last_checked_at = NOW(),
+                        banxico_response = %s
+                    WHERE order_id = %s
+                """, (json.dumps({
+                    "error": "Sorteo finalizado o no activo. Pago retenido para reembolso administrativo.",
+                    "banxico": banxico_res
+                }), order_id))
+                conn.commit()
+                return False
+
+            cur.execute("""
                 UPDATE orders
                 SET status = 'completed', tracking_key = %s, updated_at = NOW()
                 WHERE id = %s
@@ -407,6 +454,12 @@ class ReceiptWorker:
                     SET status = 'paid', reserved_until = NULL, updated_at = NOW()
                     WHERE order_id = %s AND ticket_number IN ({format_strings})
                 """, [order_id] + tickets)
+                if cur.rowcount < len(tickets):
+                    cur.execute(f"""
+                        UPDATE giveaway_tickets
+                        SET status = 'paid', order_id = %s, reserved_until = NULL, updated_at = NOW()
+                        WHERE giveaway_id = %s AND ticket_number IN ({format_strings}) AND status = 'available'
+                    """, [order_id, order["giveaway_id"]] + tickets)
 
             cur.execute("""
                 UPDATE spei_validation_queue
@@ -418,13 +471,6 @@ class ReceiptWorker:
                 "validation": validation,
                 "banxico": banxico_res
             }), order_id))
-
-            cur.execute("""
-                SELECT total_tickets, min_threshold_pct, countdown_hours, threshold_reached_at, uuid
-                FROM giveaways
-                WHERE id = %s
-            """, (order["giveaway_id"],))
-            g_row = cur.fetchone()
 
             threshold_event_payload = None
             if g_row and g_row["min_threshold_pct"] > 0 and not g_row["threshold_reached_at"]:
@@ -626,10 +672,15 @@ class ReceiptWorker:
         try:
             with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT o.id, o.uuid, o.giveaway_id, o.ticket_count, o.ticket_numbers, g.uuid AS giveaway_uuid
+                    SELECT o.id, o.uuid, o.giveaway_id, o.ticket_count, o.ticket_numbers, o.status AS current_status, g.uuid AS giveaway_uuid
                     FROM orders o
                     INNER JOIN giveaways g ON o.giveaway_id = g.id
-                    WHERE o.status = 'pending_payment' AND o.expires_at < NOW()
+                    LEFT JOIN spei_validation_queue q ON q.order_id = o.id
+                    WHERE (o.status = 'pending_payment' AND o.expires_at < NOW())
+                       OR (o.status = 'in_review' AND (
+                            (q.status = 'failed' AND o.updated_at < NOW() - INTERVAL 30 MINUTE)
+                            OR (o.created_at < NOW() - INTERVAL 48 HOUR)
+                          ))
                     ORDER BY o.expires_at ASC
                     LIMIT 20
                     FOR UPDATE SKIP LOCKED
@@ -639,12 +690,13 @@ class ReceiptWorker:
                 for exp_order in expired_orders:
                     order_id = exp_order["id"]
                     order_uuid = exp_order["uuid"]
+                    new_status = "expired" if exp_order.get("current_status") == "pending_payment" else "cancelled"
 
                     cur.execute("""
                         UPDATE orders
-                        SET status = 'expired', updated_at = NOW()
-                        WHERE id = %s AND status = 'pending_payment'
-                    """, (order_id,))
+                        SET status = %s, updated_at = NOW()
+                        WHERE id = %s
+                    """, (new_status, order_id))
 
                     tickets = json.loads(exp_order["ticket_numbers"]) if isinstance(exp_order["ticket_numbers"], str) else exp_order.get("ticket_numbers", [])
                     if tickets:

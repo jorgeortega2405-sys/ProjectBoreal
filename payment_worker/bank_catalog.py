@@ -100,10 +100,6 @@ def get_bank_code_by_clabe(clabe: str) -> Optional[str]:
     return None
 
 def detect_issuing_bank(text: str, tracking_key: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
-    """
-    Detecta el banco emisor a partir del texto OCR del comprobante y/o la clave de rastreo.
-    Retorna tupla (nombre_banco, codigo_banxico).
-    """
     if tracking_key:
         clean_key = tracking_key.strip().upper()
         for prefix, code in TRACKING_KEY_PREFIX_MAP.items():
@@ -118,7 +114,6 @@ def detect_issuing_bank(text: str, tracking_key: Optional[str] = None) -> Tuple[
 
     text_upper = text.upper()
 
-    # Prioridad: buscar nombres específicos primero
     priority_order = [
         "MERCADO PAGO", "MERCADOPAGO", "SPIN BY OXXO", "NU MEXICO", "HEY BANCO",
         "BANCO AZTECA", "CITIBANAMEX", "SCOTIABANK", "BANCOPPEL",
@@ -126,11 +121,36 @@ def detect_issuing_bank(text: str, tracking_key: Optional[str] = None) -> Tuple[
         "BANREGIO", "AFIRME", "BANBAJIO", "STP", "NU", "ALBO", "KLAR"
     ]
 
+    origin_patterns = [
+        r'(?:DESDE|ORIGEN|BANCO\s+EMISOR|INSTITUCI[OÓ]N\s+EMISORA|ORDENANTE|CUENTA\s+DE\s+RETIRO|TRANSFERIDO\s+DESDE|BANCO\s+ORIGEN)[\s\:\-]+([^\n\r\.\,]+)',
+        r'(?:DE\s+MI\s+CUENTA)[\s\:\-]+([^\n\r\.\,]+)'
+    ]
+
+    for op in origin_patterns:
+        m = re.search(op, text_upper)
+        if m:
+            origin_snippet = m.group(1)
+            for bank_name in priority_order:
+                pat = r'(?:\b|[\s\.\,\:\-])' + re.escape(bank_name) + r'(?:\b|[\s\.\,\:\-])'
+                if re.search(pat, origin_snippet):
+                    code = BANCO_CODES.get(bank_name)
+                    if code:
+                        return bank_name, code
+
+    # Si no hay bloque explícito de origen, buscar nombres de banco evitando el contexto de destino
+    dest_pattern = r'(?:DESTINO|HACIA|BENEFICIARIO|CUENTA\s+RECEPTORA|INSTITUCI[OÓ]N\s+RECEPTORA|BANCO\s+DESTINO|PARA|RECIBE)[\s\:\-]*([^\n\r]+)'
+    dest_matches = re.findall(dest_pattern, text_upper)
+    dest_combined = " ".join(dest_matches)
+
     for bank_name in priority_order:
-        pattern = r'(?:\b|[\s\.\,\:\-])' + re.escape(bank_name) + r'(?:\b|[\s\.\,\:\-])'
-        if re.search(pattern, text_upper):
+        pat = r'(?:\b|[\s\.\,\:\-])' + re.escape(bank_name) + r'(?:\b|[\s\.\,\:\-])'
+        match_in_dest = bool(re.search(pat, dest_combined))
+        match_in_text = bool(re.search(pat, text_upper))
+
+        if match_in_text and not match_in_dest:
             code = BANCO_CODES.get(bank_name)
             if code:
                 return bank_name, code
 
     return None, None
+

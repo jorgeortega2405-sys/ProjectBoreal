@@ -116,20 +116,20 @@ class BanxicoClient:
 
             html = resp.text
 
-            # 1. Detección de error por bancos iguales
+            # 1. Detección de error por bancos iguales (Rechazo de formulario en Banxico)
             if "Las instituciones financieras emisora y receptora" in html and "son iguales" in html:
                 return {
-                    "verified": True,
+                    "verified": False,
                     "is_intrabank": True,
-                    "status": "intrabank",
+                    "status": "rejected",
                     "retryable": False,
-                    "message": "Transferencia entre cuentas del mismo banco confirmada (operación intrabancaria)."
+                    "message": "Operación rechazada por Banxico CEP: emisor y receptor son la misma institución y no cursa por switch SPEI."
                 }
 
             # 2. Detección de Liquidación Exitosa
             upper_html = html.upper()
-            has_liquidated = "LIQUIDADO" in upper_html or "ESTADO DEL PAGO: LIQUIDADO" in upper_html
-            has_comprobante = "COMPROBANTE ELECTRÓNICO DE PAGO" in upper_html or "COMPROBANTE ELECTRONICO DE PAGO" in upper_html or "SELLO DIGITAL" in upper_html
+            has_liquidated = "ESTADO DEL PAGO: LIQUIDADO" in upper_html or bool(re.search(r'ESTADO\s+DEL\s+PAGO[\s\:\<\>\/a-zA-Z0-9\=]*LIQUIDADO', upper_html))
+            has_comprobante = ("COMPROBANTE ELECTRÓNICO DE PAGO" in upper_html or "COMPROBANTE ELECTRONICO DE PAGO" in upper_html) and "SELLO DIGITAL" in upper_html
 
             if has_liquidated or has_comprobante:
                 return {

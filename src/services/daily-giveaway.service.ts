@@ -299,11 +299,10 @@ export async function getRecentDailyWinners(limit = 5): Promise<DailyGiveawayWin
       let maskedPhone: string;
       if (r.customer_phone) {
         const digits = r.customer_phone.replace(/\D/g, '');
-        const lastTwo = digits.length >= 2 ? digits.slice(-2) : '89';
+        const lastTwo = digits.length >= 2 ? digits.slice(-2) : '••';
         maskedPhone = `+52 •• •• •• ${lastTwo}`;
       } else {
-        const fallbackNum = r.winner_ticket_number ? ((r.winner_ticket_number * 17) % 90 + 10) : 42;
-        maskedPhone = `+52 •• •• •• ${fallbackNum}`;
+        maskedPhone = '+52 •• •• •• ••';
       }
 
       return {
@@ -312,7 +311,7 @@ export async function getRecentDailyWinners(limit = 5): Promise<DailyGiveawayWin
         customer_phone_masked: maskedPhone,
         customer_state: state,
         draw_date: r.draw_date || r.end_date,
-        prize_amount: Number(r.prize_amount || 0) > 0 ? Number(r.prize_amount) : 10000,
+        prize_amount: Number(r.prize_amount || 0),
         title: r.title,
         uuid: r.uuid,
         winner_announced_at: r.winner_announced_at,

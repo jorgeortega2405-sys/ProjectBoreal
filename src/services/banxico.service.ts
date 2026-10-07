@@ -1,8 +1,9 @@
 import { pool } from '../config/database.config.js';
-import { deleteCache, deleteCachePattern, publishGiveawayEvent } from '../config/redis.config.js';
+import { acquireDistributedLock, deleteCache, deleteCachePattern, publishGiveawayEvent, releaseDistributedLock } from '../config/redis.config.js';
 import { recordAudit } from './audit.service.js';
 import { checkAndTriggerGiveawayThreshold } from './giveaways.service.js';
 import { logger } from './logger.service.js';
+import crypto from 'crypto';
 import { RowDataPacket } from 'mysql2/promise';
 
 interface QueueRow extends RowDataPacket {
@@ -22,6 +23,11 @@ interface QueueRow extends RowDataPacket {
   ticket_count: number;
   ticket_numbers: string | number[];
   tracking_key: string;
+}
+
+interface BankAccountRow extends RowDataPacket {
+  bank_name?: string | null;
+  clabe?: string | null;
 }
 
 const CLABE_PREFIX_MAP: Record<string, string> = {
@@ -142,14 +148,14 @@ export async function validateSpeiPayment(
     if (html.includes('Las instituciones financieras emisora y receptora') && html.includes('son iguales')) {
       return {
         details: { intrabank: true },
-        matched: true,
-        message: 'Transferencia intrabancaria confirmada entre cuentas de la misma institución.',
-        status: 'liquidated',
+        matched: false,
+        message: 'Operación rechazada por Banxico CEP: emisor y receptor son la misma institución y no cursa por switch SPEI.',
+        status: 'rejected',
       };
     }
 
-    const hasLiquidated = upperHtml.includes('LIQUIDADO') || upperHtml.includes('ESTADO DEL PAGO: LIQUIDADO');
-    const hasComprobante = upperHtml.includes('COMPROBANTE ELECTRÓNICO DE PAGO') || upperHtml.includes('COMPROBANTE ELECTRONICO DE PAGO') || upperHtml.includes('SELLO DIGITAL');
+    const hasLiquidated = upperHtml.includes('ESTADO DEL PAGO: LIQUIDADO') || upperHtml.includes('>LIQUIDADO<') || upperHtml.includes(': LIQUIDADO');
+    const hasComprobante = (upperHtml.includes('COMPROBANTE ELECTRÓNICO DE PAGO') || upperHtml.includes('COMPROBANTE ELECTRONICO DE PAGO')) && upperHtml.includes('SELLO DIGITAL');
 
     if (hasLiquidated || hasComprobante) {
       return {
@@ -195,14 +201,7 @@ export async function processBanxicoBatch(): Promise<number> {
               q.attempts, q.max_attempts,
               o.uuid AS order_uuid, o.giveaway_id, o.ticket_numbers, o.ticket_count,
               o.customer_name, o.customer_phone, o.currency, o.status AS order_status,
-              o.receipt_filename,
-              (
-                SELECT ba.clabe
-                FROM giveaway_bank_accounts gba
-                INNER JOIN bank_accounts ba ON gba.bank_account_id = ba.id
-                WHERE gba.giveaway_id = o.giveaway_id AND gba.is_active = 1
-                LIMIT 1
-              ) AS receiver_clabe
+              o.receipt_filename
        FROM spei_validation_queue q
        INNER JOIN orders o ON q.order_id = o.id
        WHERE q.status IN ('pending', 'verifying') AND q.next_retry_at <= NOW()
@@ -214,20 +213,79 @@ export async function processBanxicoBatch(): Promise<number> {
     let processedCount = 0;
 
     for (const item of queueRows) {
+      const lockToken = crypto.randomUUID();
+      const hasLock = await acquireDistributedLock(`order:${item.order_id}`, 45, lockToken);
+      if (!hasLock) {
+        continue;
+      }
+
       try {
-        const receiverBankCode = getBankCodeFromClabe(item.receiver_clabe);
-        const result = await validateSpeiPayment(
-          item.tracking_key,
-          item.expected_amount,
-          item.receiver_clabe || undefined,
-          undefined,
-          receiverBankCode
+        const [bankRows] = await pool.query<BankAccountRow[]>(
+          `SELECT ba.clabe, ba.bank_name
+           FROM giveaway_bank_accounts gba
+           INNER JOIN bank_accounts ba ON gba.bank_account_id = ba.id
+           WHERE gba.giveaway_id = ? AND gba.is_active = 1 AND ba.is_active = 1
+           ORDER BY ba.id ASC`,
+          [item.giveaway_id]
         );
+
+        let candidateAccounts: BankAccountRow[] = bankRows;
+        if (candidateAccounts.length === 0) {
+          const [fallbackRows] = await pool.query<BankAccountRow[]>(
+            `SELECT clabe, bank_name FROM bank_accounts WHERE is_active = 1 ORDER BY id ASC`
+          );
+          candidateAccounts = fallbackRows;
+        }
+
+        let result: BanxicoVerificationResult = {
+          matched: false,
+          message: 'Sin confirmación de liquidación en cuentas oficiales.',
+          status: 'pending',
+        };
+
+        for (const acc of candidateAccounts) {
+          const receiverBankCode = getBankCodeFromClabe(acc.clabe);
+          const verifyRes = await validateSpeiPayment(
+            item.tracking_key,
+            item.expected_amount,
+            acc.clabe || undefined,
+            undefined,
+            receiverBankCode
+          );
+
+          result = verifyRes;
+          if (verifyRes.matched && verifyRes.status === 'liquidated') {
+            break;
+          }
+        }
 
         if (result.matched && result.status === 'liquidated') {
           const conn = await pool.getConnection();
           try {
             await conn.beginTransaction();
+
+            const [giveawayRows] = await conn.query<RowDataPacket[]>(
+              `SELECT id, status FROM giveaways WHERE id = ? FOR UPDATE`,
+              [item.giveaway_id]
+            );
+
+            if (!giveawayRows.length || giveawayRows[0].status !== 'active') {
+              logger.app.error(`Intento de liquidar orden ${item.order_uuid} para sorteo inactivo o concluido.`);
+              await conn.query(
+                `UPDATE orders SET status = 'cancelled' WHERE id = ?`,
+                [item.order_id]
+              );
+              await conn.query(
+                `UPDATE giveaway_tickets SET status = 'available', order_id = NULL, reserved_until = NULL WHERE order_id = ? AND status = 'reserved'`,
+                [item.order_id]
+              );
+              await conn.query(
+                `UPDATE spei_validation_queue SET status = 'failed', last_checked_at = NOW(), banxico_response = ? WHERE id = ?`,
+                [JSON.stringify({ error: 'Sorteo finalizado al liquidar pago. Retenido para reembolso.', banxico: result }), item.id]
+              );
+              await conn.commit();
+              continue;
+            }
 
             await conn.query(
               `UPDATE orders
@@ -307,12 +365,12 @@ export async function processBanxicoBatch(): Promise<number> {
             if (item.receipt_filename) {
               await pool.query(
                 `UPDATE spei_validation_queue
-                 SET attempts = ?, status = 'failed', last_checked_at = NOW(), banxico_response = ?
+                 SET attempts = ?, status = 'manual_review', last_checked_at = NOW(), banxico_response = ?
                  WHERE id = ?`,
                 [nextAttempts, JSON.stringify(result), item.id]
               );
               logger.app.info(
-                `Orden ${item.order_uuid} concluyó reintentos automáticos Banxico CEP; permanece en revisión por comprobante adjunto.`
+                `Orden ${item.order_uuid} concluyó reintentos automáticos Banxico CEP; permanece en revisión manual por comprobante adjunto.`
               );
             } else {
               const failConn = await pool.getConnection();
@@ -386,7 +444,7 @@ export async function processBanxicoBatch(): Promise<number> {
                 });
 
                 logger.app.warn(
-                  `Orden ${item.order_uuid} superó los intentos de validación Banxico. Boletos liberados y orden cancelada.`
+                  `Orden ${item.order_uuid} superó los intentos de validación Banxico sin comprobante adjunto. Boletos liberados y orden cancelada.`
                 );
               } catch (failTxError) {
                 await failConn.rollback();
@@ -410,6 +468,8 @@ export async function processBanxicoBatch(): Promise<number> {
         }
       } catch (itemError) {
         logger.app.error(`Error al procesar lote Banxico para la orden ${item.order_uuid}`, itemError);
+      } finally {
+        await releaseDistributedLock(`order:${item.order_id}`, lockToken);
       }
     }
 

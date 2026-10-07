@@ -136,7 +136,7 @@ export async function reserveTickets(data: {
     const packageOpts = giveaway.package_options
       ? (typeof giveaway.package_options === 'string' ? JSON.parse(giveaway.package_options) : giveaway.package_options)
       : [];
-    const maxByTotal = Math.max(10, Math.floor(giveaway.total_tickets * 0.20));
+    const maxByTotal = Math.min(100, Math.max(5, Math.floor(giveaway.total_tickets * 0.10)));
     const maxAllowed = Math.max(1, maxByTotal);
 
     if (cleanNumbers.length > maxAllowed) {
@@ -201,7 +201,7 @@ export async function reserveTickets(data: {
     const conceptReference = data.customerName.trim().replace(/\s+/g, ' ').toUpperCase();
     const ticketCount = cleanNumbers.length;
     const totalAmount = ticketCount * Number(giveaway.ticket_price);
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
     const [orderResult] = await conn.query<ResultSetHeader>(
       `INSERT INTO orders (
@@ -237,11 +237,29 @@ export async function reserveTickets(data: {
       `INSERT INTO giveaway_tickets (giveaway_id, ticket_number, order_id, status, reserved_until)
        VALUES ?
        ON DUPLICATE KEY UPDATE
-         status = 'reserved',
-         order_id = VALUES(order_id),
-         reserved_until = VALUES(reserved_until)`,
+         status = IF(status = 'paid' OR (status = 'reserved' AND reserved_until > NOW() AND order_id != VALUES(order_id)), status, 'reserved'),
+         order_id = IF(status = 'paid' OR (status = 'reserved' AND reserved_until > NOW() AND order_id != VALUES(order_id)), order_id, VALUES(order_id)),
+         reserved_until = IF(status = 'paid' OR (status = 'reserved' AND reserved_until > NOW() AND order_id != VALUES(order_id)), reserved_until, VALUES(reserved_until))`,
       [ticketValues]
     );
+
+    const [assignedRows] = await conn.query<RowDataPacket[]>(
+      `SELECT ticket_number
+       FROM giveaway_tickets
+       WHERE giveaway_id = ? AND ticket_number IN (?) AND order_id = ? AND status = 'reserved'`,
+      [giveaway.id, cleanNumbers, orderId]
+    );
+
+    if (assignedRows.length !== cleanNumbers.length) {
+      await conn.rollback();
+      const assignedSet = new Set(assignedRows.map((r) => Number(r.ticket_number)));
+      const stolen = cleanNumbers.filter((n) => !assignedSet.has(n));
+      return {
+        bankAccounts: [],
+        success: false,
+        unavailableTickets: stolen,
+      };
+    }
 
     const [updateRes] = await conn.query<ResultSetHeader>(
       `UPDATE giveaways
@@ -452,9 +470,9 @@ export async function attachReceipt(data: {
 
     await conn.query(
       `UPDATE orders
-       SET status = 'in_review', receipt_url = ?, receipt_filename = ?, tracking_key = ?, bank_reference = ?
+       SET status = 'in_review', expires_at = ?, receipt_url = ?, receipt_filename = ?, tracking_key = ?, bank_reference = ?
        WHERE id = ?`,
-      [data.receiptUrl, data.receiptFilename || null, trackingKey, bankRef, order.id]
+      [reviewGracePeriod, data.receiptUrl, data.receiptFilename || null, trackingKey, bankRef, order.id]
     );
 
     const tickets: number[] = typeof order.ticket_numbers === 'string'
@@ -553,9 +571,14 @@ export async function releaseExpiredReservations(): Promise<number> {
     await conn.beginTransaction();
 
     const [expiredOrders] = await conn.query<RowDataPacket[]>(
-      `SELECT id, uuid, giveaway_id, customer_name, customer_phone, ticket_count, ticket_numbers, total_amount, currency
-       FROM orders
-       WHERE status = 'pending_payment' AND expires_at < NOW() AND receipt_url IS NULL
+      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.ticket_count, o.ticket_numbers, o.total_amount, o.currency, o.status AS current_status
+       FROM orders o
+       LEFT JOIN spei_validation_queue q ON q.order_id = o.id
+       WHERE (o.status = 'pending_payment' AND o.expires_at < NOW() AND o.receipt_url IS NULL)
+          OR (o.status = 'in_review' AND (
+               (q.status = 'failed' AND o.updated_at < NOW() - INTERVAL 15 MINUTE)
+               OR (o.created_at < NOW() - INTERVAL 48 HOUR)
+             ))
        FOR UPDATE`
     );
 
@@ -566,12 +589,15 @@ export async function releaseExpiredReservations(): Promise<number> {
 
     const orderIds = expiredOrders.map((o) => o.id);
 
-    await conn.query(
-      `UPDATE orders
-       SET status = 'expired'
-       WHERE id IN (?)`,
-      [orderIds]
-    );
+    for (const order of expiredOrders) {
+      const targetStatus = order.current_status === 'pending_payment' ? 'expired' : 'cancelled';
+      await conn.query(
+        `UPDATE orders
+         SET status = ?
+         WHERE id = ?`,
+        [targetStatus, order.id]
+      );
+    }
 
     const [ticketResult] = await conn.query<ResultSetHeader>(
       `UPDATE giveaway_tickets
@@ -599,8 +625,10 @@ export async function releaseExpiredReservations(): Promise<number> {
       const tickets: number[] = typeof expOrder.ticket_numbers === 'string'
         ? JSON.parse(expOrder.ticket_numbers)
         : expOrder.ticket_numbers;
+      const newStatus = expOrder.current_status === 'pending_payment' ? 'expired' : 'cancelled';
+      const auditAction = 'ORDER_EXPIRED' as const;
       await recordAudit({
-        action: 'ORDER_EXPIRED',
+        action: auditAction,
         actor_type: 'system',
         amount: expOrder.total_amount !== null ? Number(expOrder.total_amount) : null,
         currency: expOrder.currency,
@@ -611,10 +639,10 @@ export async function releaseExpiredReservations(): Promise<number> {
           ticket_count: expOrder.ticket_count,
         },
         ip_address: '127.0.0.1',
-        new_status: 'expired',
+        new_status: newStatus,
         order_id: Number(expOrder.id),
         order_uuid: expOrder.uuid,
-        previous_status: 'pending_payment',
+        previous_status: expOrder.current_status,
         user_agent: 'ProjectBoreal/SystemCron',
       });
     }
