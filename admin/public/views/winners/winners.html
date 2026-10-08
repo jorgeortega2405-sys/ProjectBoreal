@@ -1,0 +1,104 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="admin-winners-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="winners-scrollable">
+    <div class="view-header" data-ref="winners-floating-top">
+      <div class="view-header__left" data-ref="winners-floating-left">
+        <h1 class="view-header__title" data-ref="winners-title">Gestión de Ganadores y Entrega de Premios</h1>
+      </div>
+
+      <div class="view-header__right" data-ref="winners-floating-right">
+        <div class="view-header__actions" data-ref="winners-default-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar ganadores" aria-label="Buscar ganadores">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-winners" data-tooltip="Actualizar" aria-label="Actualizar">
+            <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="input-search-winners" placeholder="Buscar por ganador, sorteo o teléfono..." type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-body" data-ref="winners-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+      <div class="dashboard-stats-grid" data-ref="winners-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+        <div class="dashboard-stat-card" data-ref="card-stat-total-winners" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Ganadores Emitidos</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#emoji_events"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-total-winners" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Sorteos concluidos con éxito</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-prizes-amount" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Premios Totales</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-prizes-amount" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 MXN</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Bolsas y premios otorgados</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-delivered" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Premios Entregados</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-delivered-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Con entrega y SPEI completado</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-pending-delivery" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Por Entregar / Contactar</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: #f59e0b;" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-pending-delivery-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">En proceso de entrega</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="winners-content-area" data-ref="winners-content-area">
+        <div class="winners-grid" data-ref="winners-grid-container"></div>
+
+        <div class="giveaways-empty-state" data-ref="winners-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+            <svg class="component-icon" style="width: 28px; height: 28px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#emoji_events"></use></svg>
+          </div>
+          <h3 style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text-primary);">Sin ganadores registrados</h3>
+          <p style="margin: 0 0 20px; font-size: 13.5px; color: var(--text-secondary); max-width: 400px; margin-left: auto; margin-right: auto;">Aún no se han ejecutado sorteos concluidos o no coinciden con la búsqueda.</p>
+          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-search">Restablecer Búsqueda</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

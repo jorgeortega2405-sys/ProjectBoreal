@@ -95,6 +95,34 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
+      const { createCustomersView } = await import('../views/customers.view.js');
+      return await createCustomersView();
+    },
+    id: 'customers',
+    match: (path) =>
+      path === '/customers' ||
+      path.startsWith('/customers') ||
+      path === '/clientes' ||
+      path.startsWith('/clientes') ||
+      path === '/participantes' ||
+      path.startsWith('/participantes'),
+  },
+  {
+    handler: async () => {
+      const { createWinnersView } = await import('../views/winners.view.js');
+      return await createWinnersView();
+    },
+    id: 'winners',
+    match: (path) =>
+      path === '/winners' ||
+      path.startsWith('/winners') ||
+      path === '/ganadores' ||
+      path.startsWith('/ganadores') ||
+      path === '/premios' ||
+      path.startsWith('/premios'),
+  },
+  {
+    handler: async () => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();
     },

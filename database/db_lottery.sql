@@ -253,6 +253,37 @@ INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`)
 VALUES ('daily_giveaway_paused_next', '0', 'Indica si la regeneración automática del sorteo diario está en pausa')
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
+-- ============================================================================
+-- Tabla de Clientes Bloqueados / Lista Negra (Fraude o Comprobantes Inválidos)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `blocked_customers` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `phone` VARCHAR(30) NOT NULL UNIQUE,
+  `customer_name` VARCHAR(150) NULL,
+  `reason` VARCHAR(255) NOT NULL,
+  `blocked_by` VARCHAR(100) NOT NULL DEFAULT 'admin',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_blocked_phone` (`phone`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- Tabla de Entregas de Premios y Testimonios de Ganadores
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `winner_deliveries` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `giveaway_id` BIGINT UNSIGNED NOT NULL UNIQUE,
+  `delivery_status` ENUM('pending_contact', 'contacted', 'claimed', 'delivered') NOT NULL DEFAULT 'pending_contact',
+  `contact_notes` TEXT NULL,
+  `evidence_image_url` VARCHAR(500) NULL,
+  `spei_receipt_url` VARCHAR(500) NULL,
+  `testimonial` TEXT NULL,
+  `delivered_at` DATETIME NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_deliveries_status` (`delivery_status`),
+  CONSTRAINT `fk_deliveries_giveaway` FOREIGN KEY (`giveaway_id`) REFERENCES `giveaways` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 GRANT SELECT, INSERT, UPDATE, DELETE, INDEX, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
 

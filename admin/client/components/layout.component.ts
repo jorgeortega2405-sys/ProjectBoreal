@@ -28,7 +28,27 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     path.startsWith('/bank-accounts') ||
     path === '/cuentas-bancarias' ||
     path.startsWith('/cuentas-bancarias');
-  const isDashboard = !isGiveaways && !isPayments && !isBankAccounts && (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
+  const isCustomers =
+    path === '/customers' ||
+    path.startsWith('/customers') ||
+    path === '/clientes' ||
+    path.startsWith('/clientes') ||
+    path === '/participantes' ||
+    path.startsWith('/participantes');
+  const isWinners =
+    path === '/winners' ||
+    path.startsWith('/winners') ||
+    path === '/ganadores' ||
+    path.startsWith('/ganadores') ||
+    path === '/premios' ||
+    path.startsWith('/premios');
+  const isDashboard =
+    !isGiveaways &&
+    !isPayments &&
+    !isBankAccounts &&
+    !isCustomers &&
+    !isWinners &&
+    (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
 
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
   const btnDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-dashboard"]');
@@ -38,6 +58,10 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnPayments = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-payments"]');
   const itemBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-bank-accounts"]');
   const btnBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-bank-accounts"]');
+  const itemCustomers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-customers"]');
+  const btnCustomers = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-customers"]');
+  const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
+  const btnWinners = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-winners"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
   itemDashboard?.classList.toggle('is-active', isDashboard);
@@ -48,6 +72,10 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnPayments?.classList.toggle('is-active', isPayments);
   itemBankAccounts?.classList.toggle('is-active', isBankAccounts);
   btnBankAccounts?.classList.toggle('is-active', isBankAccounts);
+  itemCustomers?.classList.toggle('is-active', isCustomers);
+  btnCustomers?.classList.toggle('is-active', isCustomers);
+  itemWinners?.classList.toggle('is-active', isWinners);
+  btnWinners?.classList.toggle('is-active', isWinners);
   btnToggle?.classList.toggle('is-active', isDrawerOpen);
 }
 
@@ -80,6 +108,8 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const itemGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-giveaways"]');
   const itemPayments = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-payments"]');
   const itemBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-bank-accounts"]');
+  const itemCustomers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-customers"]');
+  const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
   const btnTheme = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-theme"]');
   const itemTheme = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-theme"]');
 
@@ -106,6 +136,16 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   itemBankAccounts?.addEventListener('click', (e) => {
     e.preventDefault();
     navigate('/bank-accounts');
+  });
+
+  itemCustomers?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/customers');
+  });
+
+  itemWinners?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/winners');
   });
 
   const handleToggleTheme = (e: Event) => {

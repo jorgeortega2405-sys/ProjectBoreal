@@ -1,0 +1,104 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="admin-customers-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="customers-scrollable">
+    <div class="view-header" data-ref="customers-floating-top">
+      <div class="view-header__left" data-ref="customers-floating-left">
+        <h1 class="view-header__title" data-ref="customers-title">Directorio de Clientes y Participantes</h1>
+      </div>
+
+      <div class="view-header__right" data-ref="customers-floating-right">
+        <div class="view-header__actions" data-ref="customers-default-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar participantes" aria-label="Buscar participantes">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-customers" data-tooltip="Actualizar" aria-label="Actualizar">
+            <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="input-search-customers" placeholder="Buscar por teléfono, nombre o estado..." type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-body" data-ref="customers-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+      <div class="dashboard-stats-grid" data-ref="customers-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+        <div class="dashboard-stat-card" data-ref="card-stat-total" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Total Participantes</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-total-customers" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Teléfonos únicos registrados</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-active-buyers" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Compradores Liquidados</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-active-buyers" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Con al menos 1 orden pagada</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-tickets" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Boletos Adquiridos</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-total-tickets" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Boletos en órdenes liquidadas</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-blocked" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Lista Negra</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: #ef4444;" aria-hidden="true"><use href="/icons.svg#block"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-blocked-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Teléfonos restringidos por fraude</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="customers-content-area" data-ref="customers-content-area">
+        <div class="customers-grid" data-ref="customers-grid-container"></div>
+
+        <div class="giveaways-empty-state" data-ref="customers-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+            <svg class="component-icon" style="width: 28px; height: 28px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
+          </div>
+          <h3 style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text-primary);">Sin participantes encontrados</h3>
+          <p style="margin: 0 0 20px; font-size: 13.5px; color: var(--text-secondary); max-width: 400px; margin-left: auto; margin-right: auto;">No se encontraron registros que coincidan con los criterios de búsqueda.</p>
+          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-search">Restablecer Búsqueda</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

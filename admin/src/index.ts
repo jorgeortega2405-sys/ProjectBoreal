@@ -3,10 +3,12 @@ import { config, isAllowedOrigin } from './config/env.config.js';
 import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
 import bankAccountsRoutes from './routes/bank-accounts.routes.js';
+import customersRoutes from './routes/customers.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import giveawaysRoutes from './routes/giveaways.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
+import winnersRoutes from './routes/winners.routes.js';
 import { logger } from './services/logger.service.js';
 import express, { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
@@ -33,6 +35,7 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
     const { createServer } = await import('vite');
     const vite = await createServer({
       appType: 'spa',
+      configFile: path.resolve(adminRoot, 'vite.config.ts'),
       root: adminRoot,
       server: {
         middlewareMode: true,
@@ -151,10 +154,12 @@ function createExpressApp(): express.Express {
   });
 
   app.use('/api/bank-accounts', bankAccountsRoutes);
+  app.use('/api/customers', customersRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/giveaways', giveawaysRoutes);
   app.use('/api/health', healthRoutes);
   app.use('/api/orders', ordersRoutes);
+  app.use('/api/winners', winnersRoutes);
 
   const adminPublicDir = path.resolve(ADMIN_ROOT_DIR, 'public');
   const rootPublicDir = path.resolve(ADMIN_ROOT_DIR, '..', 'public');

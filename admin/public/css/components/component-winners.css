@@ -1,123 +1,139 @@
-.winners-loading {
+/* ============================================================================
+   Project Boreal Admin - Gestión de Ganadores y Entrega de Premios
+   Archivo: admin/public/css/components/component-winners.css
+   ============================================================================ */
+
+.winners-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 640px) {
+  .winners-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.winner-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg, 16px);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 60px 20px;
-}
-
-.winners-loading.is-hidden,
-.winners-empty.is-hidden,
-.winners-empty[hidden] {
-  display: none !important;
-}
-
-.winners-loading__text {
-  font-size: 14px;
-  color: var(--text-secondary);
-}
-
-.winners-empty {
-  text-align: center;
-  padding: 60px 20px;
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-.winners-empty__icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 18px auto;
-}
-
-.winners-empty__icon .component-icon {
-  width: 32px;
-  height: 32px;
-}
-
-.winners-empty__title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0 0 8px 0;
-}
-
-.winners-empty__desc {
-  font-size: 13.5px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  margin: 0;
-}
-
-/* Contenedor y tarjeta de la tabla diaria */
-.winners-daily-wrapper {
-  width: 100%;
-}
-
-.winners-daily-table-card {
-  width: 100%;
-  border-radius: 16px;
-  border: 1px solid var(--border-subtle-translucent);
-  background: transparent;
+  justify-content: space-between;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  position: relative;
   overflow: hidden;
 }
 
-.winners-daily-table-scroll {
-  width: 100%;
-  overflow-x: auto;
+.winner-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
 }
 
-.winners-daily-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  white-space: nowrap;
+.winner-card__banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 14px;
 }
 
-.winners-daily-table thead {
-  background: transparent !important;
+.winner-card__giveaway-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
 }
 
-.winners-th {
-  padding: 14px 20px;
-  font-size: 11.5px;
+.winner-card__thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.winner-card__title-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.winner-card__giveaway-title {
+  font-size: 14px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-tertiary);
-  border-bottom: 1px solid var(--border-subtle-translucent);
-  background: transparent !important;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
 }
 
-.winners-table__tr {
-  border-bottom: 1px solid var(--border-subtle-translucent);
-  transition: background var(--sl-transition-fast, 150ms ease);
+.winner-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
 }
 
-.winners-table__tr:last-child {
-  border-bottom: none;
+.winner-card__hero-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
 }
 
-.winners-table__tr:hover {
-  background: var(--bg-hover, rgba(255, 255, 255, 0.025));
+.winner-card__ticket-badge {
+  font-family: var(--sl-font-mono, monospace);
+  font-size: 20px;
+  font-weight: 900;
+  color: #10b981;
+  letter-spacing: 0.5px;
 }
 
-.winners-table__td {
-  padding: 14px 20px;
-  font-size: 13.5px;
-  vertical-align: middle;
+.winner-card__prize-amount {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-align: right;
 }
 
-.winners-daily-table .component-badge {
-  cursor: default;
-  user-select: text;
+.winner-card__contact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
+.winner-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+  gap: 8px;
+}
 
+/* Modal de Gestión de Entrega */
+.winner-delivery-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
