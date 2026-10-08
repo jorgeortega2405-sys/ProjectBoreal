@@ -20,6 +20,36 @@
             <span>Nueva Cuenta</span>
           </button>
         </div>
+
+        <div class="view-header__actions" data-ref="bank-accounts-selected-actions" style="display: none; align-items: center; gap: 8px;">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-edit" data-tooltip="Editar cuenta" aria-label="Editar cuenta">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-toggle-status" data-tooltip="Pausar / Activar cuenta" aria-label="Pausar / Activar cuenta">
+            <svg class="component-icon" data-ref="icon-action-toggle-status" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-manage-giveaways" data-tooltip="Gestionar cobertura de sorteos" aria-label="Gestionar cobertura de sorteos">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-copy-clabe" data-tooltip="Copiar CLABE" aria-label="Copiar CLABE">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-copy-card" data-tooltip="Copiar número de tarjeta" aria-label="Copiar número de tarjeta">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-delete" data-tooltip="Eliminar cuenta" aria-label="Eliminar cuenta" style="color: var(--color-danger, #ef4444);">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
+        </div>
       </div>
 
       <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
@@ -93,7 +123,7 @@
       </div>
 
       <div class="bank-accounts-content-area" data-ref="bank-accounts-content-area">
-        <div class="bank-accounts-grid" data-ref="bank-accounts-grid-container"></div>
+        <div class="canvas-grid bank-accounts-canvas-grid" data-ref="bank-accounts-grid-container"></div>
 
         <div class="giveaways-empty-state" data-ref="bank-accounts-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
           <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">

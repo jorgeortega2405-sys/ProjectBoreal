@@ -41,29 +41,81 @@ interface BankAccountsKpis {
   uniqueBanksCount: number;
 }
 
-function formatCardNumber(card: string | null): string {
-  if (!card) return '•••• ----';
-  const clean = card.replace(/\D/g, '');
-  if (clean.length >= 15) {
-    return `${clean.slice(0, 4)} •••• •••• ${clean.slice(-4)}`;
+function getBankSkinClass(bankName: string, clabe: string | null): string {
+  const normName = (bankName || '').toLowerCase();
+  const clabePrefix = (clabe || '').slice(0, 3);
+
+  if (normName.includes('bbva') || clabePrefix === '012') {
+    return 'bank-skin--bbva';
   }
-  return card;
+  if (normName.includes('santander') || clabePrefix === '014') {
+    return 'bank-skin--santander';
+  }
+  if (normName.includes('banamex') || normName.includes('citibanamex') || clabePrefix === '002') {
+    return 'bank-skin--citibanamex';
+  }
+  if (normName.includes('banorte') || clabePrefix === '072') {
+    return 'bank-skin--banorte';
+  }
+  if (normName.includes('mercado') || normName.includes('mercadopago')) {
+    return 'bank-skin--mercadopago';
+  }
+  if (normName.includes('nu') || clabePrefix === '698') {
+    return 'bank-skin--nu';
+  }
+  if (normName.includes('azteca') || clabePrefix === '127') {
+    return 'bank-skin--azteca';
+  }
+  if (normName.includes('hey') || normName.includes('banregio') || clabePrefix === '058') {
+    return 'bank-skin--heybanco';
+  }
+  if (normName.includes('spin') || normName.includes('oxxo') || clabePrefix === '721') {
+    return 'bank-skin--spin';
+  }
+  if (normName.includes('stp') || normName.includes('transferencias')) {
+    return 'bank-skin--stp';
+  }
+  return 'bank-skin--generic';
+}
+
+function getMaskedCardDisplay(card: string | null, clabe: string | null): string {
+  if (card) {
+    const clean = card.replace(/\D/g, '');
+    if (clean.length >= 15) {
+      return `${clean.slice(0, 4)} •••• •••• ${clean.slice(-4)}`;
+    }
+    return card;
+  }
+  if (clabe && clabe.length >= 10) {
+    return `•••• •••• •••• ${clabe.slice(-4)}`;
+  }
+  return '•••• •••• •••• ----';
 }
 
 export class BankAccountsController implements ViewController {
   private abortController: AbortController | null = null;
   private accounts: BankAccountDetail[] = [];
+  private btnActionCopyCard: HTMLButtonElement | null = null;
+  private btnActionCopyClabe: HTMLButtonElement | null = null;
+  private btnActionDelete: HTMLButtonElement | null = null;
+  private btnActionDeselect: HTMLButtonElement | null = null;
+  private btnActionEdit: HTMLButtonElement | null = null;
+  private btnActionManageGiveaways: HTMLButtonElement | null = null;
+  private btnActionToggleStatus: HTMLButtonElement | null = null;
   private btnClearSearch: HTMLButtonElement | null = null;
   private btnCreateAccount: HTMLButtonElement | null = null;
   private btnRefresh: HTMLButtonElement | null = null;
   private btnResetSearch: HTMLButtonElement | null = null;
   private btnToggleSearch: HTMLButtonElement | null = null;
   private container: HTMLElement;
+  private defaultActions: HTMLElement | null = null;
   private inputSearch: HTMLInputElement | null = null;
   private isSearchActive = false;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private searchQuery = '';
   private searchToolbar: HTMLElement | null = null;
+  private selectedAccount: BankAccountDetail | null = null;
+  private selectedActions: HTMLElement | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -79,6 +131,16 @@ export class BankAccountsController implements ViewController {
     this.btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-accounts"]');
     this.btnCreateAccount = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-create-account"]');
     this.btnResetSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-search"]');
+
+    this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="bank-accounts-default-actions"]');
+    this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="bank-accounts-selected-actions"]');
+    this.btnActionDeselect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-deselect"]');
+    this.btnActionEdit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-edit"]');
+    this.btnActionToggleStatus = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-toggle-status"]');
+    this.btnActionManageGiveaways = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-manage-giveaways"]');
+    this.btnActionCopyClabe = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-copy-clabe"]');
+    this.btnActionCopyCard = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-copy-card"]');
+    this.btnActionDelete = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-delete"]');
 
     this.bindEvents();
     renderIcons(this.container);
@@ -111,18 +173,20 @@ export class BankAccountsController implements ViewController {
       'click',
       (e) => {
         e.preventDefault();
-        if (!this.searchToolbar) return;
-        this.isSearchActive = !this.isSearchActive;
-        if (this.isSearchActive) {
-          this.searchToolbar.classList.remove('is-hidden');
-          this.inputSearch?.focus();
-        } else {
-          this.searchToolbar.classList.add('is-hidden');
-          if (this.inputSearch) this.inputSearch.value = '';
-          if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
-          if (this.searchQuery) {
-            this.searchQuery = '';
-            void this.loadAccounts();
+        this.toggleSearchToolbar();
+      },
+      { signal }
+    );
+
+    document.addEventListener(
+      'keydown',
+      (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          if (this.isSearchActive) {
+            this.toggleSearchToolbar(false);
+          } else if (this.selectedAccount) {
+            this.selectedAccount = null;
+            this.updateSelectionUi();
           }
         }
       },
@@ -167,6 +231,10 @@ export class BankAccountsController implements ViewController {
         if (this.inputSearch) this.inputSearch.value = '';
         if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
         this.searchQuery = '';
+        if (this.isSearchActive) {
+          this.toggleSearchToolbar(false);
+        }
+        this.selectedAccount = null;
         void this.loadAccounts();
       },
       { signal }
@@ -180,6 +248,103 @@ export class BankAccountsController implements ViewController {
       },
       { signal }
     );
+
+    this.btnActionDeselect?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        this.selectedAccount = null;
+        this.updateSelectionUi();
+      },
+      { signal }
+    );
+
+    this.btnActionEdit?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedAccount) {
+          this.openEditAccountModal(this.selectedAccount);
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionToggleStatus?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedAccount) {
+          void this.handleToggleStatus(this.selectedAccount);
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionManageGiveaways?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedAccount) {
+          void this.openManageGiveawaysModal(this.selectedAccount.uuid);
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionCopyClabe?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedAccount?.clabe) {
+          void navigator.clipboard.writeText(this.selectedAccount.clabe);
+          showToast('CLABE interbancaria copiada al portapapeles.', 'success');
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionCopyCard?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedAccount?.card_number) {
+          void navigator.clipboard.writeText(this.selectedAccount.card_number);
+          showToast('Número de tarjeta copiado al portapapeles.', 'success');
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionDelete?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedAccount) {
+          this.openConfirmDeleteModal(this.selectedAccount);
+        }
+      },
+      { signal }
+    );
+  }
+
+  private toggleSearchToolbar(forceState?: boolean): void {
+    if (!this.searchToolbar) return;
+    this.isSearchActive = forceState !== undefined ? forceState : !this.isSearchActive;
+    if (this.isSearchActive) {
+      this.searchToolbar.classList.remove('is-hidden');
+      this.btnToggleSearch?.classList.add('is-active');
+      this.inputSearch?.focus();
+    } else {
+      this.searchToolbar.classList.add('is-hidden');
+      this.btnToggleSearch?.classList.remove('is-active');
+      if (this.inputSearch) this.inputSearch.value = '';
+      if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+      if (this.searchQuery) {
+        this.searchQuery = '';
+        void this.loadAccounts();
+      }
+    }
   }
 
   private async loadInitialData(): Promise<void> {
@@ -213,7 +378,12 @@ export class BankAccountsController implements ViewController {
       const res = await getApi<BankAccountDetail[]>(`/api/bank-accounts?${queryParams.toString()}`);
       if (res.success && Array.isArray(res.data)) {
         this.accounts = res.data;
+        if (this.selectedAccount) {
+          const found = this.accounts.find((a) => a.uuid === this.selectedAccount?.uuid);
+          this.selectedAccount = found || null;
+        }
         this.renderAccounts();
+        this.updateSelectionUi();
       } else {
         showToast(res.error || 'No se pudieron cargar las cuentas bancarias.', 'danger');
       }
@@ -242,95 +412,86 @@ export class BankAccountsController implements ViewController {
 
   private buildAccountCardHtml(acc: BankAccountDetail): string {
     const isActive = Boolean(acc.is_active);
-    const hasClabe = Boolean(acc.clabe);
-    const hasCard = Boolean(acc.card_number);
+    const skinClass = getBankSkinClass(acc.bank_name, acc.clabe);
+    const maskedNumber = getMaskedCardDisplay(acc.card_number, acc.clabe);
+    const isSelected = this.selectedAccount?.uuid === acc.uuid;
 
-    let typeLabel = 'CLABE';
-    if (acc.account_type === 'card') typeLabel = 'Tarjeta Débito';
-    else if (acc.account_type === 'both') typeLabel = 'CLABE + Tarjeta';
+    let typeBadgeLabel = 'CLABE';
+    if (acc.account_type === 'card') typeBadgeLabel = 'TARJETA DÉBITO';
+    else if (acc.account_type === 'both') typeBadgeLabel = 'CLABE + TARJETA';
 
-    const clabeHtml = hasClabe
-      ? `
-        <div class="bank-account-card__code-row">
-          <div class="bank-account-card__code-info">
-            <span class="bank-account-card__label">CLABE Interbancaria (18 dígitos):</span>
-            <span class="bank-account-card__code-val" data-ref="clabe-val-${acc.uuid}">${escapeHtml(acc.clabe || '')}</span>
-          </div>
-          <button type="button" class="component-button component-button--secondary component-button--h32 component-button--icon-only" data-ref="btn-copy-clabe-${acc.uuid}" data-uuid="${acc.uuid}" data-clabe="${escapeHtml(acc.clabe || '')}" data-tooltip="Copiar CLABE" aria-label="Copiar CLABE">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-          </button>
-        </div>
-      `
-      : '';
-
-    const cardHtml = hasCard
-      ? `
-        <div class="bank-account-card__code-row">
-          <div class="bank-account-card__code-info">
-            <span class="bank-account-card__label">Número de Tarjeta:</span>
-            <span class="bank-account-card__code-val" data-ref="card-val-${acc.uuid}">${escapeHtml(acc.card_number || '')}</span>
-          </div>
-          <button type="button" class="component-button component-button--secondary component-button--h32 component-button--icon-only" data-ref="btn-copy-card-${acc.uuid}" data-uuid="${acc.uuid}" data-card="${escapeHtml(acc.card_number || '')}" data-tooltip="Copiar Tarjeta" aria-label="Copiar Tarjeta">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
-          </button>
-        </div>
-      `
-      : '';
+    const networkBadge = acc.account_type === 'card' ? 'DÉBITO' : 'SPEI 24/7';
 
     return `
-      <div class="bank-account-card ${!isActive ? 'bank-account-card--inactive' : ''}" data-ref="card-bank-${acc.uuid}" data-uuid="${acc.uuid}">
-        <div class="bank-account-card__header">
-          <div class="bank-account-card__brand">
-            <div class="bank-account-card__icon-box">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+      <div class="bank-card-item canvas-card ${!isActive ? 'bank-card-item--inactive' : ''} ${isSelected ? 'is-selected' : ''}" data-ref="card-bank-${acc.uuid}" data-uuid="${acc.uuid}">
+        <div class="canvas-card__thumbnail">
+          <div class="bank-debit-card ${skinClass}">
+            <div class="bank-debit-card__sheen"></div>
+
+            <div class="bank-debit-card__top">
+              <div class="bank-debit-card__brand">
+                <svg class="component-icon bank-debit-card__bank-icon" aria-hidden="true"><use href="/icons.svg#account_balance"></use></svg>
+                <span class="bank-debit-card__bank-title">${escapeHtml(acc.bank_name)}</span>
+              </div>
+
+              <div class="bank-debit-card__top-right">
+                <svg class="component-icon bank-debit-card__nfc-icon" aria-hidden="true"><use href="/icons.svg#contactless"></use></svg>
+              </div>
             </div>
-            <div class="bank-account-card__title-box">
-              <h3 class="bank-account-card__bank-name">${escapeHtml(acc.bank_name)}</h3>
-              <span class="bank-account-card__type-pill">${typeLabel}</span>
+
+            <div class="bank-debit-card__middle">
+              <div class="bank-card-chip"></div>
+              <span class="bank-debit-card__network-badge">${networkBadge}</span>
+            </div>
+
+            <div class="bank-debit-card__number-row">
+              <span class="bank-debit-card__number">${escapeHtml(maskedNumber)}</span>
+            </div>
+
+            <div class="bank-debit-card__bottom">
+              <div class="bank-debit-card__holder-box">
+                <span class="bank-debit-card__holder-label">TITULAR AUTORIZADO</span>
+                <span class="bank-debit-card__holder-name">${escapeHtml(acc.account_holder)}</span>
+              </div>
+
+              <span class="bank-debit-card__status-tag ${isActive ? 'bank-debit-card__status-tag--active' : 'bank-debit-card__status-tag--inactive'}">
+                ${isActive ? 'Activa' : 'Pausada'}
+              </span>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="bank-account-card__status-dot ${isActive ? 'bank-account-card__status-dot--active' : 'bank-account-card__status-dot--inactive'}"></span>
-            <span style="font-size: 12px; font-weight: 600; color: ${isActive ? '#10b981' : 'var(--text-secondary)'};">${isActive ? 'Activa' : 'Pausada'}</span>
+
+          <div class="canvas-card__checkbox" data-ref="card-checkbox-${acc.uuid}">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
           </div>
         </div>
 
-        <div class="bank-account-card__body">
-          <div class="bank-account-card__holder-box">
-            <span class="bank-account-card__label">Titular de la cuenta:</span>
-            <span class="bank-account-card__holder-name">${escapeHtml(acc.account_holder)}</span>
-          </div>
+        <div class="canvas-card__info">
+          <h3 class="canvas-card__name" title="${escapeHtml(acc.bank_name)} • ${escapeHtml(acc.account_holder)}">
+            ${escapeHtml(acc.bank_name)} • ${escapeHtml(acc.account_holder)}
+          </h3>
 
-          ${clabeHtml}
-          ${cardHtml}
-
-          <div class="bank-account-card__coverage-row">
-            <span class="bank-account-card__coverage-badge">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-              <span>${acc.active_giveaways_count} sorteos con cuenta habilitada</span>
+          <div class="bank-card-badges-row">
+            <span class="bank-badge ${isActive ? 'bank-badge--active' : 'bank-badge--inactive'}">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${isActive ? 'check_circle' : 'pause'}"></use></svg>
+              <span>${isActive ? 'En servicio' : 'Pausada'}</span>
             </span>
-            <button type="button" class="component-button component-button--secondary component-button--h28" data-ref="btn-manage-giveaways-${acc.uuid}" data-uuid="${acc.uuid}" style="font-size: 11.5px; padding: 0 10px;">
-              <span>Gestionar Sorteos</span>
-            </button>
-          </div>
-        </div>
 
-        <div class="bank-account-card__footer">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <label class="switch-control" data-tooltip="${isActive ? 'Pausar cuenta' : 'Activar cuenta'}" aria-label="${isActive ? 'Pausar cuenta' : 'Activar cuenta'}">
-              <input type="checkbox" ${isActive ? 'checked' : ''} data-ref="toggle-status-${acc.uuid}" data-uuid="${acc.uuid}" />
-              <span class="switch-control__slider"></span>
-            </label>
-            <span style="font-size: 12px; color: var(--text-secondary);">${isActive ? 'En servicio' : 'Desactivada'}</span>
-          </div>
+            <span class="bank-badge">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+              <span>${typeBadgeLabel}</span>
+            </span>
 
-          <div class="bank-account-card__actions">
-            <button type="button" class="component-button component-button--secondary component-button--h34 component-button--icon-only" data-ref="btn-edit-account-${acc.uuid}" data-uuid="${acc.uuid}" data-tooltip="Editar cuenta" aria-label="Editar cuenta">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-            </button>
-            <button type="button" class="component-button component-button--secondary component-button--h34 component-button--icon-only" data-ref="btn-delete-account-${acc.uuid}" data-uuid="${acc.uuid}" data-tooltip="Eliminar cuenta" aria-label="Eliminar cuenta" style="color: #ef4444;">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-            </button>
+            ${acc.clabe ? `
+              <span class="bank-badge bank-badge--clabe" data-ref="btn-badge-copy-clabe-${acc.uuid}" data-clabe="${escapeHtml(acc.clabe)}" data-tooltip="Clic para copiar CLABE">
+                <span>CLABE: ${escapeHtml(acc.clabe.slice(0, 4))}...${escapeHtml(acc.clabe.slice(-4))}</span>
+                <svg class="component-icon" style="width: 11px; height: 11px; margin-left: 2px;" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+              </span>
+            ` : ''}
+
+            <span class="bank-badge bank-badge--coverage">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+              <span>${acc.active_giveaways_count} sorteos</span>
+            </span>
           </div>
         </div>
       </div>
@@ -338,76 +499,109 @@ export class BankAccountsController implements ViewController {
   }
 
   private attachCardEvents(container: HTMLElement): void {
-    const copyClabeBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-copy-clabe-"]');
-    copyClabeBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
+    const cards = container.querySelectorAll<HTMLElement>('.bank-card-item');
+    cards.forEach((card) => {
+      const uuid = card.getAttribute('data-uuid');
+      if (!uuid) return;
+      const account = this.accounts.find((a) => a.uuid === uuid);
+      if (!account) return;
+
+      card.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('[data-ref^="btn-badge-copy-clabe-"]')) {
+          return;
+        }
         e.preventDefault();
-        const clabe = btn.getAttribute('data-clabe') || '';
+        this.toggleAccountSelection(account);
+      });
+
+      card.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        this.openEditAccountModal(account);
+      });
+    });
+
+    const clabeBadges = container.querySelectorAll<HTMLElement>('[data-ref^="btn-badge-copy-clabe-"]');
+    clabeBadges.forEach((badge) => {
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const clabe = badge.getAttribute('data-clabe') || '';
         if (clabe) {
           void navigator.clipboard.writeText(clabe);
           showToast('CLABE interbancaria copiada al portapapeles.', 'success');
         }
       });
     });
+  }
 
-    const copyCardBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-copy-card-"]');
-    copyCardBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const card = btn.getAttribute('data-card') || '';
-        if (card) {
-          void navigator.clipboard.writeText(card);
-          showToast('Número de tarjeta copiado al portapapeles.', 'success');
-        }
-      });
-    });
+  private toggleAccountSelection(account: BankAccountDetail): void {
+    if (this.selectedAccount?.uuid === account.uuid) {
+      this.selectedAccount = null;
+    } else {
+      this.selectedAccount = account;
+    }
+    this.updateSelectionUi();
+  }
 
-    const toggleInputs = container.querySelectorAll<HTMLInputElement>('[data-ref^="toggle-status-"]');
-    toggleInputs.forEach((input) => {
-      input.addEventListener('change', async () => {
-        const uuid = input.getAttribute('data-uuid');
-        if (!uuid) return;
-        const isActive = input.checked;
-        const res = await patchApi<BankAccountDetail>(`/api/bank-accounts/${uuid}/status`, { isActive });
-        if (res.success) {
-          showToast(res.message || 'Estado de cuenta actualizado.', 'success');
-          void this.loadAccounts();
-          void this.loadKpis();
+  private updateSelectionUi(): void {
+    const isSelected = this.selectedAccount !== null;
+
+    if (!isSelected) {
+      if (this.defaultActions) this.defaultActions.style.display = 'flex';
+      if (this.selectedActions) this.selectedActions.style.display = 'none';
+    } else {
+      if (this.defaultActions) this.defaultActions.style.display = 'none';
+      if (this.selectedActions) this.selectedActions.style.display = 'flex';
+
+      const acc = this.selectedAccount!;
+      const isActive = Boolean(acc.is_active);
+
+      if (this.btnActionToggleStatus) {
+        const iconEl = this.btnActionToggleStatus.querySelector('[data-ref="icon-action-toggle-status"]');
+        if (isActive) {
+          this.btnActionToggleStatus.setAttribute('data-tooltip', 'Pausar cuenta');
+          this.btnActionToggleStatus.setAttribute('aria-label', 'Pausar cuenta');
+          if (iconEl) iconEl.innerHTML = '<use href="/icons.svg#pause"></use>';
         } else {
-          input.checked = !isActive;
-          showToast(res.error || 'Error al cambiar estado de la cuenta.', 'danger');
+          this.btnActionToggleStatus.setAttribute('data-tooltip', 'Activar cuenta');
+          this.btnActionToggleStatus.setAttribute('aria-label', 'Activar cuenta');
+          if (iconEl) iconEl.innerHTML = '<use href="/icons.svg#play_arrow"></use>';
+        }
+      }
+
+      if (this.btnActionCopyClabe) {
+        this.btnActionCopyClabe.style.display = acc.clabe ? 'inline-flex' : 'none';
+      }
+
+      if (this.btnActionCopyCard) {
+        this.btnActionCopyCard.style.display = acc.card_number ? 'inline-flex' : 'none';
+      }
+    }
+
+    const grid = this.container.querySelector<HTMLElement>('[data-ref="bank-accounts-grid-container"]');
+    if (grid) {
+      this.accounts.forEach((acc) => {
+        const card = grid.querySelector<HTMLElement>(`[data-ref="card-bank-${acc.uuid}"]`);
+        const isCardSelected = this.selectedAccount?.uuid === acc.uuid;
+        if (card) {
+          card.classList.toggle('is-selected', isCardSelected);
         }
       });
-    });
+    }
+  }
 
-    const manageGiveawaysBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-manage-giveaways-"]');
-    manageGiveawaysBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const uuid = btn.getAttribute('data-uuid');
-        if (uuid) void this.openManageGiveawaysModal(uuid);
-      });
-    });
-
-    const editBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-edit-account-"]');
-    editBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const uuid = btn.getAttribute('data-uuid');
-        const account = this.accounts.find((a) => a.uuid === uuid);
-        if (account) this.openEditAccountModal(account);
-      });
-    });
-
-    const deleteBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-delete-account-"]');
-    deleteBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const uuid = btn.getAttribute('data-uuid');
-        const account = this.accounts.find((a) => a.uuid === uuid);
-        if (account) this.openConfirmDeleteModal(account);
-      });
-    });
+  private async handleToggleStatus(account: BankAccountDetail): Promise<void> {
+    const nextState = !Boolean(account.is_active);
+    const res = await patchApi<BankAccountDetail>(`/api/bank-accounts/${account.uuid}/status`, { isActive: nextState });
+    if (res.success) {
+      showToast(res.message || `Cuenta ${nextState ? 'activada' : 'pausada'} con éxito.`, 'success');
+      account.is_active = nextState ? 1 : 0;
+      void this.loadAccounts();
+      void this.loadKpis();
+    } else {
+      showToast(res.error || 'Error al actualizar el estado de la cuenta.', 'danger');
+    }
   }
 
   private openCreateAccountModal(): void {
@@ -709,6 +903,7 @@ export class BankAccountsController implements ViewController {
         const res = await deleteApi(`/api/bank-accounts/${account.uuid}`);
         if (res.success) {
           showToast('Cuenta bancaria eliminada con éxito.', 'success');
+          this.selectedAccount = null;
           void this.loadAccounts();
           void this.loadKpis();
           return true;
@@ -741,3 +936,4 @@ export async function createBankAccountsView(): Promise<HTMLElement> {
   (container as any).__controller = controller;
   return container;
 }
+

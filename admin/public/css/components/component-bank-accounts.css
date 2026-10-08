@@ -1,222 +1,451 @@
 /* ============================================================================
-   Project Boreal Admin - Cuentas Bancarias y Métodos de Pago
+   Project Boreal Admin - Cuentas Bancarias y Pasarelas
    Archivo: admin/public/css/components/component-bank-accounts.css
    ============================================================================ */
 
-.bank-accounts-grid {
+.bank-accounts-canvas-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 18px;
   width: 100%;
   box-sizing: border-box;
 }
 
 @media (max-width: 640px) {
-  .bank-accounts-grid {
+  .bank-accounts-canvas-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
 }
 
-.bank-account-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg, 16px);
-  padding: 20px;
+.bank-card-item {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  box-sizing: border-box;
-  box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), border-color var(--transition-fast);
+  width: 100%;
   position: relative;
+  cursor: pointer;
+  box-sizing: border-box;
+  user-select: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  transition: transform 0.18s ease;
+}
+
+.bank-card-item:hover {
+  transform: translateY(-2px);
+}
+
+.bank-card-item:active {
+  transform: translateY(0px) scale(0.99);
+}
+
+.bank-card-item .canvas-card__thumbnail {
+  position: relative;
+  width: 100%;
+  height: 184px;
+  border-radius: 18px;
+  border: 1px solid var(--border-color);
+  outline: 2px solid transparent;
+  outline-offset: 0px;
   overflow: hidden;
-}
-
-.bank-account-card:hover {
-  border-color: var(--border-hover, var(--text-tertiary));
-  box-shadow: var(--shadow-md);
-}
-
-.bank-account-card--inactive {
-  opacity: 0.75;
-  background: var(--bg-surface-elevated, var(--bg-card));
-  border-style: dashed;
-}
-
-.bank-account-card__header {
+  transition: outline 0.2s ease, outline-offset 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   display: flex;
-  align-items: flex-start;
+  box-sizing: border-box;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.bank-card-item:hover .canvas-card__thumbnail {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 2px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+.bank-card-item.is-selected .canvas-card__thumbnail,
+.bank-card-item.is-selected:hover .canvas-card__thumbnail {
+  outline: 2px solid var(--accent-pink, #ec4899) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3.5px var(--accent-pink-subtle, rgba(236, 72, 153, 0.2)), 0 12px 30px rgba(236, 72, 153, 0.22) !important;
+}
+
+html[data-theme="dark"] .bank-card-item.is-selected .canvas-card__thumbnail,
+html.dark-theme .bank-card-item.is-selected .canvas-card__thumbnail,
+html[data-theme="dark"] .bank-card-item.is-selected:hover .canvas-card__thumbnail,
+html.dark-theme .bank-card-item.is-selected:hover .canvas-card__thumbnail {
+  outline-color: var(--accent-pink, #f472b6) !important;
+  box-shadow: 0 0 0 3.5px var(--accent-pink-subtle, rgba(244, 114, 182, 0.25)), 0 12px 30px rgba(244, 114, 182, 0.25) !important;
+}
+
+.bank-card-item--inactive .canvas-card__thumbnail {
+  filter: grayscale(0.45) opacity(0.85);
+}
+
+.bank-card-item--inactive .canvas-card__thumbnail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ============================================================================
+   Tarjeta de Débito Realista (Visual Container)
+   ============================================================================ */
+
+.bank-debit-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
+  padding: 16px 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  color: #ffffff;
+  z-index: 1;
 }
 
-.bank-account-card__brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.bank-debit-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.22) 0%, transparent 55%),
+              linear-gradient(125deg, rgba(255, 255, 255, 0.12) 0%, transparent 40%, rgba(0, 0, 0, 0.35) 100%);
+  pointer-events: none;
+  z-index: 1;
 }
 
-.bank-account-card__icon-box {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  background: var(--bg-surface-elevated, var(--bg-surface));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border-color);
-  flex-shrink: 0;
+.bank-debit-card__sheen {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent 45%,
+    rgba(255, 255, 255, 0.08) 48%,
+    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.08) 52%,
+    transparent 55%
+  );
+  pointer-events: none;
+  z-index: 2;
+  transform: rotate(15deg);
 }
 
-.bank-account-card__icon-box .component-icon {
-  width: 22px;
-  height: 22px;
-  color: var(--text-primary);
+/* Skins bancarios temáticos realistas */
+.bank-skin--bbva {
+  background: linear-gradient(135deg, #071c36 0%, #004481 55%, #1464a5 100%);
 }
 
-.bank-account-card__title-box {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.bank-skin--santander {
+  background: linear-gradient(135deg, #380707 0%, #c40000 60%, #850000 100%);
 }
 
-.bank-account-card__bank-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  line-height: 1.2;
+.bank-skin--citibanamex {
+  background: linear-gradient(135deg, #001738 0%, #002f6c 50%, #00569e 100%);
 }
 
-.bank-account-card__type-pill {
-  display: inline-flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 6px;
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color);
-  width: fit-content;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+.bank-skin--banorte {
+  background: linear-gradient(135deg, #18191b 0%, #2b2c30 55%, #a30018 100%);
 }
 
-.bank-account-card__status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-right: 5px;
+.bank-skin--mercadopago {
+  background: linear-gradient(135deg, #00203a 0%, #0084c7 60%, #00a4eb 100%);
 }
 
-.bank-account-card__status-dot--active {
-  background: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+.bank-skin--nu {
+  background: linear-gradient(135deg, #1c052c 0%, #680bb8 55%, #8a0ad8 100%);
 }
 
-.bank-account-card__status-dot--inactive {
-  background: #94a3b8;
+.bank-skin--azteca {
+  background: linear-gradient(135deg, #032b17 0%, #0b5e30 60%, #158042 100%);
 }
 
-.bank-account-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
+.bank-skin--heybanco {
+  background: linear-gradient(135deg, #0c0d0e 0%, #18191c 65%, #24252a 100%);
 }
 
-.bank-account-card__holder-box {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.bank-skin--spin {
+  background: linear-gradient(135deg, #300902 0%, #c42612 60%, #e05300 100%);
 }
 
-.bank-account-card__label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-tertiary);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+.bank-skin--stp {
+  background: linear-gradient(135deg, #171c23 0%, #29323d 50%, #3f4c5e 100%);
 }
 
-.bank-account-card__holder-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-primary);
-  word-break: break-word;
+.bank-skin--generic {
+  background: linear-gradient(135deg, #11141a 0%, #1c222b 50%, #29313e 100%);
 }
 
-.bank-account-card__code-row {
+/* Encabezado de la tarjeta */
+.bank-debit-card__top {
+  position: relative;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 8px 12px;
+  width: 100%;
+}
+
+.bank-debit-card__brand {
+  display: flex;
+  align-items: center;
   gap: 8px;
 }
 
-.bank-account-card__code-info {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  overflow: hidden;
+.bank-debit-card__bank-icon {
+  width: 20px;
+  height: 20px;
+  color: #ffffff;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
-.bank-account-card__code-val {
-  font-family: var(--sl-font-mono, monospace);
+.bank-debit-card__bank-title {
   font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: 0.6px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 170px;
 }
 
-.bank-account-card__coverage-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 4px;
-  border-top: 1px dashed var(--border-color);
-}
-
-.bank-account-card__coverage-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.bank-account-card__coverage-badge .component-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.bank-account-card__footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border-color);
-}
-
-.bank-account-card__actions {
+.bank-debit-card__top-right {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-/* Modal de Asignación por Sorteos */
+.bank-debit-card__nfc-icon {
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.75);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+}
+
+/* Fila central: Chip EMV dorado y sellos */
+.bank-debit-card__middle {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.bank-card-chip {
+  width: 38px;
+  height: 28px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #eed07a 0%, #b8860b 45%, #ffd700 85%, #b37400 100%);
+  border: 1px solid rgba(138, 92, 0, 0.5);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 2px 6px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bank-card-chip::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 1px;
+  background: rgba(80, 50, 0, 0.5);
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.bank-card-chip::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 1px solid rgba(80, 50, 0, 0.45);
+  border-radius: 3px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.bank-debit-card__network-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Numeración de la tarjeta */
+.bank-debit-card__number-row {
+  position: relative;
+  z-index: 3;
+}
+
+.bank-debit-card__number {
+  font-family: var(--font-mono, "SF Mono", Consolas, monospace);
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 2.2px;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+/* Pie de la tarjeta */
+.bank-debit-card__bottom {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+}
+
+.bank-debit-card__holder-box {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 1px;
+}
+
+.bank-debit-card__holder-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.bank-debit-card__holder-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bank-debit-card__status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.bank-debit-card__status-tag--active {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.bank-debit-card__status-tag--inactive {
+  color: #cbd5e1;
+  border-color: rgba(203, 213, 225, 0.3);
+}
+
+/* ============================================================================
+   Información y Badges debajo de la Tarjeta (.canvas-card__info)
+   ============================================================================ */
+
+.bank-card-item .canvas-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 4px 0 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bank-card-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.bank-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--bg-surface-elevated, var(--bg-surface));
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  line-height: 1;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
+.bank-badge .component-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.bank-badge--active {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.bank-badge--inactive {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
+.bank-badge--clabe {
+  font-family: var(--font-mono, "SF Mono", Consolas, monospace);
+  letter-spacing: 0.3px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.bank-badge--coverage {
+  color: var(--text-secondary);
+}
+
+/* ============================================================================
+   Modal de Asignación por Sorteos
+   ============================================================================ */
+
 .giveaways-assignment-list {
   display: flex;
   flex-direction: column;
