@@ -1,7 +1,15 @@
+export interface PaginationMeta {
+  currentPage: number;
+  limit: number;
+  totalCount: number;
+  totalPages: number;
+}
+
 export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   message?: string;
+  pagination?: PaginationMeta;
   success: boolean;
 }
 
@@ -29,7 +37,7 @@ export async function getApi<T>(endpoint: string): Promise<ApiResponse<T>> {
         success: false,
       };
     }
-    return { data: json.data, success: true };
+    return { data: json.data, pagination: json.pagination, success: true };
   } catch (_) {
     return { error: 'Error de red o conexión al servidor.', success: false };
   }

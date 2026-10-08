@@ -1,6 +1,6 @@
 import { navigate } from '../app-router.js';
 import { openModal } from '../components/modal.component.js';
-import { deleteApi, getApi, patchApi, postApi, putApi } from '../services/api.service.js';
+import { deleteApi, getApi, patchApi, postApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -251,7 +251,7 @@ export class GiveawaysController implements ViewController {
       (e) => {
         e.preventDefault();
         if (this.selectedGiveaway) {
-          this.openEditModal(this.selectedGiveaway);
+          navigate(`/giveaways/${encodeURIComponent(this.selectedGiveaway.uuid)}/edit`);
         }
       },
       { signal }
@@ -629,7 +629,7 @@ export class GiveawaysController implements ViewController {
 
       card.addEventListener('dblclick', (e) => {
         e.preventDefault();
-        this.openEditModal(giveaway);
+        navigate(`/giveaways/${encodeURIComponent(uuid)}/edit`);
       });
     });
   }
@@ -724,188 +724,6 @@ export class GiveawaysController implements ViewController {
         }
       });
     }
-  }
-
-
-  private openEditModal(g: AdminGiveawayItem): void {
-    const isCompleted = g.status === 'completed';
-    const hasSales = g.paid_tickets > 0;
-
-    const assignedBankIds = new Set(g.bank_accounts.map((b) => b.id));
-    const bankCheckboxes = this.availableBankAccounts
-      .map(
-        (b) => `
-        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-primary); cursor: pointer; padding: 6px 0;">
-          <input type="checkbox" name="bank_account" value="${b.id}" ${assignedBankIds.has(b.id) ? 'checked' : ''} ${isCompleted ? 'disabled' : ''} />
-          <span><strong>${escapeHtml(b.bank_name)}</strong> • ${escapeHtml(b.account_holder)} (${escapeHtml(b.account_type.toUpperCase())})</span>
-        </label>
-      `
-      )
-      .join('');
-
-    const startIso = g.start_date ? new Date(g.start_date).toISOString().slice(0, 16) : '';
-    const endIso = g.end_date ? new Date(g.end_date).toISOString().slice(0, 16) : '';
-
-    const formHtml = `
-      <form class="giveaway-modal-form" data-ref="form-edit-giveaway" style="display: flex; flex-direction: column; gap: 16px;">
-        
-        ${hasSales ? `
-          <div style="padding: 10px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px; font-size: 12.5px; color: var(--text-primary);">
-            <strong>Aviso de integridad:</strong> Este sorteo cuenta con <strong>${g.paid_tickets} boletos vendidos</strong>. El precio del boleto y el total de boletos están bloqueados para proteger los derechos de los participantes.
-          </div>
-        ` : ''}
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-          <label class="field" data-ref="field-title" style="grid-column: span 2;">
-            <input class="field__input" data-ref="input-title" type="text" placeholder=" " value="${escapeHtml(g.title)}" ${isCompleted ? 'disabled' : ''} required />
-            <span class="field__label">Título del Sorteo *</span>
-          </label>
-
-          <label class="field" data-ref="field-slug">
-            <input class="field__input" data-ref="input-slug" type="text" placeholder=" " value="${escapeHtml(g.slug)}" ${hasSales || isCompleted ? 'disabled' : ''} />
-            <span class="field__label">Slug / URL amigable</span>
-          </label>
-
-          <label class="field" data-ref="field-type">
-            <input class="field__input" type="text" value="${g.type === 'daily' ? 'Sorteo Diario 50/50' : 'Sorteo Estándar'}" disabled />
-            <span class="field__label">Tipo de Sorteo (No modificable)</span>
-          </label>
-        </div>
-
-        <label class="field field--textarea" data-ref="field-description">
-          <textarea class="field__textarea" data-ref="textarea-description" placeholder=" " rows="3" ${isCompleted ? 'disabled' : ''}>${escapeHtml(g.description || '')}</textarea>
-          <span class="field__label">Descripción del Sorteo</span>
-        </label>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-          <label class="field" data-ref="field-ticket-price">
-            <input class="field__input" data-ref="input-ticket-price" type="number" step="0.5" placeholder=" " value="${g.ticket_price}" ${hasSales || isCompleted ? 'disabled' : ''} required />
-            <span class="field__label">Precio por Boleto (MXN) ${hasSales ? '(Bloqueado)' : '*'}</span>
-          </label>
-
-          <label class="field" data-ref="field-total-tickets">
-            <input class="field__input" data-ref="input-total-tickets" type="number" step="1" placeholder=" " value="${g.total_tickets}" ${hasSales || isCompleted ? 'disabled' : ''} required />
-            <span class="field__label">Total de Boletos ${hasSales ? '(Bloqueado)' : '*'}</span>
-          </label>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-          <label class="field" data-ref="field-start-date">
-            <input class="field__input" data-ref="input-start-date" type="datetime-local" value="${startIso}" ${isCompleted ? 'disabled' : ''} required />
-            <span class="field__label">Fecha de Inicio *</span>
-          </label>
-
-          <label class="field" data-ref="field-end-date">
-            <input class="field__input" data-ref="input-end-date" type="datetime-local" value="${endIso}" ${isCompleted ? 'disabled' : ''} required />
-            <span class="field__label">Fecha de Cierre *</span>
-          </label>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-          <label class="field" data-ref="field-min-threshold">
-            <input class="field__input" data-ref="input-min-threshold" type="number" min="0" max="100" placeholder=" " value="${g.min_threshold_pct}" ${isCompleted ? 'disabled' : ''} />
-            <span class="field__label">Umbral Mínimo (%)</span>
-          </label>
-
-          <label class="field" data-ref="field-countdown-hours">
-            <input class="field__input" data-ref="input-countdown-hours" type="number" min="1" placeholder=" " value="${g.countdown_hours}" ${isCompleted ? 'disabled' : ''} />
-            <span class="field__label">Horas Countdown tras Umbral</span>
-          </label>
-        </div>
-
-        <label class="field" data-ref="field-image-url">
-          <input class="field__input" data-ref="input-image-url" type="text" placeholder=" " value="${escapeHtml(g.primary_image_url)}" ${isCompleted ? 'disabled' : ''} required />
-          <span class="field__label">URL Imagen Principal *</span>
-        </label>
-
-        <label class="field" data-ref="field-package-options">
-          <input class="field__input" data-ref="input-package-options" type="text" placeholder=" " value="${g.package_options ? g.package_options.join(', ') : ''}" ${isCompleted ? 'disabled' : ''} />
-          <span class="field__label">Opciones de Paquetes Rápidos</span>
-        </label>
-
-        <div style="background: var(--bg-surface); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color);">
-          <span style="font-size: 12px; font-weight: 700; color: var(--text-primary); display: block; margin-bottom: 8px;">Cuentas Bancarias Vinculadas</span>
-          ${bankCheckboxes}
-        </div>
-
-      </form>
-    `;
-
-    const modal = openModal({
-      bodyHtml: formHtml,
-      confirmText: isCompleted ? 'Cerrar' : 'Guardar Cambios',
-      description: isCompleted ? 'Detalle en solo lectura del sorteo concluido.' : 'Modifica los parámetros autorizados del sorteo.',
-      onConfirm: async () => {
-        if (isCompleted) return true;
-
-        const form = modal.body.querySelector<HTMLFormElement>('[data-ref="form-edit-giveaway"]');
-        if (!form) return false;
-
-        const titleInput = form.querySelector<HTMLInputElement>('[data-ref="input-title"]');
-        const slugInput = form.querySelector<HTMLInputElement>('[data-ref="input-slug"]');
-        const descTextarea = form.querySelector<HTMLTextAreaElement>('[data-ref="textarea-description"]');
-        const priceInput = form.querySelector<HTMLInputElement>('[data-ref="input-ticket-price"]');
-        const totalInput = form.querySelector<HTMLInputElement>('[data-ref="input-total-tickets"]');
-        const startInput = form.querySelector<HTMLInputElement>('[data-ref="input-start-date"]');
-        const endInput = form.querySelector<HTMLInputElement>('[data-ref="input-end-date"]');
-        const thresholdInput = form.querySelector<HTMLInputElement>('[data-ref="input-min-threshold"]');
-        const countdownInput = form.querySelector<HTMLInputElement>('[data-ref="input-countdown-hours"]');
-        const imgInput = form.querySelector<HTMLInputElement>('[data-ref="input-image-url"]');
-        const packagesInput = form.querySelector<HTMLInputElement>('[data-ref="input-package-options"]');
-
-        const title = titleInput?.value.trim();
-        const primaryImage = imgInput?.value.trim();
-        const endDate = endInput?.value;
-
-        if (!title || !primaryImage || !endDate) {
-          modal.setError('Título, imagen principal y fecha de cierre son obligatorios.');
-          return false;
-        }
-
-        const selectedBanks: number[] = [];
-        form.querySelectorAll<HTMLInputElement>('input[name="bank_account"]:checked').forEach((cb) => {
-          selectedBanks.push(Number(cb.value));
-        });
-
-        const rawPackages = packagesInput?.value || '';
-        const parsedPackages = rawPackages
-          .split(',')
-          .map((s) => parseInt(s.trim(), 10))
-          .filter((n) => !isNaN(n) && n > 0);
-
-        const payload: any = {
-          bank_account_ids: selectedBanks,
-          countdown_hours: Number(countdownInput?.value || 72),
-          description: descTextarea?.value.trim() || undefined,
-          end_date: new Date(endDate).toISOString(),
-          image_urls: [primaryImage],
-          min_threshold_pct: Number(thresholdInput?.value || 0),
-          package_options: parsedPackages.length > 0 ? parsedPackages : undefined,
-          primary_image_url: primaryImage,
-          start_date: startInput?.value ? new Date(startInput.value).toISOString() : undefined,
-          title,
-        };
-
-        if (!hasSales) {
-          payload.slug = slugInput?.value.trim() || undefined;
-          payload.ticket_price = Number(priceInput?.value);
-          payload.total_tickets = Number(totalInput?.value);
-        }
-
-        const res = await putApi<AdminGiveawayItem>(`/api/giveaways/${g.uuid}`, payload);
-        if (!res.success) {
-          modal.setError(res.error || 'Error al actualizar el sorteo.');
-          return false;
-        }
-
-        showToast('Sorteo actualizado correctamente.', 'success');
-        void this.loadData();
-        return true;
-      },
-      showCancel: !isCompleted,
-      size: 'md',
-      title: isCompleted ? 'Detalle de Sorteo Concluido' : 'Editar Sorteo',
-    });
   }
 
   private openDailyConfigModal(): void {

@@ -1,0 +1,243 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="admin-payments-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="payments-scrollable">
+    <div class="view-header" data-ref="payments-floating-top">
+      <div class="view-header__left" data-ref="payments-floating-left">
+        <h1 class="view-header__title" data-ref="payments-title">Revisión de Pagos y Comprobantes</h1>
+      </div>
+
+      <div class="view-header__right" data-ref="payments-floating-right">
+        <div class="view-header__actions" data-ref="payments-default-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar pagos" aria-label="Buscar pagos">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </button>
+
+          <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtros" aria-label="Filtros">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="filter-dropdown-menu">
+                <div class="avatar-menu__section-header">
+                  <span class="drawer-section__title">Estado del Pago</span>
+                </div>
+                <div class="menu-panel__list" data-ref="filter-statuses-list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-filter-status-all" data-status-filter="all">
+                    <span class="menu-item__text">Todos</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-review" data-status-filter="in_review">
+                    <span class="menu-item__text">En Revisión</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-manual" data-status-filter="manual_review">
+                    <span class="menu-item__text">Revisión Manual OCR</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-pending" data-status-filter="pending_payment">
+                    <span class="menu-item__text">Pendientes de Pago</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-completed" data-status-filter="completed">
+                    <span class="menu-item__text">Liquidadas / Pagadas</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-cancelled" data-status-filter="cancelled">
+                    <span class="menu-item__text">Canceladas / Expiradas</span>
+                  </button>
+                </div>
+
+                <div class="menu-divider"></div>
+
+                <div class="avatar-menu__section-header">
+                  <span class="drawer-section__title">Sorteo</span>
+                </div>
+                <div class="menu-panel__list" data-ref="filter-giveaways-dropdown-list" style="max-height: 180px; overflow-y: auto;">
+                  <button type="button" class="menu-item is-active" data-giveaway-filter="all">
+                    <span class="menu-item__text">Todos los sorteos</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-payments" data-tooltip="Actualizar" aria-label="Actualizar">
+            <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+          </button>
+        </div>
+
+        <div class="view-header__actions" data-ref="payments-selected-actions" style="display: none; align-items: center; gap: 8px;">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-inspect" data-tooltip="Inspeccionar Comprobante" aria-label="Inspeccionar Comprobante">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-approve" data-tooltip="Aprobar y Liquidar Pago" aria-label="Aprobar y Liquidar Pago" style="color: #10b981;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-reject" data-tooltip="Rechazar Comprobante" aria-label="Rechazar Comprobante" style="color: #ef4444;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-copy-spei" data-tooltip="Copiar Clave SPEI" aria-label="Copiar Clave SPEI">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="input-search-payments" placeholder="Buscar por cliente, folio, teléfono, clave SPEI..." type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-body" data-ref="payments-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+      <!-- 4 Metric KPI Cards Grid (Spriteboard Admin Style - Monochromatic) -->
+      <div class="dashboard-stats-grid" data-ref="payments-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+        <!-- Card 1: En Revisión -->
+        <div class="dashboard-stat-card" data-ref="card-stat-review" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">En Revisión</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-review-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+              <span data-ref="kpi-review-amount" style="font-size: 12px; color: var(--text-secondary);">$0.00 MXN</span>
+              <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Comprobantes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Pendientes de Pago -->
+        <div class="dashboard-stat-card" data-ref="card-stat-pending" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pendientes</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-pending-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+              <span data-ref="kpi-pending-amount" style="font-size: 12px; color: var(--text-secondary);">$0.00 MXN</span>
+              <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Apartados</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Pagos Liquidados -->
+        <div class="dashboard-stat-card" data-ref="card-stat-completed" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pagos Liquidados</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-completed-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+              <span data-ref="kpi-completed-amount" style="font-size: 12px; color: var(--text-secondary);">$0.00 MXN</span>
+              <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Confirmados</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4: Canceladas / Expiradas -->
+        <div class="dashboard-stat-card" data-ref="card-stat-cancelled" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Canceladas / Expiradas</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-cancelled-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+              <span style="font-size: 12px; color: var(--text-secondary);">Boletos liberados</span>
+              <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Disponibles</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Filter Pills Bar -->
+      <div class="giveaways-toolbar" data-ref="payments-toolbar" style="margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div class="giveaways-toolbar__left" data-ref="payments-toolbar-left">
+          <div class="filter-pills-bar" data-ref="status-pills-bar">
+            <button type="button" class="filter-pill is-active" data-ref="filter-status-all" data-status="all">
+              <span>Todos</span>
+            </button>
+            <button type="button" class="filter-pill" data-ref="filter-status-review" data-status="in_review">
+              <span class="filter-pill__dot" style="background: #3b82f6;"></span>
+              <span>En Revisión</span>
+              <span class="filter-pill__badge is-hidden" data-ref="badge-count-review">0</span>
+            </button>
+            <button type="button" class="filter-pill" data-ref="filter-status-manual" data-status="manual_review">
+              <span class="filter-pill__dot" style="background: #8b5cf6;"></span>
+              <span>Revisión Manual OCR</span>
+            </button>
+            <button type="button" class="filter-pill" data-ref="filter-status-pending" data-status="pending_payment">
+              <span class="filter-pill__dot" style="background: #f59e0b;"></span>
+              <span>Pendientes</span>
+            </button>
+            <button type="button" class="filter-pill" data-ref="filter-status-completed" data-status="completed">
+              <span class="filter-pill__dot" style="background: #10b981;"></span>
+              <span>Liquidadas</span>
+            </button>
+            <button type="button" class="filter-pill" data-ref="filter-status-cancelled" data-status="cancelled">
+              <span class="filter-pill__dot" style="background: #ef4444;"></span>
+              <span>Canceladas</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="giveaways-toolbar__right" data-ref="payments-toolbar-right">
+          <label class="field giveaway-filter-select-label" data-ref="field-giveaway-filter">
+            <select class="field__input giveaway-filter-select" data-ref="select-giveaway-filter">
+              <option value="all">Todos los sorteos</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <!-- Orders List Container -->
+      <div class="payments-content-area" data-ref="payments-content-area">
+        <div class="payments-list" data-ref="payments-list-container"></div>
+
+        <div class="giveaways-empty-state" data-ref="payments-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+            <svg class="component-icon" style="width: 28px; height: 28px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          </div>
+          <h3 style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text-primary);">Sin órdenes ni comprobantes</h3>
+          <p style="margin: 0 0 20px; font-size: 13.5px; color: var(--text-secondary); max-width: 400px; margin-left: auto; margin-right: auto;">No se encontraron órdenes registradas con los filtros seleccionados.</p>
+          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-filters">Restablecer Filtros</button>
+        </div>
+
+        <div class="pagination-bar" data-ref="payments-pagination-bar" style="margin-top: 14px;">
+          <span class="pagination-bar__info" data-ref="pagination-info">Mostrando 0 de 0 órdenes</span>
+          <div class="pagination-bar__actions" data-ref="pagination-actions">
+            <button type="button" class="component-button component-button--secondary component-button--h32 component-button--icon-only" data-ref="btn-page-prev" data-tooltip="Página anterior" aria-label="Página anterior">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+            </button>
+            <span class="pagination-bar__page-number" data-ref="text-current-page">1 / 1</span>
+            <button type="button" class="component-button component-button--secondary component-button--h32 component-button--icon-only" data-ref="btn-page-next" data-tooltip="Página siguiente" aria-label="Página siguiente">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

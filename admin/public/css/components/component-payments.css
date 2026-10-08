@@ -1,0 +1,580 @@
+/* ==========================================================================
+   ProjectBoreal Admin - Módulo de Revisión de Pagos y Comprobantes
+   ========================================================================== */
+
+.payments-content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.payments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Tarjeta de Pago y Comprobante (Payment Card)
+   -------------------------------------------------------------------------- */
+
+.payment-card {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 18px;
+  background: var(--bg-card, var(--bg-surface));
+  border: 1px solid var(--border-color, var(--border-subtle));
+  border-radius: var(--radius-lg, 16px);
+  padding: 18px 20px;
+  box-sizing: border-box;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--sl-transition-fast, 0.2s ease);
+  cursor: pointer;
+  user-select: none;
+}
+
+.payment-card:hover {
+  border-color: var(--text-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.payment-card.is-selected,
+.payment-card.is-selected:hover {
+  outline: 2px solid var(--accent-pink, #4f46e5) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3.5px var(--accent-pink-subtle, rgba(79, 70, 229, 0.15)), 0 8px 24px rgba(79, 70, 229, 0.18) !important;
+}
+
+html[data-theme="dark"] .payment-card.is-selected,
+html.dark-theme .payment-card.is-selected,
+html[data-theme="dark"] .payment-card.is-selected:hover,
+html.dark-theme .payment-card.is-selected:hover {
+  outline-color: var(--accent-pink, #818cf8) !important;
+  box-shadow: 0 0 0 3.5px var(--accent-pink-subtle, rgba(129, 140, 248, 0.2)), 0 8px 24px rgba(129, 140, 248, 0.22) !important;
+}
+
+@media (max-width: 640px) {
+  .payment-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* Miniatura del comprobante */
+.payment-card__thumb {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-height: 140px;
+  border-radius: var(--sl-border-radius-medium);
+  overflow: hidden;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+}
+
+.payment-card__thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.payment-card__thumb-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+}
+
+.payment-card__thumb-fallback .component-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.payment-card__thumb-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity var(--sl-transition-fast);
+}
+
+.payment-card__thumb:hover .payment-card__thumb-overlay {
+  opacity: 1;
+}
+
+.payment-card__thumb-overlay .component-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.payment-card__thumb--none {
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+}
+
+.payment-card__thumb-icon {
+  width: 32px;
+  height: 32px;
+}
+
+/* Cuerpo principal de la tarjeta */
+.payment-card__main {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.payment-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.payment-card__title-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.payment-card__folio {
+  font-family: var(--sl-font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  letter-spacing: 0.5px;
+}
+
+.payment-card__customer {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.payment-card__customer-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.payment-card__phone {
+  font-family: var(--sl-font-mono, monospace);
+}
+
+.payment-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.payment-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.payment-card__giveaway-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.payment-card__giveaway-name .component-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
+}
+
+.payment-card__tickets-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.payment-card__tickets-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+}
+
+.payment-card__chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.payment-card__chips .giveaway-ticket--chip {
+  padding: 2px 7px;
+  font-size: 11.5px;
+  font-family: var(--sl-font-mono, monospace);
+  background: var(--bg-surface-raised, var(--bg-canvas));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--sl-border-radius-pill);
+  color: var(--text-primary);
+}
+
+.payment-card__tracking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-canvas);
+  padding: 3px 8px;
+  border-radius: var(--sl-border-radius-small);
+  border: 1px solid var(--border-subtle);
+  width: fit-content;
+}
+
+.payment-card__tracking-label {
+  color: var(--text-tertiary);
+}
+
+.payment-card__tracking-val {
+  font-family: var(--sl-font-mono, monospace);
+  color: var(--text-primary);
+}
+
+.payment-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.payment-card__amount-box {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.payment-card__amount-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.payment-card__amount-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.payment-card__date {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+}
+
+.payment-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   Barra de Filtros por Estado (Filter Pills)
+   -------------------------------------------------------------------------- */
+
+.filter-pills-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--sl-border-radius-pill);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--sl-transition-fast);
+}
+
+.filter-pill:hover {
+  background: var(--bg-surface-raised, rgba(0, 0, 0, 0.04));
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+.filter-pill.is-active {
+  background: var(--text-primary);
+  color: var(--bg-canvas);
+  border-color: var(--text-primary);
+  font-weight: 600;
+}
+
+.filter-pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.filter-pill__badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.giveaway-filter-select-label {
+  margin: 0;
+  min-width: 180px;
+}
+
+.giveaway-filter-select {
+  height: 36px;
+  font-size: 13px;
+}
+
+/* --------------------------------------------------------------------------
+   Modal de Inspección Detallada de Pago (Inspect Modal)
+   -------------------------------------------------------------------------- */
+
+.inspect-modal-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 24px;
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .inspect-modal-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+.inspect-receipt-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--sl-border-radius-medium);
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.inspect-receipt-pane--empty {
+  min-height: 280px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.inspect-receipt-viewer {
+  width: 100%;
+  height: 380px;
+  background: #0d1117;
+  border-radius: var(--sl-border-radius-small);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.inspect-receipt-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+  user-select: none;
+}
+
+.inspect-receipt-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.inspect-details-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  max-height: 480px;
+}
+
+.inspect-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--sl-border-radius-medium);
+  padding: 14px;
+}
+
+.inspect-section__title {
+  margin: 0 0 4px 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.inspect-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.inspect-info-label {
+  color: var(--text-tertiary);
+}
+
+.inspect-info-val {
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.inspect-tickets-box {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.inspect-tickets-box .giveaway-ticket--chip {
+  padding: 3px 8px;
+  font-size: 12px;
+  font-family: var(--sl-font-mono, monospace);
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--sl-border-radius-pill);
+}
+
+.inspect-tracking-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Diagnóstico OCR y Banxico */
+.inspect-diagnostics-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--sl-border-radius-medium);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inspect-diagnostics-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.inspect-diagnostics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.inspect-diagnostics-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.inspect-diagnostics-label {
+  color: var(--text-tertiary);
+}
+
+.inspect-errors-list {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--sl-border-radius-small);
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.inspect-errors-list ul {
+  margin: 4px 0 0 16px;
+  padding: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Paginación
+   -------------------------------------------------------------------------- */
+
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--sl-border-radius-large);
+  margin-top: 8px;
+}
+
+.pagination-bar__info {
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+
+.pagination-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pagination-bar__page-number {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}

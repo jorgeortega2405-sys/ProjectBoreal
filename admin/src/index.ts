@@ -5,11 +5,17 @@ import { requestLogger } from './middlewares/request-logger.middleware.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import giveawaysRoutes from './routes/giveaways.routes.js';
 import healthRoutes from './routes/health.routes.js';
+import ordersRoutes from './routes/orders.routes.js';
 import { logger } from './services/logger.service.js';
 import express, { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ADMIN_ROOT_DIR = path.resolve(__dirname, '..');
 
 process.on('uncaughtException', (err: Error) => {
   logger.app.error('Excepción no controlada capturada en proceso Node.js Admin', err);
@@ -20,7 +26,7 @@ process.on('unhandledRejection', (reason: unknown) => {
 });
 
 async function setupClient(app: express.Express, server: http.Server): Promise<void> {
-  const adminRoot = process.cwd();
+  const adminRoot = ADMIN_ROOT_DIR;
 
   if (config.nodeEnv !== 'production') {
     const { createServer } = await import('vite');
@@ -47,6 +53,13 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
     app.use(vite.middlewares);
     app.use('*', async (req: Request, res: Response, next: NextFunction) => {
       const url = req.originalUrl;
+      if (url.startsWith('/api') || req.path.startsWith('/api')) {
+        res.status(404).json({
+          error: 'Endpoint de API no encontrado.',
+          success: false,
+        });
+        return;
+      }
       try {
         const template = fs.readFileSync(path.resolve(adminRoot, 'index.html'), 'utf-8');
         const html = await vite.transformIndexHtml(url, template);
@@ -70,7 +83,15 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
         },
       })
     );
-    app.get('*', (_req: Request, res: Response) => {
+    app.get('*', (req: Request, res: Response) => {
+      const url = req.originalUrl;
+      if (url.startsWith('/api') || req.path.startsWith('/api')) {
+        res.status(404).json({
+          error: 'Endpoint de API no encontrado.',
+          success: false,
+        });
+        return;
+      }
       res.sendFile(path.join(clientDist, 'index.html'));
     });
   }
@@ -131,9 +152,10 @@ function createExpressApp(): express.Express {
   app.use('/api/health', healthRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/giveaways', giveawaysRoutes);
+  app.use('/api/orders', ordersRoutes);
 
-  const adminPublicDir = path.join(process.cwd(), 'public');
-  const rootPublicDir = path.resolve(process.cwd(), '..', 'public');
+  const adminPublicDir = path.resolve(ADMIN_ROOT_DIR, 'public');
+  const rootPublicDir = path.resolve(ADMIN_ROOT_DIR, '..', 'public');
 
   app.use('/images', express.static(path.join(adminPublicDir, 'images')));
   app.use('/images', express.static(path.join(rootPublicDir, 'images')));

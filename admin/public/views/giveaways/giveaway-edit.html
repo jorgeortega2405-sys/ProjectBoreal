@@ -1,0 +1,221 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="giveaway-edit-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="edit-scrollable">
+    <div class="view-header" data-ref="edit-header">
+      <div class="view-header__left" data-ref="edit-header-left">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-back" data-tooltip="Volver a Sorteos" aria-label="Volver a Sorteos">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+        </button>
+        <h1 class="view-header__title" data-ref="edit-title">Editar Sorteo</h1>
+      </div>
+
+      <div class="view-header__right" data-ref="edit-header-right">
+        <div class="view-header__actions" data-ref="edit-header-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-header-cancel" data-tooltip="Cancelar" aria-label="Cancelar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-header-save" data-tooltip="Guardar Cambios" aria-label="Guardar Cambios">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <form class="giveaway-create-layout" data-ref="form-giveaway-edit" novalidate>
+      <div class="giveaway-create__form-panel" data-ref="edit-form-panel">
+        
+        <div class="banner banner--warning is-hidden" data-ref="banner-sales-warning" style="padding: 12px 16px; border-radius: var(--radius-md, 12px); border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.08); font-size: 13px; color: var(--text-primary); line-height: 1.45;">
+          <strong>Aviso de integridad:</strong> Este sorteo cuenta con <strong data-ref="text-paid-count">0 boletos vendidos</strong>. El precio del boleto, total de emisión y slug están bloqueados para proteger los derechos de los participantes.
+        </div>
+
+        <div class="banner banner--info is-hidden" data-ref="banner-completed-info" style="padding: 12px 16px; border-radius: var(--radius-md, 12px); border: 1px solid rgba(59, 130, 246, 0.35); background: rgba(59, 130, 246, 0.08); font-size: 13px; color: var(--text-primary); line-height: 1.45;">
+          <strong>Sorteo Concluido:</strong> Este sorteo ya ha sido ejecutado y se encuentra en modo de solo lectura.
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-basic-info">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Información Principal</h2>
+            <p class="giveaway-create__section-desc">Detalles visibles del sorteo para los usuarios y enlaces públicos.</p>
+          </div>
+
+          <label class="field" data-ref="field-title">
+            <input class="field__input" data-ref="input-title" type="text" placeholder=" " required />
+            <span class="field__label">Título del Sorteo *</span>
+          </label>
+
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-slug">
+              <input class="field__input" data-ref="input-slug" type="text" placeholder=" " />
+              <span class="field__label">Slug / Enlace amigable</span>
+            </label>
+
+            <label class="field" data-ref="field-type-readonly">
+              <input class="field__input" data-ref="input-type-display" type="text" placeholder=" " readonly disabled style="opacity: 0.85; cursor: not-allowed;" />
+              <span class="field__label">Modalidad (No editable)</span>
+            </label>
+          </div>
+
+          <label class="field field--textarea" data-ref="field-description">
+            <textarea class="field__input" data-ref="textarea-description" placeholder=" " rows="3" style="min-height: 80px; height: 95px; resize: vertical;"></textarea>
+            <span class="field__label">Descripción o bases del premio</span>
+          </label>
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-pricing">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Precios y Emisión de Boletos</h2>
+            <p class="giveaway-create__section-desc">Costo por boleto y total de la emisión disponible.</p>
+          </div>
+
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-ticket-price">
+              <input class="field__input" data-ref="input-ticket-price" type="number" step="0.5" min="1" placeholder=" " required />
+              <span class="field__label" data-ref="label-ticket-price">Precio por Boleto (MXN) *</span>
+            </label>
+
+            <label class="field" data-ref="field-total-tickets">
+              <input class="field__input" data-ref="input-total-tickets" type="number" step="1" min="10" placeholder=" " required />
+              <span class="field__label" data-ref="label-total-tickets">Total de Boletos *</span>
+            </label>
+          </div>
+
+          <label class="field" data-ref="field-package-options">
+            <input class="field__input" data-ref="input-package-options" type="text" placeholder=" " />
+            <span class="field__label">Opciones de paquetes rápidos (separados por coma)</span>
+          </label>
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-dates">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Programación y Fechas</h2>
+            <p class="giveaway-create__section-desc">Vigencia del sorteo y parámetros de activación por umbral.</p>
+          </div>
+
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-start-date">
+              <input class="field__input" data-ref="input-start-date" type="datetime-local" placeholder=" " required />
+              <span class="field__label">Fecha de Inicio *</span>
+            </label>
+
+            <label class="field" data-ref="field-end-date">
+              <input class="field__input" data-ref="input-end-date" type="datetime-local" placeholder=" " required />
+              <span class="field__label">Fecha de Cierre / Sorteo *</span>
+            </label>
+          </div>
+
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-min-threshold">
+              <input class="field__input" data-ref="input-min-threshold" type="number" min="0" max="100" placeholder=" " />
+              <span class="field__label">Umbral Mínimo para Sorteo (%)</span>
+            </label>
+
+            <label class="field" data-ref="field-countdown-hours">
+              <input class="field__input" data-ref="input-countdown-hours" type="number" min="1" placeholder=" " />
+              <span class="field__label">Horas de Cuenta Regresiva tras Umbral</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-media">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Imagen de Portada</h2>
+            <p class="giveaway-create__section-desc">Selecciona una imagen rápida del catálogo o ingresa una URL personalizada.</p>
+          </div>
+
+          <div class="giveaway-create__presets" data-ref="image-presets-container">
+            <button type="button" class="giveaway-create__preset-btn" data-ref="btn-preset-cartoon" data-url="/images/giveaways/standard/cash-cartoon-3d/cash-cartoon-3d-main.svg">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#attach_money"></use></svg>
+              <span>Efectivo 3D</span>
+            </button>
+            <button type="button" class="giveaway-create__preset-btn" data-ref="btn-preset-dark" data-url="/images/giveaways/standard/cash-dark-luxe/cash-dark-luxe-main.jpg">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
+              <span>Dark Luxe</span>
+            </button>
+            <button type="button" class="giveaway-create__preset-btn" data-ref="btn-preset-glass" data-url="/images/giveaways/standard/cash-glass-prism/cash-glass-prism-main.jpg">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#diamond"></use></svg>
+              <span>Glass Prism</span>
+            </button>
+          </div>
+
+          <label class="field" data-ref="field-image-url">
+            <input class="field__input" data-ref="input-image-url" type="text" placeholder=" " required />
+            <span class="field__label">URL Imagen Principal *</span>
+          </label>
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-banks">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Cuentas Bancarias Habilitadas</h2>
+            <p class="giveaway-create__section-desc">Cuentas activas asociadas a este sorteo para recibir transferencias.</p>
+          </div>
+
+          <div class="giveaway-create__banks-list" data-ref="banks-container">
+            <div class="skeleton-placeholder" style="padding: 16px; font-size: 13px; color: var(--text-tertiary);">Cargando cuentas bancarias...</div>
+          </div>
+        </div>
+
+        <div class="giveaway-create__actions" data-ref="edit-bottom-actions">
+          <button type="button" class="component-button component-button--h45" data-ref="btn-cancel-edit">
+            Cancelar
+          </button>
+          <button type="submit" class="component-button component-button--h45 component-button--black" data-ref="btn-submit-edit">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+            <span>Guardar Cambios</span>
+          </button>
+        </div>
+
+        <div class="banner banner--danger is-hidden" data-ref="banner-error"></div>
+      </div>
+
+      <aside class="giveaway-create__preview-sidebar" data-ref="edit-preview-sidebar">
+        <div class="giveaway-create__preview-card-wrap">
+          <div class="giveaway-create__preview-header">
+            <span class="giveaway-create__preview-title">Vista Previa</span>
+            <span class="giveaway-card__meta-badge" data-ref="preview-live-indicator" style="position: static; height: 22px; font-size: 11px; padding: 0 8px;">En Vivo</span>
+          </div>
+
+          <div class="canvas-card" data-ref="preview-canvas-card">
+            <div class="canvas-card__thumbnail">
+              <img class="canvas-card__image" data-ref="preview-img" src="/images/giveaways/standard/cash-cartoon-3d/cash-cartoon-3d-main.svg" alt="Vista previa del sorteo" loading="lazy" />
+              <div data-ref="preview-img-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: var(--bg-surface); color: var(--text-tertiary);">
+                <svg class="component-icon" style="width: 36px; height: 36px;"><use href="/icons.svg#confirmation_number"></use></svg>
+              </div>
+
+              <div class="giveaway-card__meta-badge" data-ref="preview-badge-type">Estándar</div>
+              <span class="canvas-card__btn-sync" data-ref="preview-badge-price">$0.00 MXN</span>
+              <div class="giveaway-card__timer-badge" data-ref="preview-badge-status" style="background: rgba(16, 185, 129, 0.85); color: #ffffff;">
+                Activo
+              </div>
+            </div>
+
+            <div class="canvas-card__info">
+              <h3 class="canvas-card__name" data-ref="preview-title" title="Título del Sorteo">Título del Sorteo</h3>
+              <div class="canvas-card__meta">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+                <span data-ref="preview-tickets">0 / 0 boletos (0%)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="giveaway-create__stats-summary" data-ref="preview-stats">
+            <div class="giveaway-create__stat-row">
+              <span>Recaudación Actual</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-current-revenue">$0.00 MXN</span>
+            </div>
+            <div class="giveaway-create__stat-row">
+              <span>Recaudación Potencial</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-potential-revenue">$0.00 MXN</span>
+            </div>
+            <div class="giveaway-create__stat-row">
+              <span>Boletos para Umbral</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-threshold-tickets">Inmediato (0%)</span>
+            </div>
+            <div class="giveaway-create__stat-row">
+              <span>Tiempo Restante</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-duration-days">-</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </form>
+  </div>
+</div>

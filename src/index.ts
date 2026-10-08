@@ -100,6 +100,13 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
     app.use(vite.middlewares);
     app.use('*', async (req: Request, res: Response, next: NextFunction) => {
       const url = req.originalUrl;
+      if (url.startsWith('/api') || req.path.startsWith('/api')) {
+        res.status(404).json({
+          error: 'Endpoint de API no encontrado.',
+          success: false,
+        });
+        return;
+      }
       try {
         const template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
         const html = await vite.transformIndexHtml(url, template);
@@ -123,7 +130,15 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
         },
       })
     );
-    app.get('*', (_req: Request, res: Response) => {
+    app.get('*', (req: Request, res: Response) => {
+      const url = req.originalUrl;
+      if (url.startsWith('/api') || req.path.startsWith('/api')) {
+        res.status(404).json({
+          error: 'Endpoint de API no encontrado.',
+          success: false,
+        });
+        return;
+      }
       res.sendFile(path.join(clientDist, 'index.html'));
     });
   }

@@ -14,18 +14,31 @@ export function getIsSidebarOpen(): boolean {
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
   const isGiveaways = path === '/giveaways' || path.startsWith('/giveaways') || path === '/sorteos' || path.startsWith('/sorteos');
-  const isDashboard = !isGiveaways && (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
+  const isPayments =
+    path === '/payments' ||
+    path.startsWith('/payments') ||
+    path === '/pagos' ||
+    path.startsWith('/pagos') ||
+    path === '/orders' ||
+    path.startsWith('/orders') ||
+    path === '/comprobantes' ||
+    path.startsWith('/comprobantes');
+  const isDashboard = !isGiveaways && !isPayments && (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
 
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
   const btnDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-dashboard"]');
   const itemGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-giveaways"]');
   const btnGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-giveaways"]');
+  const itemPayments = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-payments"]');
+  const btnPayments = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-payments"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
   itemDashboard?.classList.toggle('is-active', isDashboard);
   btnDashboard?.classList.toggle('is-active', isDashboard);
   itemGiveaways?.classList.toggle('is-active', isGiveaways);
   btnGiveaways?.classList.toggle('is-active', isGiveaways);
+  itemPayments?.classList.toggle('is-active', isPayments);
+  btnPayments?.classList.toggle('is-active', isPayments);
   btnToggle?.classList.toggle('is-active', isDrawerOpen);
 }
 
@@ -56,6 +69,7 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
   const itemGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-giveaways"]');
+  const itemPayments = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-payments"]');
   const btnTheme = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-theme"]');
   const itemTheme = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-theme"]');
 
@@ -72,6 +86,11 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   itemGiveaways?.addEventListener('click', (e) => {
     e.preventDefault();
     navigate('/giveaways');
+  });
+
+  itemPayments?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/payments');
   });
 
   const handleToggleTheme = (e: Event) => {

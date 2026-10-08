@@ -17,7 +17,7 @@ export const config = {
     user: process.env.DB_LOTTERY_USER || process.env.DB_USER || '',
   },
   nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.ADMIN_PORT || process.env.PORT || '3001', 10),
+  port: parseInt(process.env.ADMIN_PORT || '3001', 10),
   redis: {
     host: process.env.REDIS_HOST || '127.0.0.1',
     password: process.env.REDIS_PASSWORD || undefined,
