@@ -1,0 +1,109 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="admin-bank-accounts-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="bank-accounts-scrollable">
+    <div class="view-header" data-ref="bank-accounts-floating-top">
+      <div class="view-header__left" data-ref="bank-accounts-floating-left">
+        <h1 class="view-header__title" data-ref="bank-accounts-title">Cuentas Bancarias y Pasarelas</h1>
+      </div>
+
+      <div class="view-header__right" data-ref="bank-accounts-floating-right">
+        <div class="view-header__actions" data-ref="bank-accounts-default-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar cuentas" aria-label="Buscar cuentas">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-accounts" data-tooltip="Actualizar" aria-label="Actualizar">
+            <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--black component-button--pill view-header__btn" data-ref="btn-create-account" data-tooltip="Registrar Cuenta" aria-label="Registrar Cuenta">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+            <span>Nueva Cuenta</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="input-search-accounts" placeholder="Buscar por banco, titular, CLABE o tarjeta..." type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-body" data-ref="bank-accounts-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+      <div class="dashboard-stats-grid" data-ref="bank-accounts-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
+        <div class="dashboard-stat-card" data-ref="card-stat-active" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Cuentas Activas</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-active-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Disponibles para checkout SPEI</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-inactive" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Cuentas Pausadas</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#pause"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-inactive-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Ocultas de nuevas compras</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-banks" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Bancos Conectados</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-banks-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Instituciones receptoras</span>
+          </div>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-stat-coverage" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Sorteos con Cobertura</span>
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+            </div>
+          </div>
+          <div>
+            <div class="stat-card-value" data-ref="kpi-coverage-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
+            <span style="font-size: 12px; color: var(--text-secondary);">Con al menos 1 cuenta activa</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bank-accounts-content-area" data-ref="bank-accounts-content-area">
+        <div class="bank-accounts-grid" data-ref="bank-accounts-grid-container"></div>
+
+        <div class="giveaways-empty-state" data-ref="bank-accounts-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
+          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
+            <svg class="component-icon" style="width: 28px; height: 28px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
+          </div>
+          <h3 style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text-primary);">Sin cuentas registradas</h3>
+          <p style="margin: 0 0 20px; font-size: 13.5px; color: var(--text-secondary); max-width: 400px; margin-left: auto; margin-right: auto;">No se encontraron cuentas bancarias con el término de búsqueda proporcionado.</p>
+          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-search">Restablecer Búsqueda</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

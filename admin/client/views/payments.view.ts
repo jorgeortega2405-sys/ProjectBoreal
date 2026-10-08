@@ -121,7 +121,6 @@ export class PaymentsController implements ViewController {
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private searchQuery = '';
   private searchToolbar: HTMLElement | null = null;
-  private selectGiveaway: HTMLSelectElement | null = null;
   private selectedActions: HTMLElement | null = null;
   private selectedGiveawayUuid = 'all';
   private selectedOrder: AdminOrderSummary | null = null;
@@ -146,7 +145,6 @@ export class PaymentsController implements ViewController {
     this.btnActionApprove = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-approve"]');
     this.btnActionReject = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-reject"]');
     this.btnActionCopySpei = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-copy-spei"]');
-    this.selectGiveaway = this.container.querySelector<HTMLSelectElement>('[data-ref="select-giveaway-filter"]');
     this.btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-payments"]');
     this.btnResetFilters = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-filters"]');
     this.btnPagePrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-page-prev"]');
@@ -302,19 +300,6 @@ export class PaymentsController implements ViewController {
       { signal }
     );
 
-    const statusBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-status]');
-    statusBtns.forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        (e) => {
-          e.preventDefault();
-          const status = btn.getAttribute('data-status') || 'all';
-          this.setStatusFilter(status);
-        },
-        { signal }
-      );
-    });
-
     const dropdownStatusBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-status-filter]');
     dropdownStatusBtns.forEach((btn) => {
       btn.addEventListener(
@@ -329,18 +314,6 @@ export class PaymentsController implements ViewController {
       );
     });
 
-    this.selectGiveaway?.addEventListener(
-      'change',
-      () => {
-        this.selectedGiveawayUuid = this.selectGiveaway?.value || 'all';
-        this.selectedOrder = null;
-        this.currentPage = 1;
-        this.syncGiveawayDropdownUi();
-        void this.loadOrders();
-      },
-      { signal }
-    );
-
     this.btnResetFilters?.addEventListener(
       'click',
       (e) => {
@@ -353,7 +326,6 @@ export class PaymentsController implements ViewController {
 
         if (this.inputSearch) this.inputSearch.value = '';
         if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
-        if (this.selectGiveaway) this.selectGiveaway.value = 'all';
 
         this.syncStatusUi();
         this.syncGiveawayDropdownUi();
@@ -398,10 +370,6 @@ export class PaymentsController implements ViewController {
   }
 
   private syncStatusUi(): void {
-    const statusBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-status]');
-    statusBtns.forEach((b) => {
-      b.classList.toggle('is-active', b.getAttribute('data-status') === this.selectedStatus);
-    });
     const dropdownStatusBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-status-filter]');
     dropdownStatusBtns.forEach((b) => {
       b.classList.toggle('is-active', b.getAttribute('data-status-filter') === this.selectedStatus);
@@ -424,16 +392,6 @@ export class PaymentsController implements ViewController {
       const res = await getApi<Array<{ title: string; uuid: string }>>('/api/giveaways');
       if (res.success && Array.isArray(res.data)) {
         this.giveawaysList = res.data;
-        if (this.selectGiveaway) {
-          const currentVal = this.selectGiveaway.value;
-          const optionsHtml =
-            '<option value="all">Todos los sorteos</option>' +
-            this.giveawaysList
-              .map((g) => `<option value="${escapeHtml(g.uuid)}">${escapeHtml(g.title)}</option>`)
-              .join('');
-          this.selectGiveaway.innerHTML = optionsHtml;
-          this.selectGiveaway.value = currentVal || 'all';
-        }
         const dropdownList = this.container.querySelector<HTMLElement>('[data-ref="filter-giveaways-dropdown-list"]');
         if (dropdownList) {
           dropdownList.innerHTML =
@@ -451,7 +409,6 @@ export class PaymentsController implements ViewController {
               const gUuid = btn.getAttribute('data-giveaway-filter') || 'all';
               if (gUuid !== this.selectedGiveawayUuid) {
                 this.selectedGiveawayUuid = gUuid;
-                if (this.selectGiveaway) this.selectGiveaway.value = gUuid;
                 dropdownGiveawayBtns.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-giveaway-filter') === gUuid));
                 this.selectedOrder = null;
                 this.currentPage = 1;

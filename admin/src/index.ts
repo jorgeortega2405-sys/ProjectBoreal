@@ -2,6 +2,7 @@ import { checkDbConnection, closeDbConnections } from './config/database.config.
 import { config, isAllowedOrigin } from './config/env.config.js';
 import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
+import bankAccountsRoutes from './routes/bank-accounts.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import giveawaysRoutes from './routes/giveaways.routes.js';
 import healthRoutes from './routes/health.routes.js';
@@ -149,9 +150,10 @@ function createExpressApp(): express.Express {
     next();
   });
 
-  app.use('/api/health', healthRoutes);
+  app.use('/api/bank-accounts', bankAccountsRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/giveaways', giveawaysRoutes);
+  app.use('/api/health', healthRoutes);
   app.use('/api/orders', ordersRoutes);
 
   const adminPublicDir = path.resolve(ADMIN_ROOT_DIR, 'public');

@@ -81,6 +81,20 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
+      const { createBankAccountsView } = await import('../views/bank-accounts.view.js');
+      return await createBankAccountsView();
+    },
+    id: 'bank-accounts',
+    match: (path) =>
+      path === '/bank-accounts' ||
+      path.startsWith('/bank-accounts') ||
+      path === '/cuentas-bancarias' ||
+      path.startsWith('/cuentas-bancarias') ||
+      path === '/bancos' ||
+      path.startsWith('/bancos'),
+  },
+  {
+    handler: async () => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();
     },
