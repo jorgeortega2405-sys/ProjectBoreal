@@ -105,8 +105,8 @@ export class PaymentsController implements ViewController {
   private btnActionInspect: HTMLButtonElement | null = null;
   private btnActionReject: HTMLButtonElement | null = null;
   private btnClearSearch: HTMLButtonElement | null = null;
-  private btnPageNext: HTMLButtonElement | null = null;
-  private btnPagePrev: HTMLButtonElement | null = null;
+  private btnPaginationNext: HTMLButtonElement | null = null;
+  private btnPaginationPrev: HTMLButtonElement | null = null;
   private btnRefresh: HTMLButtonElement | null = null;
   private btnResetFilters: HTMLButtonElement | null = null;
   private btnToggleSearch: HTMLButtonElement | null = null;
@@ -115,6 +115,7 @@ export class PaymentsController implements ViewController {
   private defaultActions: HTMLElement | null = null;
   private filterDropdownController: DropdownController | null = null;
   private giveawaysList: GiveawayOption[] = [];
+  private inputPaginationPage: HTMLInputElement | null = null;
   private inputSearch: HTMLInputElement | null = null;
   private isSearchActive = false;
   private orders: AdminOrderSummary[] = [];
@@ -147,8 +148,9 @@ export class PaymentsController implements ViewController {
     this.btnActionCopySpei = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-copy-spei"]');
     this.btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-payments"]');
     this.btnResetFilters = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-filters"]');
-    this.btnPagePrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-page-prev"]');
-    this.btnPageNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-page-next"]');
+    this.btnPaginationPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-prev"]');
+    this.btnPaginationNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-next"]');
+    this.inputPaginationPage = this.container.querySelector<HTMLInputElement>('[data-ref="input-pagination-page"]');
 
     const filterDropdownWrapper = this.container.querySelector<HTMLElement>('[data-ref="filter-dropdown-wrapper"]');
     if (filterDropdownWrapper) {
@@ -334,7 +336,34 @@ export class PaymentsController implements ViewController {
       { signal }
     );
 
-    this.btnPagePrev?.addEventListener(
+    this.inputPaginationPage?.addEventListener(
+      'change',
+      () => {
+        let page = parseInt(this.inputPaginationPage?.value || '1', 10);
+        if (isNaN(page) || page < 1) page = 1;
+        if (page > this.totalPages) page = this.totalPages;
+        if (page !== this.currentPage) {
+          this.currentPage = page;
+          void this.loadOrders();
+        } else if (this.inputPaginationPage) {
+          this.inputPaginationPage.value = String(this.currentPage);
+        }
+      },
+      { signal }
+    );
+
+    this.inputPaginationPage?.addEventListener(
+      'keydown',
+      (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.inputPaginationPage?.blur();
+        }
+      },
+      { signal }
+    );
+
+    this.btnPaginationPrev?.addEventListener(
       'click',
       (e) => {
         e.preventDefault();
@@ -346,13 +375,23 @@ export class PaymentsController implements ViewController {
       { signal }
     );
 
-    this.btnPageNext?.addEventListener(
+    this.btnPaginationNext?.addEventListener(
       'click',
       (e) => {
         e.preventDefault();
         if (this.currentPage < this.totalPages) {
           this.currentPage++;
           void this.loadOrders();
+        }
+      },
+      { signal }
+    );
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && this.selectedOrder) {
+          this.selectedOrder = null;
+          this.updateSelectionUi();
         }
       },
       { signal }
@@ -473,7 +512,7 @@ export class PaymentsController implements ViewController {
         if (res.pagination) {
           this.currentPage = res.pagination.currentPage;
           this.totalPages = res.pagination.totalPages;
-          this.updatePaginationUi(res.pagination.totalCount);
+          this.updatePaginationUi();
         }
         this.renderOrders();
         this.updateSelectionUi();
@@ -485,22 +524,19 @@ export class PaymentsController implements ViewController {
     }
   }
 
-  private updatePaginationUi(totalCount: number): void {
-    const elInfo = this.container.querySelector('[data-ref="pagination-info"]');
-    const elPage = this.container.querySelector('[data-ref="text-current-page"]');
-
-    if (elInfo) {
-      elInfo.textContent = `Mostrando ${this.orders.length} de ${formatNumber(totalCount)} órdenes`;
-    }
-    if (elPage) {
-      elPage.textContent = `${this.currentPage} / ${Math.max(1, this.totalPages)}`;
+  private updatePaginationUi(): void {
+    if (this.inputPaginationPage) {
+      this.inputPaginationPage.value = String(this.currentPage);
+      this.inputPaginationPage.min = '1';
+      this.inputPaginationPage.max = String(Math.max(1, this.totalPages));
+      this.inputPaginationPage.disabled = this.totalPages <= 1;
     }
 
-    if (this.btnPagePrev) {
-      this.btnPagePrev.disabled = this.currentPage <= 1;
+    if (this.btnPaginationPrev) {
+      this.btnPaginationPrev.disabled = this.currentPage <= 1;
     }
-    if (this.btnPageNext) {
-      this.btnPageNext.disabled = this.currentPage >= this.totalPages;
+    if (this.btnPaginationNext) {
+      this.btnPaginationNext.disabled = this.currentPage >= this.totalPages;
     }
   }
 
@@ -518,37 +554,36 @@ export class PaymentsController implements ViewController {
     if (this.defaultActions) this.defaultActions.style.display = isSelected ? 'none' : 'flex';
     if (this.selectedActions) this.selectedActions.style.display = isSelected ? 'flex' : 'none';
 
-    const cards = this.container.querySelectorAll<HTMLElement>('.payment-card');
-    cards.forEach((card) => {
-      const isThisSelected = card.getAttribute('data-uuid') === this.selectedOrder?.uuid;
-      card.classList.toggle('is-selected', isThisSelected);
+    const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr');
+    rows.forEach((row) => {
+      const isThisSelected = row.getAttribute('data-uuid') === this.selectedOrder?.uuid;
+      row.classList.toggle('is-selected', isThisSelected);
     });
   }
 
   private renderOrders(): void {
-    const listContainer = this.container.querySelector<HTMLElement>('[data-ref="payments-list-container"]');
+    const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-payments"]');
+    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="payments-table-card"]');
     const emptyState = this.container.querySelector<HTMLElement>('[data-ref="payments-empty-state"]');
-    const paginationBar = this.container.querySelector<HTMLElement>('[data-ref="payments-pagination-bar"]');
 
-    if (!listContainer) return;
+    if (!tbody) return;
 
     if (this.orders.length === 0) {
-      listContainer.innerHTML = '';
+      tbody.innerHTML = '';
+      if (tableCard) tableCard.style.display = 'none';
       if (emptyState) emptyState.style.display = 'block';
-      if (paginationBar) paginationBar.style.display = 'none';
       return;
     }
 
+    if (tableCard) tableCard.style.display = 'block';
     if (emptyState) emptyState.style.display = 'none';
-    if (paginationBar) paginationBar.style.display = 'flex';
 
-    listContainer.innerHTML = this.orders.map((o) => this.buildOrderCardHtml(o)).join('');
-    renderIcons(listContainer);
-    this.attachOrderActions(listContainer);
+    tbody.innerHTML = this.orders.map((o) => this.buildOrderRowHtml(o)).join('');
+    renderIcons(tbody);
+    this.attachOrderActions(tbody);
   }
 
-  private buildOrderCardHtml(order: AdminOrderSummary): string {
-    const hasReceipt = Boolean(order.receipt_filename);
+  private buildOrderRowHtml(order: AdminOrderSummary): string {
     const isCompleted = order.status === 'completed';
     const isInReview = order.status === 'in_review';
     const isPending = order.status === 'pending_payment';
@@ -560,200 +595,100 @@ export class PaymentsController implements ViewController {
     if (isInReview) {
       if (order.spei_status === 'manual_review') {
         statusBadgeHtml = `
-          <span class="giveaway-badge" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-            <span>Revisión Manual</span>
+          <span class="component-badge component-badge--sm" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">
+            Revisión Manual
           </span>
         `;
       } else {
         statusBadgeHtml = `
-          <span class="giveaway-badge" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
-            <span>En Revisión</span>
+          <span class="component-badge component-badge--sm" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
+            En Revisión
           </span>
         `;
       }
     } else if (isCompleted) {
       statusBadgeHtml = `
-        <span class="giveaway-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-          <span>Liquidado</span>
+        <span class="component-badge component-badge--sm" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+          Liquidado
         </span>
       `;
     } else if (isPending) {
       statusBadgeHtml = `
-        <span class="giveaway-badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
-          <span>Pendiente de Pago</span>
+        <span class="component-badge component-badge--sm" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">
+          Pendiente
         </span>
       `;
     } else if (isExpired) {
       statusBadgeHtml = `
-        <span class="giveaway-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-          <span>Expirada</span>
+        <span class="component-badge component-badge--sm" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+          Expirada
         </span>
       `;
     } else {
       statusBadgeHtml = `
-        <span class="giveaway-badge" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-          <span>Cancelada</span>
+        <span class="component-badge component-badge--sm" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+          Cancelada
         </span>
       `;
     }
 
-    const receiptThumbHtml = hasReceipt
-      ? `
-        <div class="payment-card__thumb" data-ref="thumb-${order.uuid}" data-uuid="${order.uuid}">
-          <img src="/api/orders/${order.uuid}/receipt" alt="Comprobante" loading="lazy" class="payment-card__thumb-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div class="payment-card__thumb-fallback" style="display: none;">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-          </div>
-          <div class="payment-card__thumb-overlay" data-ref="overlay-zoom">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#zoom_in"></use></svg>
-          </div>
-        </div>
-      `
-      : `
-        <div class="payment-card__thumb payment-card__thumb--none">
-          <svg class="component-icon payment-card__thumb-icon" aria-hidden="true"><use href="/icons.svg#hourglass_empty"></use></svg>
-        </div>
-      `;
-
-    const ticketChipsHtml = order.ticket_numbers
-      .slice(0, 10)
-      .map((num) => `<span class="giveaway-ticket giveaway-ticket--chip">#${String(num).padStart(3, '0')}</span>`)
-      .join('');
-
-    const moreTicketsCount = Math.max(0, order.ticket_numbers.length - 10);
-    const moreChipsBadge = moreTicketsCount > 0 ? `<span class="giveaway-ticket giveaway-ticket--chip">+${moreTicketsCount} más</span>` : '';
-
-    const trackingKeyHtml = order.tracking_key
-      ? `<div class="payment-card__tracking"><span class="payment-card__tracking-label">Clave SPEI:</span> <strong class="payment-card__tracking-val">${escapeHtml(order.tracking_key)}</strong></div>`
-      : '';
-
-    let actionsHtml = `
-      <button type="button" class="component-button component-button--secondary component-button--h36" data-ref="btn-inspect-${order.uuid}" data-uuid="${order.uuid}">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-        <span>Inspeccionar</span>
-      </button>
-    `;
-
-    if (isInReview || isPending) {
-      actionsHtml += `
-        <button type="button" class="component-button component-button--black component-button--h36" data-ref="btn-approve-${order.uuid}" data-uuid="${order.uuid}">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
-          <span>Aprobar</span>
-        </button>
-        <button type="button" class="component-button component-button--danger component-button--h36" data-ref="btn-reject-${order.uuid}" data-uuid="${order.uuid}">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-          <span>Rechazar</span>
-        </button>
-      `;
-    }
+    const speiDisplay = order.tracking_key
+      ? `<span class="component-badge component-badge--sm" style="font-family: var(--sl-font-mono, monospace);">${escapeHtml(order.tracking_key.slice(0, 14))}...</span>`
+      : `<span style="color: var(--text-tertiary); font-size: 12px;">—</span>`;
 
     return `
-      <div class="payment-card ${isSelected ? 'is-selected' : ''}" data-ref="card-order-${order.uuid}" data-uuid="${order.uuid}">
-        ${receiptThumbHtml}
-
-        <div class="payment-card__main">
-          <div class="payment-card__header">
-            <div class="payment-card__title-box">
-              <span class="payment-card__folio">Folio ORD-${order.uuid.slice(0, 8).toUpperCase()}</span>
-              <h3 class="payment-card__customer">${escapeHtml(order.customer_name)}</h3>
-              <div class="payment-card__customer-meta">
-                <span class="payment-card__phone">${formatPhone(order.customer_phone)}</span>
-                ${order.customer_state ? `<span class="payment-card__state">• ${escapeHtml(order.customer_state)}</span>` : ''}
-              </div>
-            </div>
-            <div class="payment-card__badges">
-              ${statusBadgeHtml}
-            </div>
+      <tr class="winners-table__tr ${isSelected ? 'is-selected' : ''}" data-ref="tr-order-${order.uuid}" data-uuid="${order.uuid}">
+        <td class="winners-table__td">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-family: var(--sl-font-mono, monospace); font-size: 11px; font-weight: 700; color: var(--text-tertiary);">ORD-${order.uuid.slice(0, 8).toUpperCase()}</span>
+            <span style="font-weight: 600; color: var(--text-primary); font-size: 13px;">${escapeHtml(order.giveaway_title)}</span>
           </div>
-
-          <div class="payment-card__body">
-            <div class="payment-card__giveaway-name">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-              <span>${escapeHtml(order.giveaway_title)}</span>
-            </div>
-
-            <div class="payment-card__tickets-row">
-              <span class="payment-card__tickets-label">${formatNumber(order.ticket_count)} boletos:</span>
-              <div class="payment-card__chips">${ticketChipsHtml}${moreChipsBadge}</div>
-            </div>
-
-            ${trackingKeyHtml}
+        </td>
+        <td class="winners-table__td">
+          <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(order.customer_name)}</span>
+        </td>
+        <td class="winners-table__td">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-family: var(--sl-font-mono, monospace); font-size: 12.5px; color: var(--text-secondary);">${formatPhone(order.customer_phone)}</span>
+            ${order.customer_state ? `<span style="font-size: 11px; color: var(--text-tertiary);">${escapeHtml(order.customer_state)}</span>` : ''}
           </div>
-
-          <div class="payment-card__footer">
-            <div class="payment-card__amount-box">
-              <span class="payment-card__amount-label">Monto Total:</span>
-              <span class="payment-card__amount-val">${formatCurrency(order.total_amount, order.currency)}</span>
-              <span class="payment-card__date">${formatDate(order.created_at)}</span>
-            </div>
-            <div class="payment-card__actions">
-              ${actionsHtml}
-            </div>
-          </div>
-        </div>
-      </div>
+        </td>
+        <td class="winners-table__td">
+          <span class="component-badge component-badge--sm" style="font-family: var(--sl-font-mono, monospace); font-weight: 700;">
+            ${formatNumber(order.ticket_count)} bol.
+          </span>
+        </td>
+        <td class="winners-table__td">
+          <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">${formatCurrency(order.total_amount, order.currency)}</span>
+        </td>
+        <td class="winners-table__td">
+          ${speiDisplay}
+        </td>
+        <td class="winners-table__td">
+          ${statusBadgeHtml}
+        </td>
+        <td class="winners-table__td">
+          <span style="font-size: 12px; color: var(--text-secondary);">${formatDate(order.created_at)}</span>
+        </td>
+      </tr>
     `;
   }
 
-  private attachOrderActions(container: HTMLElement): void {
-    const cards = container.querySelectorAll<HTMLElement>('.payment-card');
-    cards.forEach((card) => {
-      const uuid = card.getAttribute('data-uuid');
+  private attachOrderActions(tbody: HTMLElement): void {
+    const rows = tbody.querySelectorAll<HTMLElement>('.winners-table__tr');
+    rows.forEach((row) => {
+      const uuid = row.getAttribute('data-uuid');
       if (!uuid) return;
       const order = this.orders.find((o) => o.uuid === uuid);
       if (!order) return;
 
-      card.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (target.closest('button') || target.closest('a') || target.closest('.payment-card__thumb-overlay')) return;
+      row.addEventListener('click', () => {
         this.toggleOrderSelection(order);
       });
 
-      card.addEventListener('dblclick', (e) => {
+      row.addEventListener('dblclick', (e) => {
         e.preventDefault();
         void this.openInspectModal(uuid);
-      });
-    });
-
-    const inspectBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-inspect-"]');
-    inspectBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const uuid = btn.getAttribute('data-uuid');
-        if (uuid) void this.openInspectModal(uuid);
-      });
-    });
-
-    const thumbs = container.querySelectorAll<HTMLElement>('.payment-card__thumb[data-uuid]');
-    thumbs.forEach((thumb) => {
-      thumb.addEventListener('click', (e) => {
-        e.preventDefault();
-        const uuid = thumb.getAttribute('data-uuid');
-        if (uuid) void this.openInspectModal(uuid);
-      });
-    });
-
-    const approveBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-approve-"]');
-    approveBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const uuid = btn.getAttribute('data-uuid');
-        if (uuid) this.openConfirmApproveModal(uuid);
-      });
-    });
-
-    const rejectBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-reject-"]');
-    rejectBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const uuid = btn.getAttribute('data-uuid');
-        if (uuid) this.openConfirmRejectModal(uuid);
       });
     });
   }

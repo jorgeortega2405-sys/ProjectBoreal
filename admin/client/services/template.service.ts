@@ -4,14 +4,18 @@ import { renderIcons } from './icon.service.js';
 const templateCache = new Map<string, string>();
 
 export async function loadTemplate(url: string): Promise<HTMLElement> {
-  let html = templateCache.get(url);
+  const isDev = Boolean((import.meta as any).env?.DEV);
+  let html = isDev ? undefined : templateCache.get(url);
   if (!html) {
-    const res = await fetch(url);
+    const fetchUrl = isDev ? `${url}?_t=${Date.now()}` : url;
+    const res = await fetch(fetchUrl, { cache: isDev ? 'no-cache' : 'default' });
     if (!res.ok) {
       throw new Error(`Error al cargar la plantilla: ${url} (${res.status})`);
     }
     html = await res.text();
-    templateCache.set(url, html);
+    if (!isDev) {
+      templateCache.set(url, html);
+    }
   }
 
   const template = document.createElement('template');

@@ -1328,6 +1328,29 @@ html.dark-theme .view-header__title-name {
   gap: 8px;
 }
 
+.view-header__divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--border-color);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.view-header__pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-header__pagination-info {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin: 0 4px;
+  white-space: nowrap;
+  user-select: none;
+}
+
 .view-header__btn,
 .home-floating-btn {
   width: 40px;
@@ -1373,6 +1396,15 @@ html.dark-theme .home-floating-btn:hover {
   background: rgba(24, 24, 27, 0.8);
   border-color: rgba(255, 255, 255, 0.3);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+}
+
+.view-header__btn:disabled,
+.view-header__btn[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .component-button--upgrade-pill {

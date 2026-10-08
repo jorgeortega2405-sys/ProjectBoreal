@@ -69,16 +69,30 @@ function formatDate(iso: string | null): string {
 
 export class WinnersController implements ViewController {
   private abortController: AbortController | null = null;
+  private btnActionCopyPhone: HTMLButtonElement | null = null;
+  private btnActionDeselect: HTMLButtonElement | null = null;
+  private btnActionInspectEvidence: HTMLButtonElement | null = null;
+  private btnActionManageDelivery: HTMLButtonElement | null = null;
+  private btnActionWhatsapp: HTMLButtonElement | null = null;
   private btnClearSearch: HTMLButtonElement | null = null;
+  private btnPaginationNext: HTMLButtonElement | null = null;
+  private btnPaginationPrev: HTMLButtonElement | null = null;
   private btnRefresh: HTMLButtonElement | null = null;
   private btnResetSearch: HTMLButtonElement | null = null;
   private btnToggleSearch: HTMLButtonElement | null = null;
   private container: HTMLElement;
+  private currentPage = 1;
+  private defaultActions: HTMLElement | null = null;
+  private inputPaginationPage: HTMLInputElement | null = null;
   private inputSearch: HTMLInputElement | null = null;
   private isSearchActive = false;
+  private pageSize = 10;
   private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private searchQuery = '';
   private searchToolbar: HTMLElement | null = null;
+  private selectedActions: HTMLElement | null = null;
+  private selectedWinner: WinnerItem | null = null;
+  private totalPages = 1;
   private winners: WinnerItem[] = [];
 
   constructor(container: HTMLElement) {
@@ -94,6 +108,17 @@ export class WinnersController implements ViewController {
     this.btnClearSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-search"]');
     this.btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-winners"]');
     this.btnResetSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-search"]');
+    this.btnPaginationPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-prev"]');
+    this.btnPaginationNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-next"]');
+    this.inputPaginationPage = this.container.querySelector<HTMLInputElement>('[data-ref="input-pagination-page"]');
+
+    this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="winners-default-actions"]');
+    this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="winners-selected-actions"]');
+    this.btnActionDeselect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-deselect"]');
+    this.btnActionManageDelivery = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-manage-delivery"]');
+    this.btnActionInspectEvidence = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-inspect-evidence"]');
+    this.btnActionWhatsapp = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-whatsapp"]');
+    this.btnActionCopyPhone = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-copy-phone"]');
 
     this.bindEvents();
     renderIcons(this.container);
@@ -137,6 +162,7 @@ export class WinnersController implements ViewController {
           if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
           if (this.searchQuery) {
             this.searchQuery = '';
+            this.currentPage = 1;
             void this.loadWinners();
           }
         }
@@ -156,6 +182,7 @@ export class WinnersController implements ViewController {
         }
         this.searchDebounceTimer = setTimeout(() => {
           this.searchQuery = val;
+          this.currentPage = 1;
           void this.loadWinners();
         }, 300);
       },
@@ -169,6 +196,7 @@ export class WinnersController implements ViewController {
         if (this.inputSearch) this.inputSearch.value = '';
         if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
         this.searchQuery = '';
+        this.currentPage = 1;
         void this.loadWinners();
         this.inputSearch?.focus();
       },
@@ -182,7 +210,128 @@ export class WinnersController implements ViewController {
         if (this.inputSearch) this.inputSearch.value = '';
         if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
         this.searchQuery = '';
+        this.selectedWinner = null;
+        this.currentPage = 1;
+        this.updateSelectionUi();
         void this.loadWinners();
+      },
+      { signal }
+    );
+
+    this.inputPaginationPage?.addEventListener(
+      'change',
+      () => {
+        let page = parseInt(this.inputPaginationPage?.value || '1', 10);
+        if (isNaN(page) || page < 1) page = 1;
+        if (page > this.totalPages) page = this.totalPages;
+        if (page !== this.currentPage) {
+          this.currentPage = page;
+          this.renderWinners();
+        } else if (this.inputPaginationPage) {
+          this.inputPaginationPage.value = String(this.currentPage);
+        }
+      },
+      { signal }
+    );
+
+    this.inputPaginationPage?.addEventListener(
+      'keydown',
+      (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.inputPaginationPage?.blur();
+        }
+      },
+      { signal }
+    );
+
+    this.btnPaginationPrev?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.currentPage > 1) {
+          this.currentPage--;
+          this.renderWinners();
+        }
+      },
+      { signal }
+    );
+
+    this.btnPaginationNext?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.currentPage < this.totalPages) {
+          this.currentPage++;
+          this.renderWinners();
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionDeselect?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        this.selectedWinner = null;
+        this.updateSelectionUi();
+      },
+      { signal }
+    );
+
+    this.btnActionManageDelivery?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedWinner) {
+          this.openManageDeliveryModal(this.selectedWinner);
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionInspectEvidence?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedWinner) {
+          this.openInspectEvidenceModal(this.selectedWinner);
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionWhatsapp?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedWinner?.winner_phone) {
+          const rawPhone = this.selectedWinner.winner_phone.replace(/\D/g, '');
+          window.open(`https://wa.me/52${rawPhone}`, '_blank', 'noopener,noreferrer');
+        }
+      },
+      { signal }
+    );
+
+    this.btnActionCopyPhone?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.selectedWinner?.winner_phone) {
+          void navigator.clipboard.writeText(this.selectedWinner.winner_phone);
+          showToast('Teléfono copiado al portapapeles.', 'success');
+        }
+      },
+      { signal }
+    );
+
+    document.addEventListener(
+      'keydown',
+      (e) => {
+        if (e.key === 'Escape' && this.selectedWinner) {
+          this.selectedWinner = null;
+          this.updateSelectionUi();
+        }
       },
       { signal }
     );
@@ -219,7 +368,12 @@ export class WinnersController implements ViewController {
       const res = await getApi<WinnerItem[]>(`/api/winners?${queryParams.toString()}`);
       if (res.success && Array.isArray(res.data)) {
         this.winners = res.data;
+        if (this.selectedWinner) {
+          const fresh = this.winners.find((w) => w.giveaway_uuid === this.selectedWinner?.giveaway_uuid);
+          this.selectedWinner = fresh || null;
+        }
         this.renderWinners();
+        this.updateSelectionUi();
       } else {
         showToast(res.error || 'No se pudieron cargar los ganadores.', 'danger');
       }
@@ -228,111 +382,171 @@ export class WinnersController implements ViewController {
     }
   }
 
+  private toggleWinnerSelection(winner: WinnerItem): void {
+    if (this.selectedWinner?.giveaway_uuid === winner.giveaway_uuid) {
+      this.selectedWinner = null;
+    } else {
+      this.selectedWinner = winner;
+    }
+    this.updateSelectionUi();
+  }
+
+  private updateSelectionUi(): void {
+    const isSelected = this.selectedWinner !== null;
+    if (this.defaultActions) this.defaultActions.style.display = isSelected ? 'none' : 'flex';
+    if (this.selectedActions) this.selectedActions.style.display = isSelected ? 'flex' : 'none';
+
+    const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr');
+    rows.forEach((row) => {
+      const isThisSelected = row.getAttribute('data-uuid') === this.selectedWinner?.giveaway_uuid;
+      row.classList.toggle('is-selected', isThisSelected);
+    });
+  }
+
+  private updatePaginationUi(): void {
+    const totalCount = this.winners.length;
+    this.totalPages = Math.max(1, Math.ceil(totalCount / this.pageSize));
+    if (this.currentPage > this.totalPages) {
+      this.currentPage = this.totalPages;
+    }
+
+    if (this.inputPaginationPage) {
+      this.inputPaginationPage.value = String(this.currentPage);
+      this.inputPaginationPage.min = '1';
+      this.inputPaginationPage.max = String(Math.max(1, this.totalPages));
+      this.inputPaginationPage.disabled = this.totalPages <= 1;
+    }
+
+    if (this.btnPaginationPrev) {
+      this.btnPaginationPrev.disabled = this.currentPage <= 1;
+    }
+    if (this.btnPaginationNext) {
+      this.btnPaginationNext.disabled = this.currentPage >= this.totalPages;
+    }
+  }
+
   private renderWinners(): void {
-    const gridContainer = this.container.querySelector<HTMLElement>('[data-ref="winners-grid-container"]');
+    const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-winners"]');
+    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="winners-table-card"]');
     const emptyState = this.container.querySelector<HTMLElement>('[data-ref="winners-empty-state"]');
 
-    if (!gridContainer) return;
+    if (!tbody) return;
 
     if (this.winners.length === 0) {
-      gridContainer.innerHTML = '';
+      tbody.innerHTML = '';
+      if (tableCard) tableCard.style.display = 'none';
       if (emptyState) emptyState.style.display = 'block';
+      this.updatePaginationUi();
       return;
     }
 
+    if (tableCard) tableCard.style.display = 'block';
     if (emptyState) emptyState.style.display = 'none';
-    gridContainer.innerHTML = this.winners.map((w) => this.buildWinnerCardHtml(w)).join('');
-    renderIcons(gridContainer);
-    this.attachCardEvents(gridContainer);
+
+    this.updatePaginationUi();
+    const startIndex = (this.currentPage - 1) * this.pageSize;
+    const pageItems = this.winners.slice(startIndex, startIndex + this.pageSize);
+
+    tbody.innerHTML = pageItems.map((w) => this.buildWinnerRowHtml(w)).join('');
+    renderIcons(tbody);
+    this.attachRowEvents(tbody);
   }
 
-  private buildWinnerCardHtml(w: WinnerItem): string {
+  private buildWinnerRowHtml(w: WinnerItem): string {
     const isDelivered = w.delivery_status === 'delivered';
     const isContacted = w.delivery_status === 'contacted';
     const isClaimed = w.delivery_status === 'claimed';
+    const isSelected = this.selectedWinner?.giveaway_uuid === w.giveaway_uuid;
 
-    let statusLabel = 'Pendiente Contacto';
-    let statusColor = '#f59e0b';
+    let statusBadgeHtml = '<span class="component-badge component-badge--sm" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">Por Contactar</span>';
 
     if (isDelivered) {
-      statusLabel = 'Premio Entregado';
-      statusColor = '#10b981';
+      statusBadgeHtml = '<span class="component-badge component-badge--sm" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">Entregado</span>';
     } else if (isClaimed) {
-      statusLabel = 'Reclamado / En Envío';
-      statusColor = '#3b82f6';
+      statusBadgeHtml = '<span class="component-badge component-badge--sm" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">Reclamado</span>';
     } else if (isContacted) {
-      statusLabel = 'Ganador Contactado';
-      statusColor = '#8b5cf6';
+      statusBadgeHtml = '<span class="component-badge component-badge--sm" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">Contactado</span>';
     }
 
-    const prizeText = w.prize_amount !== null ? formatCurrency(w.prize_amount) : 'Premio en Especie';
+    const prizeText = w.prize_amount !== null ? formatCurrency(w.prize_amount) : 'En Especie';
 
     return `
-      <div class="winner-card" data-ref="card-winner-${w.giveaway_uuid}" data-uuid="${w.giveaway_uuid}">
-        <div class="winner-card__banner">
-          <div class="winner-card__giveaway-info">
-            <img src="${escapeHtml(w.giveaway_primary_image_url || '/images/giveaways/daily/daily-cash-1000-main.jpg')}" alt="Sorteo" class="winner-card__thumb" onerror="this.src='/images/giveaways/daily/daily-cash-1000-main.jpg';" />
-            <div class="winner-card__title-box">
-              <h3 class="winner-card__giveaway-title">${escapeHtml(w.giveaway_title)}</h3>
-              <span style="font-size: 11.5px; color: var(--text-secondary);">${w.giveaway_type === 'daily' ? 'Sorteo Diario' : 'Sorteo Estándar'} • ${formatDate(w.winner_announced_at)}</span>
-            </div>
+      <tr class="winners-table__tr ${isSelected ? 'is-selected' : ''}" data-ref="tr-winner-${w.giveaway_uuid}" data-uuid="${w.giveaway_uuid}">
+        <td class="winners-table__td">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-weight: 600; color: var(--text-primary); font-size: 13.5px;">${escapeHtml(w.giveaway_title)}</span>
+            <span style="font-size: 11px; color: var(--text-secondary);">${w.giveaway_type === 'daily' ? 'Sorteo Diario' : 'Sorteo Estándar'}</span>
           </div>
-          <span class="giveaway-badge" style="background: ${statusColor}15; color: ${statusColor}; border: 1px solid ${statusColor}40;">${statusLabel}</span>
-        </div>
-
-        <div class="winner-card__body">
-          <div class="winner-card__hero-box">
-            <div>
-              <span style="font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase;">Boleto Ganador</span>
-              <div class="winner-card__ticket-badge">#${String(w.winner_ticket_number).padStart(3, '0')}</div>
-            </div>
-            <div>
-              <span style="font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; display: block; text-align: right;">Bolsa / Premio</span>
-              <div class="winner-card__prize-amount">${prizeText}</div>
-            </div>
+        </td>
+        <td class="winners-table__td">
+          <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(w.winner_name)}</span>
+        </td>
+        <td class="winners-table__td">
+          <span class="component-badge component-badge--sm" style="font-family: var(--sl-font-mono, monospace); font-weight: 900; color: #10b981; font-size: 13px;">
+            #${String(w.winner_ticket_number).padStart(3, '0')}
+          </span>
+        </td>
+        <td class="winners-table__td">
+          <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">${prizeText}</span>
+        </td>
+        <td class="winners-table__td">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-family: var(--sl-font-mono, monospace); font-size: 12.5px; color: var(--text-secondary);">${formatPhone(w.winner_phone)}</span>
+            ${w.winner_state ? `<span style="font-size: 11px; color: var(--text-tertiary);">${escapeHtml(w.winner_state)}</span>` : ''}
           </div>
-
-          <div class="winner-card__contact-row">
-            <span><strong>Ganador:</strong> ${escapeHtml(w.winner_name)}</span>
-            <span>${w.winner_state ? `• ${escapeHtml(w.winner_state)}` : ''}</span>
-          </div>
-
-          <div class="winner-card__contact-row">
-            <span><strong>Teléfono:</strong> ${formatPhone(w.winner_phone)}</span>
-            ${w.winner_order_uuid ? `<span style="font-family: var(--sl-font-mono, monospace); font-size: 11.5px;">ORD-${w.winner_order_uuid.slice(0, 8).toUpperCase()}</span>` : ''}
-          </div>
-        </div>
-
-        <div class="winner-card__footer">
-          <button type="button" class="component-button component-button--black component-button--h34" data-ref="btn-manage-delivery-${w.giveaway_uuid}" data-uuid="${w.giveaway_uuid}">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
-            <span>Gestionar Entrega</span>
-          </button>
-
-          ${
-            w.winner_phone
-              ? `
-                <a href="https://wa.me/52${w.winner_phone.replace(/\D/g, '')}" target="_blank" rel="noopener noreferrer" class="component-button component-button--secondary component-button--h34" style="color: #22c55e;">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call"></use></svg>
-                  <span>Llamar / WhatsApp</span>
-                </a>
-              `
-              : ''
-          }
-        </div>
-      </div>
+        </td>
+        <td class="winners-table__td">
+          ${statusBadgeHtml}
+        </td>
+        <td class="winners-table__td">
+          <span style="font-size: 12px; color: var(--text-secondary);">${formatDate(w.winner_announced_at)}</span>
+        </td>
+      </tr>
     `;
   }
 
-  private attachCardEvents(container: HTMLElement): void {
-    const manageBtns = container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-manage-delivery-"]');
-    manageBtns.forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const uuid = btn.getAttribute('data-uuid');
-        const winner = this.winners.find((w) => w.giveaway_uuid === uuid);
-        if (winner) this.openManageDeliveryModal(winner);
+  private attachRowEvents(tbody: HTMLElement): void {
+    const rows = tbody.querySelectorAll<HTMLElement>('.winners-table__tr');
+    rows.forEach((row) => {
+      const uuid = row.getAttribute('data-uuid');
+      if (!uuid) return;
+      const winner = this.winners.find((w) => w.giveaway_uuid === uuid);
+      if (!winner) return;
+
+      row.addEventListener('click', () => {
+        this.toggleWinnerSelection(winner);
       });
+
+      row.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        this.openManageDeliveryModal(winner);
+      });
+    });
+  }
+
+  private openInspectEvidenceModal(winner: WinnerItem): void {
+    const url = winner.evidence_image_url || winner.spei_receipt_url;
+    if (!url) {
+      showToast('No hay evidencia digital ni comprobante SPEI registrado.', 'info');
+      return;
+    }
+
+    const modalBody = document.createElement('div');
+    modalBody.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 14px; align-items: center; width: 100%;">
+        <div style="width: 100%; max-height: 420px; overflow: hidden; border-radius: 12px; background: #000; display: flex; align-items: center; justify-content: center;">
+          <img src="${escapeHtml(url)}" alt="Evidencia de entrega" style="max-width: 100%; max-height: 420px; object-fit: contain;" />
+        </div>
+        ${winner.testimonial ? `<p style="font-style: italic; font-size: 13px; color: var(--text-secondary); text-align: center; margin: 0;">"${escapeHtml(winner.testimonial)}"</p>` : ''}
+      </div>
+    `;
+
+    openModal({
+      bodyHtml: modalBody,
+      cancelText: 'Cerrar',
+      description: `Ganador: ${winner.winner_name} • ${winner.giveaway_title}`,
+      size: 'md',
+      title: 'Evidencia de Entrega de Premio',
     });
   }
 
@@ -431,3 +645,4 @@ export async function createWinnersView(): Promise<HTMLElement> {
   (container as any).__controller = controller;
   return container;
 }
+

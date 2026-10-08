@@ -59,6 +59,20 @@
           <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-payments" data-tooltip="Actualizar" aria-label="Actualizar">
             <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
           </button>
+
+          <div class="component-inline-control component-inline-control--fixed component-inline-control--pagination" data-ref="pagination-inline-control">
+            <div class="component-inline-control__group" data-ref="inline-group-page-prev">
+              <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-prev" data-tooltip="Página anterior" aria-label="Página anterior" disabled>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              </button>
+            </div>
+            <input class="component-inline-control__input" data-ref="input-pagination-page" type="number" min="1" max="1" value="1" autocomplete="off" />
+            <div class="component-inline-control__group" data-ref="inline-group-page-next">
+              <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-next" data-tooltip="Página siguiente" aria-label="Página siguiente" disabled>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="view-header__actions" data-ref="payments-selected-actions" style="display: none; align-items: center; gap: 8px;">
@@ -171,9 +185,31 @@
         </div>
       </div>
 
-      <!-- Orders List Container -->
+      <!-- Orders Table Container -->
       <div class="payments-content-area" data-ref="payments-content-area">
-        <div class="payments-list" data-ref="payments-list-container"></div>
+        <section class="canvas-section" data-ref="payments-section" style="padding: 0; width: 100%;">
+          <div class="winners-daily-wrapper" data-ref="payments-table-wrapper">
+            <div class="winners-daily-table-card" data-ref="payments-table-card" style="display: block;">
+              <div class="winners-daily-table-scroll">
+                <table class="winners-daily-table" data-ref="payments-table">
+                  <thead>
+                    <tr>
+                      <th class="winners-th" scope="col">Folio / Sorteo</th>
+                      <th class="winners-th" scope="col">Cliente</th>
+                      <th class="winners-th" scope="col">Teléfono / Ubicación</th>
+                      <th class="winners-th" scope="col">Boletos</th>
+                      <th class="winners-th" scope="col">Monto</th>
+                      <th class="winners-th" scope="col">Clave SPEI</th>
+                      <th class="winners-th" scope="col">Estado</th>
+                      <th class="winners-th" scope="col">Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody class="winners-tbody" data-ref="tbody-payments"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div class="giveaways-empty-state" data-ref="payments-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
           <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
@@ -182,19 +218,6 @@
           <h3 style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text-primary);">Sin órdenes ni comprobantes</h3>
           <p style="margin: 0 0 20px; font-size: 13.5px; color: var(--text-secondary); max-width: 400px; margin-left: auto; margin-right: auto;">No se encontraron órdenes registradas con los filtros seleccionados.</p>
           <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-filters">Restablecer Filtros</button>
-        </div>
-
-        <div class="pagination-bar" data-ref="payments-pagination-bar" style="margin-top: 14px;">
-          <span class="pagination-bar__info" data-ref="pagination-info">Mostrando 0 de 0 órdenes</span>
-          <div class="pagination-bar__actions" data-ref="pagination-actions">
-            <button type="button" class="component-button component-button--secondary component-button--h32 component-button--icon-only" data-ref="btn-page-prev" data-tooltip="Página anterior" aria-label="Página anterior">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
-            </button>
-            <span class="pagination-bar__page-number" data-ref="text-current-page">1 / 1</span>
-            <button type="button" class="component-button component-button--secondary component-button--h32 component-button--icon-only" data-ref="btn-page-next" data-tooltip="Página siguiente" aria-label="Página siguiente">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
-            </button>
-          </div>
         </div>
       </div>
     </div>

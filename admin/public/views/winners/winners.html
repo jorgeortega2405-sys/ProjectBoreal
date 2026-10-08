@@ -14,6 +14,42 @@
           <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-winners" data-tooltip="Actualizar" aria-label="Actualizar">
             <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
           </button>
+
+          <div class="component-inline-control component-inline-control--fixed component-inline-control--pagination" data-ref="pagination-inline-control">
+            <div class="component-inline-control__group" data-ref="inline-group-page-prev">
+              <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-prev" data-tooltip="Página anterior" aria-label="Página anterior" disabled>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              </button>
+            </div>
+            <input class="component-inline-control__input" data-ref="input-pagination-page" type="number" min="1" max="1" value="1" autocomplete="off" />
+            <div class="component-inline-control__group" data-ref="inline-group-page-next">
+              <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-next" data-tooltip="Página siguiente" aria-label="Página siguiente" disabled>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="view-header__actions" data-ref="winners-selected-actions" style="display: none; align-items: center; gap: 8px;">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-manage-delivery" data-tooltip="Gestionar Entrega de Premio" aria-label="Gestionar Entrega de Premio">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-inspect-evidence" data-tooltip="Ver Evidencia / Comprobante" aria-label="Ver Evidencia / Comprobante">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-whatsapp" data-tooltip="WhatsApp Directo" aria-label="WhatsApp Directo" style="color: #22c55e;">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-copy-phone" data-tooltip="Copiar Teléfono" aria-label="Copiar Teléfono">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+          </button>
         </div>
       </div>
 
@@ -88,7 +124,28 @@
       </div>
 
       <div class="winners-content-area" data-ref="winners-content-area">
-        <div class="winners-grid" data-ref="winners-grid-container"></div>
+        <section class="canvas-section" data-ref="winners-section" style="padding: 0; width: 100%;">
+          <div class="winners-daily-wrapper" data-ref="winners-table-wrapper">
+            <div class="winners-daily-table-card" data-ref="winners-table-card" style="display: block;">
+              <div class="winners-daily-table-scroll">
+                <table class="winners-daily-table" data-ref="winners-table">
+                  <thead>
+                    <tr>
+                      <th class="winners-th" scope="col">Sorteo</th>
+                      <th class="winners-th" scope="col">Ganador</th>
+                      <th class="winners-th" scope="col">Boleto Ganador</th>
+                      <th class="winners-th" scope="col">Premio / Bolsa</th>
+                      <th class="winners-th" scope="col">Teléfono / Ubicación</th>
+                      <th class="winners-th" scope="col">Estado de Entrega</th>
+                      <th class="winners-th" scope="col">Fecha Sorteo</th>
+                    </tr>
+                  </thead>
+                  <tbody class="winners-tbody" data-ref="tbody-winners"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div class="giveaways-empty-state" data-ref="winners-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
           <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">

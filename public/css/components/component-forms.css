@@ -755,3 +755,115 @@ body[data-theme="dark"] .login-logo-img {
   padding-left: 16px;
   padding-right: 16px;
 }
+
+.component-inline-control {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background-color: var(--bg-surface);
+  box-sizing: border-box;
+}
+
+.component-inline-control--fixed {
+  width: 240px;
+  max-width: 100%;
+}
+
+.component-inline-control--pagination {
+  width: 124px;
+  min-width: 124px;
+  max-width: 124px;
+}
+
+.component-inline-control--pagination .component-inline-control__input {
+  width: 44px;
+  min-width: 44px;
+  padding: 0 2px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.component-inline-control--full {
+  width: 100%;
+}
+
+.component-inline-control__group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 100%;
+}
+
+.component-inline-control__btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  height: 32px;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  transition: background-color var(--sl-transition-fast), border-color var(--sl-transition-fast), color var(--sl-transition-fast);
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.component-inline-control__btn .component-icon,
+.component-inline-control__btn .material-symbols-rounded {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.component-inline-control__btn:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
+}
+
+.component-inline-control__btn:active:not(:disabled) {
+  background-color: var(--bg-active);
+}
+
+.component-inline-control__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.component-inline-control__input {
+  flex: 1;
+  text-align: center;
+  height: 32px;
+  min-width: 52px;
+  width: 52px;
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: transparent;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+  -moz-appearance: textfield;
+}
+
+.component-inline-control__input::-webkit-outer-spin-button,
+.component-inline-control__input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.component-inline-control__input:focus {
+  border-color: var(--border-color-focus);
+}
