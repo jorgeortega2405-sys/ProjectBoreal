@@ -1,11 +1,11 @@
 <div class="component-wrapper component-wrapper--full view-wrapper" data-ref="not-found-wrapper">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="not-found-scrollable">
-    <div class="view-body" data-ref="not-found-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center; padding: 48px 24px;">
-      <div class="not-found-card" data-ref="not-found-card" style="display: flex; flex-direction: column; align-items: center; max-width: 480px; gap: 16px;">
-        <span class="not-found-code" data-ref="not-found-code" style="font-size: 72px; font-weight: 900; letter-spacing: -2px; line-height: 1; color: var(--text-primary);">404</span>
-        <h1 class="not-found-title" data-ref="not-found-title" style="font-size: 22px; font-weight: 700; margin: 0; color: var(--text-primary);">Página no encontrada</h1>
-        <p class="not-found-desc" data-ref="not-found-desc" style="font-size: 14px; color: var(--text-secondary); margin: 0; line-height: 1.5;">La sección administrativa a la que intentas acceder no existe o no está disponible.</p>
-        <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-404-dashboard" style="margin-top: 12px;">
+    <div class="view-body view-body--not-found" data-ref="not-found-container">
+      <div class="not-found-card" data-ref="not-found-card">
+        <span class="not-found-code" data-ref="not-found-code">404</span>
+        <h1 class="not-found-title" data-ref="not-found-title">Página no encontrada</h1>
+        <p class="not-found-desc" data-ref="not-found-desc">La sección administrativa a la que intentas acceder no existe o no está disponible.</p>
+        <button type="button" class="component-button component-button--black component-button--h44 not-found-action" data-ref="btn-404-dashboard">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           <span>Volver al Dashboard</span>
         </button>

@@ -698,6 +698,7 @@ html.dark-theme .rail-btn--create:hover .rail-btn__icon {
 }
 
 .rail-nav-item {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;

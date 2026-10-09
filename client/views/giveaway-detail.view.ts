@@ -251,15 +251,12 @@ export class GiveawayDetailController {
       }
       if (closedBanner) {
         closedBanner.classList.add('is-hidden');
-        closedBanner.style.display = 'none';
       }
       if (upcomingBanner) {
         upcomingBanner.classList.add('is-hidden');
-        upcomingBanner.style.display = 'none';
       }
       if (winnerBanner) {
         winnerBanner.classList.remove('is-hidden');
-        winnerBanner.style.display = 'block';
 
         const hasWinner = Boolean(g.winner_ticket_number != null && g.winner_name && g.winner_name !== 'Sin participantes');
         const winnerTitleEl = this.container.querySelector<HTMLElement>('[data-ref="banner-winner-title"]');
@@ -310,18 +307,15 @@ export class GiveawayDetailController {
       }
       if (closedBanner) {
         closedBanner.classList.add('is-hidden');
-        closedBanner.style.display = 'none';
       }
       if (upcomingBanner) {
         upcomingBanner.classList.remove('is-hidden');
-        upcomingBanner.style.display = 'block';
         if (upcomingBannerText) {
           upcomingBannerText.textContent = t('giveaway.upcoming_banner', { date: dateText });
         }
       }
       if (winnerBanner) {
         winnerBanner.classList.add('is-hidden');
-        winnerBanner.style.display = 'none';
       }
       if (buyBtn) {
         buyBtn.disabled = true;
@@ -335,7 +329,6 @@ export class GiveawayDetailController {
 
     if (upcomingBanner) {
       upcomingBanner.classList.add('is-hidden');
-      upcomingBanner.style.display = 'none';
     }
 
     if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
@@ -350,11 +343,9 @@ export class GiveawayDetailController {
       }
       if (closedBanner) {
         closedBanner.classList.add('is-hidden');
-        closedBanner.style.display = 'none';
       }
       if (winnerBanner) {
         winnerBanner.classList.add('is-hidden');
-        winnerBanner.style.display = 'none';
       }
       this.disablePurchaseControls(false);
       if (buyBtn) {
@@ -377,7 +368,6 @@ export class GiveawayDetailController {
       }
       if (closedBanner) {
         closedBanner.classList.add('is-hidden');
-        closedBanner.style.display = 'none';
       }
       if (buyBtn) {
         buyBtn.disabled = true;
@@ -407,7 +397,6 @@ export class GiveawayDetailController {
       if (timerBadge) timerBadge.classList.add('giveaway-badge--warning');
       if (closedBanner) {
         closedBanner.classList.remove('is-hidden');
-        closedBanner.style.display = 'block';
       }
       if (buyBtn) {
         buyBtn.disabled = true;
@@ -420,7 +409,6 @@ export class GiveawayDetailController {
       if (timerBadge) timerBadge.classList.remove('giveaway-badge--warning');
       if (closedBanner) {
         closedBanner.classList.add('is-hidden');
-        closedBanner.style.display = 'none';
       }
       this.disablePurchaseControls(false);
       if (buyBtn) {
@@ -501,17 +489,17 @@ export class GiveawayDetailController {
     const hasWinner = Boolean(ticketNum != null && winnerName && winnerName !== 'Sin participantes');
     const modalContent = hasWinner
       ? `
-      <div class="winner-modal-box" style="text-align: center; padding: 24px 16px;">
-        <div class="winner-trophy" style="font-size: 48px; margin-bottom: 12px;">🏆</div>
-        <h2 class="winner-title" style="font-size: 22px; font-weight: 800; color: #f59e0b; margin-bottom: 8px;">${escapeHtml(t('giveaway.winner_congrats_title'))}</h2>
-        <p class="winner-sub" style="font-size: 15px; color: var(--text-secondary); margin-bottom: 20px;">
+      <div class="winner-modal-box">
+        <div class="winner-trophy">🏆</div>
+        <h2 class="winner-title">${escapeHtml(t('giveaway.winner_congrats_title'))}</h2>
+        <p class="winner-sub">
           ${escapeHtml(t('giveaway.winner_congrats_desc', { ticket: ticketNum! }))}
         </p>
-        <div class="winner-card" style="padding: 16px 20px; border-radius: 12px; background: var(--bg-hover); margin-bottom: 24px; border: 1px solid var(--border-subtle);">
-          <div class="winner-card-label" style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">${escapeHtml(t('giveaway.winner_label'))}</div>
-          <div class="winner-card-name" style="font-size: 20px; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(winnerName)}</div>
-          <div class="winner-card-ticket" style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">
-            ${escapeHtml(t('giveaway.winner_ticket_label'))} <strong style="color: #f59e0b;">#${ticketNum}</strong>
+        <div class="winner-card">
+          <div class="winner-card-label">${escapeHtml(t('giveaway.winner_label'))}</div>
+          <div class="winner-card-name">${escapeHtml(winnerName)}</div>
+          <div class="winner-card-ticket">
+            ${escapeHtml(t('giveaway.winner_ticket_label'))} <strong class="winner-card-ticket-number">#${ticketNum}</strong>
           </div>
         </div>
         <button type="button" class="component-button component-button--black component-button--h50 component-button--w-full" data-ref="btn-close-winner-modal">
@@ -520,16 +508,16 @@ export class GiveawayDetailController {
       </div>
     `
       : `
-      <div class="winner-modal-box" style="text-align: center; padding: 24px 16px;">
-        <div class="winner-trophy" style="font-size: 48px; margin-bottom: 12px;">🎟️</div>
-        <h2 class="winner-title" style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">${escapeHtml(t('giveaway.no_winner_modal_title'))}</h2>
-        <p class="winner-sub" style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;">
+      <div class="winner-modal-box">
+        <div class="winner-trophy">🎟️</div>
+        <h2 class="winner-title winner-title--neutral">${escapeHtml(t('giveaway.no_winner_modal_title'))}</h2>
+        <p class="winner-sub winner-sub--sm">
           ${escapeHtml(t('giveaway.no_winner_modal_desc'))}
         </p>
-        <div class="winner-card" style="padding: 16px 20px; border-radius: 12px; background: var(--bg-hover); margin-bottom: 24px; border: 1px solid var(--border-subtle);">
-          <div class="winner-card-label" style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">${escapeHtml(t('giveaway.no_winner_status_label'))}</div>
-          <div class="winner-card-name" style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin-top: 4px;">${escapeHtml(t('giveaway.no_winner_status_badge'))}</div>
-          <div class="winner-card-ticket" style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
+        <div class="winner-card">
+          <div class="winner-card-label">${escapeHtml(t('giveaway.no_winner_status_label'))}</div>
+          <div class="winner-card-name winner-card-name--sm">${escapeHtml(t('giveaway.no_winner_status_badge'))}</div>
+          <div class="winner-card-ticket winner-card-ticket--sm">
             ${escapeHtml(t('giveaway.no_winner_status_detail'))}
           </div>
         </div>
@@ -597,17 +585,17 @@ export class GiveawayDetailController {
     const dateTextEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-draw-date-text"]');
     if (drawBadgeEl && dateTextEl) {
       if (isUpcoming) {
-        drawBadgeEl.style.display = 'inline-flex';
+        drawBadgeEl.classList.remove('is-hidden');
         const dateText = formatShortDate(g.start_date, getCurrentLanguage());
         dateTextEl.textContent = t('giveaway.upcoming_badge', { date: dateText });
       } else if (g.type === 'daily') {
-        drawBadgeEl.style.display = 'inline-flex';
+        drawBadgeEl.classList.remove('is-hidden');
         dateTextEl.textContent = 'Hoy 23:59 hrs';
       } else if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
-        drawBadgeEl.style.display = 'inline-flex';
+        drawBadgeEl.classList.remove('is-hidden');
         dateTextEl.textContent = t('home.threshold_target', { target: g.min_threshold_pct });
       } else if (g.draw_date) {
-        drawBadgeEl.style.display = 'inline-flex';
+        drawBadgeEl.classList.remove('is-hidden');
         const formattedDate = new Date(g.draw_date).toLocaleDateString('es-ES', {
           day: 'numeric',
           month: 'short',
@@ -615,7 +603,7 @@ export class GiveawayDetailController {
         });
         dateTextEl.textContent = t('giveaway.draw_date', { date: formattedDate });
       } else {
-        drawBadgeEl.style.display = 'none';
+        drawBadgeEl.classList.add('is-hidden');
       }
     }
 
@@ -646,28 +634,26 @@ export class GiveawayDetailController {
 
     const thresholdHintEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-threshold-hint"]');
     if (thresholdHintEl) {
-      if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
-        thresholdHintEl.style.display = 'block';
+      const showHint = g.min_threshold_pct > 0 && !g.threshold_reached_at;
+      thresholdHintEl.classList.toggle('is-hidden', !showHint);
+      if (showHint) {
         thresholdHintEl.textContent = t('giveaway.threshold_waiting_desc', {
           hours: g.countdown_hours || 72,
           target: g.min_threshold_pct,
         });
-      } else {
-        thresholdHintEl.style.display = 'none';
       }
     }
 
     const dailyPotBanner = this.container.querySelector<HTMLElement>('[data-ref="banner-daily-pot"]');
-    if (g.type === 'daily') {
-      if (dailyPotBanner) {
-        dailyPotBanner.style.display = 'block';
+    if (dailyPotBanner) {
+      const isDaily = g.type === 'daily';
+      dailyPotBanner.classList.toggle('is-hidden', !isDaily);
+      if (isDaily) {
         const potAmountEl = dailyPotBanner.querySelector<HTMLElement>('[data-ref="daily-banner-pot-amount"]');
         if (potAmountEl) {
           potAmountEl.textContent = formatCurrency(g.current_pot || 0, g.currency || 'MXN', { decimals: 0 });
         }
       }
-    } else {
-      if (dailyPotBanner) dailyPotBanner.style.display = 'none';
     }
   }
 
@@ -683,12 +669,12 @@ export class GiveawayDetailController {
       disclaimerEl.textContent = t('giveaway.disclaimer_illustrative');
     }
 
+    const isSingleOrDaily = this.giveaway?.type === 'daily' || this.allImages.length <= 1;
+
     const dotsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-dots"]');
     if (dotsContainer) {
-      if (this.giveaway?.type === 'daily' || this.allImages.length <= 1) {
-        dotsContainer.style.display = 'none';
-      } else {
-        dotsContainer.style.display = 'flex';
+      dotsContainer.classList.toggle('is-hidden', isSingleOrDaily);
+      if (!isSingleOrDaily) {
         dotsContainer.innerHTML = this.allImages
           .map((url, idx) => {
             const isActive = url === this.activeImageUrl;
@@ -703,22 +689,19 @@ export class GiveawayDetailController {
     const thumbsContainer = this.container.querySelector<HTMLElement>('[data-ref="gallery-thumbs"]');
     if (!thumbsContainer) return;
 
-    if (this.giveaway?.type === 'daily' || this.allImages.length <= 1) {
-      thumbsContainer.style.display = 'none';
-      return;
+    thumbsContainer.classList.toggle('is-hidden', isSingleOrDaily);
+    if (!isSingleOrDaily) {
+      thumbsContainer.innerHTML = this.allImages
+        .map((url, idx) => {
+          const isActive = url === this.activeImageUrl;
+          return `
+            <button type="button" class="giveaway-gallery__thumb ${isActive ? 'is-active' : ''}" data-ref="thumb-${idx}" data-url="${url}">
+              <img class="giveaway-gallery__thumb-img" src="${url}" alt="Thumbnail ${idx + 1}" loading="lazy" />
+            </button>
+          `;
+        })
+        .join('');
     }
-
-    thumbsContainer.style.display = 'flex';
-    thumbsContainer.innerHTML = this.allImages
-      .map((url, idx) => {
-        const isActive = url === this.activeImageUrl;
-        return `
-          <button type="button" class="giveaway-gallery__thumb ${isActive ? 'is-active' : ''}" data-ref="thumb-${idx}" data-url="${url}">
-            <img class="giveaway-gallery__thumb-img" src="${url}" alt="Thumbnail ${idx + 1}" loading="lazy" />
-          </button>
-        `;
-      })
-      .join('');
   }
 
   private startGallerySlideshow(): void {
@@ -945,7 +928,7 @@ export class GiveawayDetailController {
     const paginationEl = this.container.querySelector<HTMLElement>('[data-ref="tickets-pagination"]');
 
     if (paginationEl) {
-      paginationEl.style.display = totalPages > 1 ? 'flex' : 'none';
+      paginationEl.classList.toggle('is-hidden', totalPages <= 1);
     }
 
     if (prevBtn) {
@@ -1343,9 +1326,9 @@ export class GiveawayDetailController {
     if (!container) return;
 
     container.innerHTML = `
-      <div style="text-align: center; padding: 80px 20px;">
-        <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">${t('giveaway.not_found_title')}</h2>
-        <p style="color: var(--text-secondary); margin-bottom: 24px;">${t('giveaway.not_found_desc')}</p>
+      <div class="giveaway-not-found">
+        <h2 class="giveaway-not-found__title">${t('giveaway.not_found_title')}</h2>
+        <p class="giveaway-not-found__desc">${t('giveaway.not_found_desc')}</p>
         <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-back-not-found">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
           <span>${t('giveaway.back_to_home')}</span>

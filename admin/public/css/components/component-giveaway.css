@@ -2438,5 +2438,211 @@ html.dark-theme .giveaway-pagination__btn.is-active {
   user-select: text;
 }
 
+/* ==========================================================================
+   Admin Giveaways Management View & Forms
+   ========================================================================== */
+
+.giveaways-selected-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.giveaways-content-container {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 20px 24px 60px;
+}
+
+.banner-daily-cycle {
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.banner-daily-cycle__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.banner-daily-cycle__left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.banner-daily-cycle__icon {
+  width: 20px;
+  height: 20px;
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.banner-daily-cycle__title {
+  color: var(--text-primary);
+  font-size: 13.5px;
+}
+
+.banner-daily-cycle__desc {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.giveaway-card__timer-badge--active {
+  background: rgba(16, 185, 129, 0.85);
+  color: #ffffff;
+}
+
+.giveaway-card__timer-badge--paused,
+.giveaway-card__timer-badge--daily-next {
+  background: rgba(245, 158, 11, 0.85);
+  color: #000000;
+}
+
+.giveaway-card__timer-badge--draft {
+  background: rgba(107, 114, 128, 0.85);
+  color: #ffffff;
+}
+
+.giveaway-card__timer-badge--completed {
+  background: rgba(59, 130, 246, 0.85);
+  color: #ffffff;
+}
+
+.giveaway-card__timer-badge--cancelled {
+  background: rgba(239, 68, 68, 0.85);
+  color: #ffffff;
+}
+
+.canvas-card__img-fallback {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+}
+
+.canvas-card__img-fallback-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.daily-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.daily-modal-status-box {
+  padding: 14px 16px;
+  border-radius: 12px;
+}
+
+.daily-modal-status-box--paused {
+  border: 1px solid #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.daily-modal-status-box--active {
+  border: 1px solid #10b981;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.daily-modal-status-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.daily-modal-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.daily-modal-status-dot--paused {
+  background: #f59e0b;
+}
+
+.daily-modal-status-dot--active {
+  background: #10b981;
+}
+
+.daily-modal-status-title {
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.daily-modal-status-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.daily-modal-prompt {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.giveaway-dialog-text {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.field__textarea-autogrow {
+  min-height: 80px;
+  height: 95px;
+  resize: vertical;
+}
+
+.field__input--disabled-readonly {
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+.giveaway-preview-live-indicator {
+  position: static;
+  height: 22px;
+  font-size: 11px;
+  padding: 0 8px;
+}
+
+.skeleton-banks-loading {
+  padding: 16px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.giveaway-edit-banner-sales {
+  padding: 12px 16px;
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(245, 158, 11, 0.08);
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+.giveaway-edit-banner-completed {
+  padding: 12px 16px;
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.08);
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
 
 

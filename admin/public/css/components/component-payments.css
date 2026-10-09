@@ -483,3 +483,71 @@ html.dark-theme .payment-card.is-selected:hover {
   padding: 0;
 }
 
+.filter-giveaways-dropdown-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.btn-action-approve-icon {
+  color: #10b981;
+}
+
+.btn-action-reject-icon {
+  color: #ef4444;
+}
+
+.inspect-receipt-empty-icon {
+  width: 56px;
+  height: 56px;
+  color: var(--text-tertiary);
+}
+
+.inspect-cep-verified {
+  color: #10b981;
+}
+
+.inspect-cep-unverified {
+  color: #f59e0b;
+}
+
+.inspect-errors-title {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.inspect-amount-highlight {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 16px;
+}
+
+.inspect-tracking-field {
+  flex: 1;
+}
+
+.payment-dialog-text {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.payment-reject-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.payment-reject-text {
+  margin: 0;
+}
+
+.payment-reject-subtext {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+
+

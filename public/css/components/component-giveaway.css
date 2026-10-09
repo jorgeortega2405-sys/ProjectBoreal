@@ -22,6 +22,97 @@ html.dark-theme {
   gap: 8px;
 }
 
+.winner-modal-box {
+  text-align: center;
+  padding: 24px 16px;
+}
+
+.winner-trophy {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.winner-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f59e0b;
+  margin-bottom: 8px;
+}
+
+.winner-title--neutral {
+  font-size: 20px;
+  color: var(--text-primary);
+}
+
+.winner-sub {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.winner-sub--sm {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.winner-card {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--bg-hover);
+  margin-bottom: 24px;
+  border: 1px solid var(--border-subtle);
+}
+
+.winner-card-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.winner-card-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+
+.winner-card-name--sm {
+  font-size: 17px;
+}
+
+.winner-card-ticket {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+.winner-card-ticket--sm {
+  margin-top: 6px;
+}
+
+.winner-card-ticket-number {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.giveaway-not-found {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.giveaway-not-found__title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.giveaway-not-found__desc {
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+}
+
 .validate-orders-wrapper {
   width: 100%;
   max-width: 900px;

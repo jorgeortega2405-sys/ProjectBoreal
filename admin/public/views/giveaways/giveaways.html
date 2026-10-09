@@ -63,16 +63,12 @@
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
           </button>
 
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-giveaways" data-tooltip="Actualizar" aria-label="Actualizar">
-            <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
-          </button>
-
           <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-create-giveaway" data-tooltip="Crear Sorteo" aria-label="Crear Sorteo">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
           </button>
         </div>
 
-        <div class="view-header__actions" data-ref="giveaways-selected-actions" style="display: none; align-items: center; gap: 8px;">
+        <div class="view-header__actions giveaways-selected-actions is-hidden" data-ref="giveaways-selected-actions">
           <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-i18n-tooltip="giveaways.selected_actions.deselect" data-i18n-aria="giveaways.selected_actions.deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
@@ -97,7 +93,7 @@
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
           </button>
 
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-delete" data-i18n-tooltip="giveaways.selected_actions.delete" data-i18n-aria="giveaways.selected_actions.delete" data-tooltip="Eliminar borrador" aria-label="Eliminar borrador" style="color: var(--color-danger, #ef4444);">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn view-header__btn--danger" data-ref="btn-action-delete" data-i18n-tooltip="giveaways.selected_actions.delete" data-i18n-aria="giveaways.selected_actions.delete" data-tooltip="Eliminar borrador" aria-label="Eliminar borrador">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
           </button>
         </div>
@@ -111,76 +107,48 @@
           <div class="component-search__input-box" data-ref="search-input-box">
             <input class="component-search__input" data-ref="input-search-giveaways" data-i18n-placeholder="giveaways.search_placeholder" placeholder="Buscar por título, slug o ID..." type="text" maxlength="100" autocomplete="off" />
           </div>
-          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
       </div>
     </div>
 
-    <div class="view-body" data-ref="giveaways-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
+    <div class="view-body giveaways-content-container" data-ref="giveaways-content-container">
 
-      <div class="dashboard-stats-grid" data-ref="giveaways-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
-        <div class="dashboard-stat-card" data-ref="card-kpi-total" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span data-i18n="giveaways.kpi.total_title" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Total Sorteos</span>
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-            </div>
-          </div>
-          <div>
-            <div class="stat-card-value" data-ref="kpi-total-value" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-            <span data-i18n="giveaways.kpi.total_desc" style="font-size: 12px; color: var(--text-secondary);">Catálogo histórico registrado</span>
-          </div>
+      <div class="dashboard-stats-grid" data-ref="giveaways-kpi-grid">
+        <div class="dashboard-stat-card" data-ref="card-kpi-total">
+          <span class="dashboard-stat-card__title" data-i18n="giveaways.kpi.total_title">Total Sorteos</span>
+          <div class="stat-card-value" data-ref="kpi-total-value">0</div>
+          <span class="dashboard-stat-card__desc" data-i18n="giveaways.kpi.total_desc">Catálogo histórico registrado</span>
         </div>
 
-        <div class="dashboard-stat-card" data-ref="card-kpi-active" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span data-i18n="giveaways.kpi.active_title" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Sorteos Activos</span>
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-            </div>
-          </div>
-          <div>
-            <div class="stat-card-value" data-ref="kpi-active-value" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-            <span data-i18n="giveaways.kpi.active_desc" style="font-size: 12px; color: var(--text-secondary);">Sorteos con venta abierta</span>
-          </div>
+        <div class="dashboard-stat-card" data-ref="card-kpi-active">
+          <span class="dashboard-stat-card__title" data-i18n="giveaways.kpi.active_title">Sorteos Activos</span>
+          <div class="stat-card-value" data-ref="kpi-active-value">0</div>
+          <span class="dashboard-stat-card__desc" data-i18n="giveaways.kpi.active_desc">Sorteos con venta abierta</span>
         </div>
 
-        <div class="dashboard-stat-card" data-ref="card-kpi-daily-pot" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span data-i18n="giveaways.kpi.daily_pot_title" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Acumulado Diario</span>
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
-            </div>
-          </div>
-          <div>
-            <div class="stat-card-value" data-ref="kpi-daily-pot-value" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 MXN</div>
-            <span data-i18n="giveaways.kpi.daily_pot_desc" style="font-size: 12px; color: var(--text-secondary);">Bolsa en efectivo estimada hoy</span>
-          </div>
+        <div class="dashboard-stat-card" data-ref="card-kpi-daily-pot">
+          <span class="dashboard-stat-card__title" data-i18n="giveaways.kpi.daily_pot_title">Acumulado Diario</span>
+          <div class="stat-card-value" data-ref="kpi-daily-pot-value">$0.00 MXN</div>
+          <span class="dashboard-stat-card__desc" data-i18n="giveaways.kpi.daily_pot_desc">Bolsa en efectivo estimada hoy</span>
         </div>
 
-        <div class="dashboard-stat-card" data-ref="card-kpi-revenue" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span data-i18n="giveaways.kpi.revenue_title" style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Recaudación Total</span>
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
-            </div>
-          </div>
-          <div>
-            <div class="stat-card-value" data-ref="kpi-revenue-value" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">$0.00 MXN</div>
-            <span data-i18n="giveaways.kpi.revenue_desc" style="font-size: 12px; color: var(--text-secondary);">Acumulado en sorteos vigentes</span>
-          </div>
+        <div class="dashboard-stat-card" data-ref="card-kpi-revenue">
+          <span class="dashboard-stat-card__title" data-i18n="giveaways.kpi.revenue_title">Recaudación Total</span>
+          <div class="stat-card-value" data-ref="kpi-revenue-value">$0.00 MXN</div>
+          <span class="dashboard-stat-card__desc" data-i18n="giveaways.kpi.revenue_desc">Acumulado en sorteos vigentes</span>
         </div>
       </div>
 
-      <div class="banner banner--warning" data-ref="banner-daily-cycle" style="display: none; margin-bottom: 24px; padding: 14px 18px; border-radius: var(--radius-md, 12px); border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.08);">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <svg class="component-icon" style="width: 20px; height: 20px; color: #f59e0b; flex-shrink: 0;" aria-hidden="true"><use href="/icons.svg#warning"></use></svg>
+      <div class="banner banner--warning banner-daily-cycle is-hidden" data-ref="banner-daily-cycle">
+        <div class="banner-daily-cycle__inner">
+          <div class="banner-daily-cycle__left">
+            <svg class="component-icon banner-daily-cycle__icon" aria-hidden="true"><use href="/icons.svg#warning"></use></svg>
             <div>
-              <strong style="color: var(--text-primary); font-size: 13.5px;" data-ref="banner-daily-title">Pausa del siguiente ciclo diario programada</strong>
-              <p style="margin: 2px 0 0; font-size: 12.5px; color: var(--text-secondary);" data-ref="banner-daily-desc">Al finalizar el sorteo diario de hoy, no se generará automáticamente el siguiente ciclo hasta que sea reanudado.</p>
+              <strong class="banner-daily-cycle__title" data-ref="banner-daily-title">Pausa del siguiente ciclo diario programada</strong>
+              <p class="banner-daily-cycle__desc" data-ref="banner-daily-desc">Al finalizar el sorteo diario de hoy, no se generará automáticamente el siguiente ciclo hasta que sea reanudado.</p>
             </div>
           </div>
           <button type="button" class="component-button component-button--h32 component-button--secondary" data-ref="btn-banner-toggle-daily">Reactivar Siguiente Ciclo</button>
@@ -190,13 +158,15 @@
       <div class="canvas-grid" data-ref="giveaways-grid">
       </div>
 
-      <div class="giveaways-empty-state" data-ref="giveaways-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
-        <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-          <svg class="component-icon" style="width: 28px; height: 28px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
+      <div class="component-empty-state is-hidden" data-ref="giveaways-empty-state">
+        <div class="component-empty-state__badge">
+          <svg class="component-icon component-empty-state__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
         </div>
-        <h3 style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text-primary);" data-i18n="giveaways.card.empty_title">Sin sorteos disponibles</h3>
-        <p style="margin: 0 0 20px; font-size: 13.5px; color: var(--text-secondary); max-width: 400px; margin-left: auto; margin-right: auto;" data-i18n="giveaways.card.empty_filter">No se encontraron sorteos con los filtros seleccionados.</p>
-        <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-filters">Restablecer Filtros</button>
+        <h3 class="component-empty-state__title" data-i18n="giveaways.card.empty_title">Sin sorteos disponibles</h3>
+        <p class="component-empty-state__desc" data-i18n="giveaways.card.empty_filter">No se encontraron sorteos con los filtros seleccionados.</p>
+        <div class="component-empty-state__actions">
+          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-filters">Restablecer Filtros</button>
+        </div>
       </div>
 
     </div>

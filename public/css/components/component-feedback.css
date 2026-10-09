@@ -304,12 +304,91 @@
 }
 
 /* Modificadores utilitarios */
+.view-skeleton {
+  pointer-events: none;
+  user-select: none;
+}
+
 .skeleton--w-full { width: 100%; }
 .skeleton--w-75 { width: 75%; }
 .skeleton--w-50 { width: 50%; }
 .skeleton--w-35 { width: 35%; }
 .skeleton--w-25 { width: 25%; }
 .skeleton--mx-auto { margin-left: auto; margin-right: auto; }
+.skeleton--h-32 { height: 32px; }
+.skeleton--h-48 { height: 48px; }
+.skeleton--h-52 { height: 52px; }
+.skeleton--h-160 { height: 160px; }
+.skeleton--h-320 { height: 320px; }
+.skeleton--h-380 { height: 380px; }
+.skeleton--h-540 { height: 540px; }
+.skeleton--w-64 { width: 64px; }
+.skeleton--w-80 { width: 80px; }
+.skeleton--w-120 { width: 120px; }
+.skeleton--w-140 { width: 140px; }
+.skeleton--w-160 { width: 160px; }
+.skeleton--w-180 { width: 180px; }
+.skeleton--w-240 { width: 240px; }
+.skeleton--w-280 { width: 280px; }
+.skeleton--w-300 { width: 300px; }
+.skeleton--w-340 { width: 340px; }
+.skeleton--pill { border-radius: 9999px; }
+.skeleton--search-hero { max-width: 480px; height: 46px; border-radius: 9999px; }
+.skeleton-gallery-main { width: 100%; height: 380px; border-radius: var(--radius-lg, 16px); margin-bottom: 12px; }
+.skeleton-gallery-thumb { width: 64px; height: 64px; border-radius: var(--radius-md, 10px); }
+.skeleton-gallery-thumbs { display: flex; gap: 8px; }
+.skeleton-detail-layout { padding-top: 24px; }
+.skeleton-detail-info { display: flex; flex-direction: column; gap: 14px; }
+.skeleton-detail-badges { display: flex; gap: 8px; }
+.skeleton-detail-card { padding: 20px; border-radius: var(--radius-lg, 16px); margin-top: 12px; }
+.skeleton-drawing-stage { max-width: 1000px; margin: 24px auto; padding: 0 20px; }
+.skeleton-legal-card { padding: 36px 32px; border-radius: var(--radius-xl, 20px); }
+.skeleton-not-found-card { padding: 48px 24px; }
+
+/* Vista de error 404 */
+.view-body--not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.not-found-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 480px;
+  gap: 16px;
+}
+
+.not-found-code {
+  font-size: 72px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.not-found-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.not-found-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.not-found-action {
+  margin-top: 12px;
+}
 
 /* Layout genérico agrupado centrado (700px) */
 .grouped-flow-layout {

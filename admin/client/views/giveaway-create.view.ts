@@ -318,16 +318,16 @@ export class GiveawayCreateController implements ViewController {
       this.previewImg.addEventListener(
         'error',
         () => {
-          if (this.previewImg) this.previewImg.style.display = 'none';
-          if (this.previewImgFallback) this.previewImgFallback.style.display = 'flex';
+          if (this.previewImg) this.previewImg.classList.add('is-hidden');
+          if (this.previewImgFallback) this.previewImgFallback.classList.remove('is-hidden');
         },
         { signal }
       );
       this.previewImg.addEventListener(
         'load',
         () => {
-          if (this.previewImg) this.previewImg.style.display = 'block';
-          if (this.previewImgFallback) this.previewImgFallback.style.display = 'none';
+          if (this.previewImg) this.previewImg.classList.remove('is-hidden');
+          if (this.previewImgFallback) this.previewImgFallback.classList.add('is-hidden');
         },
         { signal }
       );
@@ -357,15 +357,10 @@ export class GiveawayCreateController implements ViewController {
     }
 
     if (this.previewBadgeStatus) {
-      if (statusVal === 'active') {
-        this.previewBadgeStatus.textContent = 'Activo';
-        this.previewBadgeStatus.style.background = 'rgba(16, 185, 129, 0.85)';
-        this.previewBadgeStatus.style.color = '#ffffff';
-      } else {
-        this.previewBadgeStatus.textContent = 'Borrador';
-        this.previewBadgeStatus.style.background = 'rgba(107, 114, 128, 0.85)';
-        this.previewBadgeStatus.style.color = '#ffffff';
-      }
+      const isActive = statusVal === 'active';
+      this.previewBadgeStatus.textContent = isActive ? 'Activo' : 'Borrador';
+      this.previewBadgeStatus.classList.toggle('giveaway-card__timer-badge--active', isActive);
+      this.previewBadgeStatus.classList.toggle('giveaway-card__timer-badge--draft', !isActive);
     }
 
     if (this.previewImg && this.previewImg.src !== imageVal) {
@@ -414,7 +409,7 @@ export class GiveawayCreateController implements ViewController {
     const res = await getApi<BankAccountItem[]>('/api/giveaways/bank-accounts');
     if (!res.success || !res.data || res.data.length === 0) {
       this.banksContainer.innerHTML = `
-        <div style="font-size: 13px; color: var(--text-tertiary); padding: 8px 0;">
+        <div class="giveaway-create__empty-banks">
           No hay cuentas bancarias activas registradas en la plataforma.
         </div>
       `;
@@ -426,9 +421,9 @@ export class GiveawayCreateController implements ViewController {
         (b) => `
         <label class="giveaway-create__bank-item">
           <input type="checkbox" name="bank_account" value="${b.id}" checked />
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${escapeHtml(b.bank_name)} • ${escapeHtml(b.account_holder)}</span>
-            <span style="font-size: 11.5px; color: var(--text-secondary);">${escapeHtml(b.account_type.toUpperCase())} ${b.clabe ? `• CLABE: ${escapeHtml(b.clabe)}` : ''} ${b.card_number ? `• Tarjeta: ${escapeHtml(b.card_number)}` : ''}</span>
+          <div class="giveaway-create__bank-info">
+            <span class="giveaway-create__bank-name">${escapeHtml(b.bank_name)} • ${escapeHtml(b.account_holder)}</span>
+            <span class="giveaway-create__bank-meta">${escapeHtml(b.account_type.toUpperCase())} ${b.clabe ? `• CLABE: ${escapeHtml(b.clabe)}` : ''} ${b.card_number ? `• Tarjeta: ${escapeHtml(b.card_number)}` : ''}</span>
           </div>
         </label>
       `

@@ -166,22 +166,6 @@ export class GiveawaysController implements ViewController {
   bindEvents(): void {
     const signal = this.abortController?.signal;
 
-    const btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-giveaways"]');
-    btnRefresh?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        const icon = btnRefresh.querySelector('[data-ref="icon-refresh"]');
-        icon?.classList.add('admin-refresh-spin');
-        void this.loadData().finally(() => {
-          setTimeout(() => {
-            icon?.classList.remove('admin-refresh-spin');
-          }, 600);
-        });
-      },
-      { signal }
-    );
-
     const btnCreate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-create-giveaway"]');
     btnCreate?.addEventListener(
       'click',
@@ -324,9 +308,7 @@ export class GiveawaysController implements ViewController {
       'input',
       () => {
         const val = (this.inputSearch?.value || '').trim();
-        if (this.btnClearSearch) {
-          this.btnClearSearch.style.display = val.length > 0 ? 'inline-flex' : 'none';
-        }
+        this.btnClearSearch?.classList.toggle('is-hidden', val.length === 0);
         this.searchQuery = val.toLowerCase();
         this.applyFiltersAndRender();
       },
@@ -341,9 +323,7 @@ export class GiveawaysController implements ViewController {
           this.inputSearch.value = '';
         }
         this.searchQuery = '';
-        if (this.btnClearSearch) {
-          this.btnClearSearch.style.display = 'none';
-        }
+        this.btnClearSearch?.classList.add('is-hidden');
         this.applyFiltersAndRender();
         this.inputSearch?.focus();
       },
@@ -401,7 +381,7 @@ export class GiveawaysController implements ViewController {
         this.statusFilter = 'all';
         this.searchQuery = '';
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        this.btnClearSearch?.classList.add('is-hidden');
 
         typeBtns.forEach((b) => {
           b.classList.toggle('is-active', b.getAttribute('data-type-filter') === 'all');
@@ -498,12 +478,7 @@ export class GiveawaysController implements ViewController {
   private updateDailyBanner(): void {
     const banner = this.container.querySelector<HTMLElement>('[data-ref="banner-daily-cycle"]');
     if (!banner) return;
-
-    if (this.isDailyPausedNext) {
-      banner.style.display = 'block';
-    } else {
-      banner.style.display = 'none';
-    }
+    banner.classList.toggle('is-hidden', !this.isDailyPausedNext);
   }
 
   private applyFiltersAndRender(): void {
@@ -532,11 +507,11 @@ export class GiveawaysController implements ViewController {
 
     if (filtered.length === 0) {
       grid.innerHTML = '';
-      if (emptyState) emptyState.style.display = 'block';
+      emptyState?.classList.remove('is-hidden');
       return;
     }
 
-    if (emptyState) emptyState.style.display = 'none';
+    emptyState?.classList.add('is-hidden');
     this.renderCards(grid, filtered);
     this.updateSelectionUi();
   }
@@ -556,29 +531,23 @@ export class GiveawaysController implements ViewController {
 
     const typeBadgeText = isDaily ? 'Diario 50/50' : 'Estándar';
     let statusBadgeText = 'Activo';
-    let statusBadgeBg = 'rgba(16, 185, 129, 0.85)';
-    let statusBadgeColor = '#ffffff';
+    let statusBadgeClass = 'giveaway-card__timer-badge--active';
 
     if (isPaused) {
       statusBadgeText = 'Pausado';
-      statusBadgeBg = 'rgba(245, 158, 11, 0.85)';
-      statusBadgeColor = '#000000';
+      statusBadgeClass = 'giveaway-card__timer-badge--paused';
     } else if (isDraft) {
       statusBadgeText = 'Borrador';
-      statusBadgeBg = 'rgba(107, 114, 128, 0.85)';
-      statusBadgeColor = '#ffffff';
+      statusBadgeClass = 'giveaway-card__timer-badge--draft';
     } else if (isCompleted) {
       statusBadgeText = 'Concluido';
-      statusBadgeBg = 'rgba(59, 130, 246, 0.85)';
-      statusBadgeColor = '#ffffff';
+      statusBadgeClass = 'giveaway-card__timer-badge--completed';
     } else if (isCancelled) {
       statusBadgeText = 'Cancelado';
-      statusBadgeBg = 'rgba(239, 68, 68, 0.85)';
-      statusBadgeColor = '#ffffff';
+      statusBadgeClass = 'giveaway-card__timer-badge--cancelled';
     } else if (isDaily && this.isDailyPausedNext) {
       statusBadgeText = 'Pausa siguiente ciclo';
-      statusBadgeBg = 'rgba(245, 158, 11, 0.85)';
-      statusBadgeColor = '#000000';
+      statusBadgeClass = 'giveaway-card__timer-badge--daily-next';
     }
 
     const priceText = formatCurrency(g.ticket_price, g.currency || 'MXN');
@@ -587,14 +556,14 @@ export class GiveawaysController implements ViewController {
     return `
       <div class="canvas-card ${isSelected ? 'is-selected' : ''}" data-ref="card-giveaway-${escapeHtml(g.uuid)}" data-uuid="${escapeHtml(g.uuid)}">
         <div class="canvas-card__thumbnail">
-          <img class="canvas-card__image" data-ref="card-img-${escapeHtml(g.uuid)}" src="${escapeHtml(g.primary_image_url)}" alt="${escapeHtml(g.title)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-          <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: var(--bg-surface); color: var(--text-tertiary);">
-            <svg class="component-icon" style="width: 36px; height: 36px;"><use href="/icons.svg#confirmation_number"></use></svg>
+          <img class="canvas-card__image" data-ref="card-img-${escapeHtml(g.uuid)}" src="${escapeHtml(g.primary_image_url)}" alt="${escapeHtml(g.title)}" loading="lazy" />
+          <div class="canvas-card__img-fallback is-hidden" data-ref="card-img-fallback-${escapeHtml(g.uuid)}">
+            <svg class="component-icon canvas-card__img-fallback-icon"><use href="/icons.svg#confirmation_number"></use></svg>
           </div>
 
           <div class="giveaway-card__meta-badge" data-ref="card-meta-${escapeHtml(g.uuid)}">${escapeHtml(typeBadgeText)}</div>
           <span class="canvas-card__btn-sync">${escapeHtml(priceText)}</span>
-          <div class="giveaway-card__timer-badge" data-ref="card-timer-${escapeHtml(g.uuid)}" style="background: ${statusBadgeBg}; color: ${statusBadgeColor};">
+          <div class="giveaway-card__timer-badge ${statusBadgeClass}" data-ref="card-timer-${escapeHtml(g.uuid)}">
             ${escapeHtml(statusBadgeText)}
           </div>
 
@@ -646,13 +615,10 @@ export class GiveawaysController implements ViewController {
   private updateSelectionUi(): void {
     const isSelected = this.selectedGiveaway !== null;
 
-    if (!isSelected) {
-      if (this.defaultActions) this.defaultActions.style.display = 'flex';
-      if (this.selectedActions) this.selectedActions.style.display = 'none';
-    } else {
-      if (this.defaultActions) this.defaultActions.style.display = 'none';
-      if (this.selectedActions) this.selectedActions.style.display = 'flex';
+    this.defaultActions?.classList.toggle('is-hidden', isSelected);
+    this.selectedActions?.classList.toggle('is-hidden', !isSelected);
 
+    if (isSelected) {
       const g = this.selectedGiveaway!;
       const isActive = g.status === 'active';
       const isPaused = g.status === 'paused';
@@ -662,8 +628,10 @@ export class GiveawaysController implements ViewController {
 
       if (this.btnActionTogglePause) {
         const iconEl = this.btnActionTogglePause.querySelector('[data-ref="icon-action-pause"]');
+        const canToggle = isActive || isPaused || isDraft;
+        this.btnActionTogglePause.classList.toggle('is-hidden', !canToggle);
+
         if (isActive) {
-          this.btnActionTogglePause.style.display = 'inline-flex';
           if (g.can_pause) {
             this.btnActionTogglePause.setAttribute('data-tooltip', 'Pausar venta');
             this.btnActionTogglePause.setAttribute('aria-label', 'Pausar venta');
@@ -674,17 +642,13 @@ export class GiveawaysController implements ViewController {
             if (iconEl) iconEl.innerHTML = '<use href="/icons.svg#schedule"></use>';
           }
         } else if (isPaused) {
-          this.btnActionTogglePause.style.display = 'inline-flex';
           this.btnActionTogglePause.setAttribute('data-tooltip', 'Reanudar venta');
           this.btnActionTogglePause.setAttribute('aria-label', 'Reanudar venta');
           if (iconEl) iconEl.innerHTML = '<use href="/icons.svg#play_arrow"></use>';
         } else if (isDraft) {
-          this.btnActionTogglePause.style.display = 'inline-flex';
           this.btnActionTogglePause.setAttribute('data-tooltip', 'Publicar sorteo');
           this.btnActionTogglePause.setAttribute('aria-label', 'Publicar sorteo');
           if (iconEl) iconEl.innerHTML = '<use href="/icons.svg#play_arrow"></use>';
-        } else {
-          this.btnActionTogglePause.style.display = 'none';
         }
       }
 
@@ -701,17 +665,9 @@ export class GiveawaysController implements ViewController {
         }
       }
 
-      if (this.btnActionDrawNow) {
-        this.btnActionDrawNow.style.display = isActive && !isCompleted ? 'inline-flex' : 'none';
-      }
-
-      if (this.btnActionCancel) {
-        this.btnActionCancel.style.display = isActive || isPaused ? 'inline-flex' : 'none';
-      }
-
-      if (this.btnActionDelete) {
-        this.btnActionDelete.style.display = isDraft || (isCancelled && g.orders_count === 0) ? 'inline-flex' : 'none';
-      }
+      this.btnActionDrawNow?.classList.toggle('is-hidden', !(isActive && !isCompleted));
+      this.btnActionCancel?.classList.toggle('is-hidden', !(isActive || isPaused));
+      this.btnActionDelete?.classList.toggle('is-hidden', !(isDraft || (isCancelled && g.orders_count === 0)));
     }
 
     const grid = this.container.querySelector<HTMLElement>('[data-ref="giveaways-grid"]');
@@ -730,22 +686,22 @@ export class GiveawaysController implements ViewController {
     const isPaused = this.isDailyPausedNext;
 
     const bodyHtml = `
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div style="padding: 14px 16px; border-radius: 12px; border: 1px solid ${isPaused ? '#f59e0b' : '#10b981'}; background: ${isPaused ? 'rgba(245, 158, 11, 0.08)' : 'rgba(16, 185, 129, 0.08)'};">
-          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
-            <span style="width: 10px; height: 10px; border-radius: 50%; background: ${isPaused ? '#f59e0b' : '#10b981'};"></span>
-            <strong style="color: var(--text-primary); font-size: 14px;">
+      <div class="daily-modal-content">
+        <div class="daily-modal-status-box ${isPaused ? 'daily-modal-status-box--paused' : 'daily-modal-status-box--active'}">
+          <div class="daily-modal-status-header">
+            <span class="daily-modal-status-dot ${isPaused ? 'daily-modal-status-dot--paused' : 'daily-modal-status-dot--active'}"></span>
+            <strong class="daily-modal-status-title">
               ${isPaused ? 'Pausa del Siguiente Sorteo Activa' : 'Renovación Automática Activa'}
             </strong>
           </div>
-          <p style="margin: 0; font-size: 13px; color: var(--text-secondary); line-height: 1.45;">
+          <p class="daily-modal-status-desc">
             ${isPaused
               ? 'Cuando concluya el sorteo diario de hoy y se extraiga al ganador, el sistema NO creará un nuevo sorteo diario de forma automática hasta que se vuelva a activar.'
               : 'El sistema aprovisiona diariamente un nuevo ciclo 50/50 de lunes a viernes al momento de concluir el sorteo en curso.'}
           </p>
         </div>
 
-        <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+        <p class="daily-modal-prompt">
           ${isPaused
             ? '¿Deseas reactivar la continuidad automática para que mañana sí haya sorteo diario programado?'
             : 'Si activas la suspensión, el sorteo diario de hoy continuará con normalidad para sus compradores actuales, pero mañana el sorteo no se abrirá.'}
@@ -792,7 +748,7 @@ export class GiveawaysController implements ViewController {
   private handleManualDraw(g: AdminGiveawayItem): void {
     openModal({
       bodyHtml: `
-        <div style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5;">
+        <div class="giveaway-dialog-text">
           ¿Estás seguro de ejecutar el sorteo de <strong>${escapeHtml(g.title)}</strong> en este momento?<br/><br/>
           Se seleccionará aleatoriamente un boleto pagado entre los <strong>${g.paid_tickets} boletos vendidos</strong>, se anunciará al ganador y el sorteo cambiará inmediatamente a estado <strong>Concluido</strong>.
         </div>
@@ -838,7 +794,7 @@ export class GiveawaysController implements ViewController {
     const hasSales = g.paid_tickets > 0;
     openModal({
       bodyHtml: `
-        <div style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5;">
+        <div class="giveaway-dialog-text">
           ${hasSales
             ? `<strong>Advertencia crítica:</strong> Este sorteo cuenta con <strong>${g.paid_tickets} boletos vendidos</strong>. Al cancelarlo, se suspenderán las operaciones y deberás realizar la devolución correspondiente a los clientes.`
             : `El sorteo '${escapeHtml(g.title)}' no tiene ventas y pasará a estado Cancelado.`}
@@ -868,7 +824,7 @@ export class GiveawaysController implements ViewController {
   private handleDelete(g: AdminGiveawayItem): void {
     openModal({
       bodyHtml: `
-        <div style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.5;">
+        <div class="giveaway-dialog-text">
           ¿Deseas eliminar permanentemente el sorteo <strong>${escapeHtml(g.title)}</strong>? Esta acción no se puede deshacer.
         </div>
       `,

@@ -1,4 +1,5 @@
 import { navigate } from '../app-router.js';
+import { logout } from '../services/auth.service.js';
 import { translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
@@ -148,6 +149,23 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     navigate('/winners');
   });
 
+  const handleLogout = async (e: Event) => {
+    e.preventDefault();
+    await logout();
+    unmountSidebar();
+    navigate('/login');
+  };
+
+  const btnLogout = sidebar.querySelector<HTMLElement>('[data-ref="btn-logout"]');
+  const itemLogout = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-logout"]');
+
+  btnLogout?.addEventListener('click', handleLogout);
+  itemLogout?.addEventListener('click', (e) => {
+    if (e.target !== btnLogout && !btnLogout?.contains(e.target as Node)) {
+      void handleLogout(e);
+    }
+  });
+
   const handleToggleTheme = (e: Event) => {
     e.preventDefault();
     toggleTheme();
@@ -163,6 +181,14 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   window.addEventListener('themechange', () => {
     updateThemeButtonState(sidebar);
   });
+}
+
+export function unmountSidebar(): void {
+  if (sidebarInstance) {
+    sidebarInstance.remove();
+    sidebarInstance = null;
+  }
+  sidebarInitPromise = null;
 }
 
 export async function createSidebar(): Promise<HTMLElement> {

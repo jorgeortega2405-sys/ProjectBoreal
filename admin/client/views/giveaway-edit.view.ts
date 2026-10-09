@@ -281,7 +281,7 @@ export class GiveawayEditController implements ViewController {
     if (!this.banksContainer) return;
     if (allBanks.length === 0) {
       this.banksContainer.innerHTML = `
-        <div style="font-size: 13px; color: var(--text-tertiary); padding: 8px 0;">
+        <div class="giveaway-create__empty-banks">
           No hay cuentas bancarias activas registradas en la plataforma.
         </div>
       `;
@@ -293,9 +293,9 @@ export class GiveawayEditController implements ViewController {
         (b) => `
         <label class="giveaway-create__bank-item">
           <input type="checkbox" name="bank_account" value="${b.id}" ${assignedIds.has(b.id) ? 'checked' : ''} ${this.isCompleted ? 'disabled' : ''} />
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-size: 13px; font-weight: 600; color: var(--text-primary);">${escapeHtml(b.bank_name)} • ${escapeHtml(b.account_holder)}</span>
-            <span style="font-size: 11.5px; color: var(--text-secondary);">${escapeHtml(b.account_type.toUpperCase())} ${b.clabe ? `• CLABE: ${escapeHtml(b.clabe)}` : ''} ${b.card_number ? `• Tarjeta: ${escapeHtml(b.card_number)}` : ''}</span>
+          <div class="giveaway-create__bank-info">
+            <span class="giveaway-create__bank-name">${escapeHtml(b.bank_name)} • ${escapeHtml(b.account_holder)}</span>
+            <span class="giveaway-create__bank-meta">${escapeHtml(b.account_type.toUpperCase())} ${b.clabe ? `• CLABE: ${escapeHtml(b.clabe)}` : ''} ${b.card_number ? `• Tarjeta: ${escapeHtml(b.card_number)}` : ''}</span>
           </div>
         </label>
       `
@@ -359,16 +359,16 @@ export class GiveawayEditController implements ViewController {
       this.previewImg.addEventListener(
         'error',
         () => {
-          if (this.previewImg) this.previewImg.style.display = 'none';
-          if (this.previewImgFallback) this.previewImgFallback.style.display = 'flex';
+          if (this.previewImg) this.previewImg.classList.add('is-hidden');
+          if (this.previewImgFallback) this.previewImgFallback.classList.remove('is-hidden');
         },
         { signal }
       );
       this.previewImg.addEventListener(
         'load',
         () => {
-          if (this.previewImg) this.previewImg.style.display = 'block';
-          if (this.previewImgFallback) this.previewImgFallback.style.display = 'none';
+          if (this.previewImg) this.previewImg.classList.remove('is-hidden');
+          if (this.previewImgFallback) this.previewImgFallback.classList.add('is-hidden');
         },
         { signal }
       );
@@ -403,27 +403,31 @@ export class GiveawayEditController implements ViewController {
       const isDraft = this.giveaway.status === 'draft';
       const isCompleted = this.giveaway.status === 'completed';
       const isCancelled = this.giveaway.status === 'cancelled';
+      const isActive = !isPaused && !isDraft && !isCompleted && !isCancelled;
+
+      this.previewBadgeStatus.classList.remove(
+        'giveaway-card__timer-badge--active',
+        'giveaway-card__timer-badge--paused',
+        'giveaway-card__timer-badge--draft',
+        'giveaway-card__timer-badge--completed',
+        'giveaway-card__timer-badge--cancelled'
+      );
 
       if (isPaused) {
         this.previewBadgeStatus.textContent = 'Pausado';
-        this.previewBadgeStatus.style.background = 'rgba(245, 158, 11, 0.85)';
-        this.previewBadgeStatus.style.color = '#000000';
+        this.previewBadgeStatus.classList.add('giveaway-card__timer-badge--paused');
       } else if (isDraft) {
         this.previewBadgeStatus.textContent = 'Borrador';
-        this.previewBadgeStatus.style.background = 'rgba(107, 114, 128, 0.85)';
-        this.previewBadgeStatus.style.color = '#ffffff';
+        this.previewBadgeStatus.classList.add('giveaway-card__timer-badge--draft');
       } else if (isCompleted) {
         this.previewBadgeStatus.textContent = 'Concluido';
-        this.previewBadgeStatus.style.background = 'rgba(59, 130, 246, 0.85)';
-        this.previewBadgeStatus.style.color = '#ffffff';
+        this.previewBadgeStatus.classList.add('giveaway-card__timer-badge--completed');
       } else if (isCancelled) {
         this.previewBadgeStatus.textContent = 'Cancelado';
-        this.previewBadgeStatus.style.background = 'rgba(239, 68, 68, 0.85)';
-        this.previewBadgeStatus.style.color = '#ffffff';
+        this.previewBadgeStatus.classList.add('giveaway-card__timer-badge--cancelled');
       } else {
         this.previewBadgeStatus.textContent = 'Activo';
-        this.previewBadgeStatus.style.background = 'rgba(16, 185, 129, 0.85)';
-        this.previewBadgeStatus.style.color = '#ffffff';
+        this.previewBadgeStatus.classList.add('giveaway-card__timer-badge--active');
       }
     }
 

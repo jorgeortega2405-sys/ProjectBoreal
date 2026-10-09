@@ -3,7 +3,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { DropdownController, setupDropdown } from '../utils/dom.util.js';
+import { DropdownController, escapeHtml, setupDropdown } from '../utils/dom.util.js';
 import Chart from 'chart.js/auto';
 
 interface DashboardStatsData {
@@ -123,22 +123,6 @@ export class DashboardController implements ViewController {
         { signal }
       );
     });
-
-    const refreshBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-dashboard"]');
-    refreshBtn?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        const icon = refreshBtn.querySelector('[data-ref="icon-refresh"]');
-        icon?.classList.add('admin-refresh-spin');
-        void this.loadStats(this.activePeriod).finally(() => {
-          setTimeout(() => {
-            icon?.classList.remove('admin-refresh-spin');
-          }, 600);
-        });
-      },
-      { signal }
-    );
   }
 
   private setupThemeObserver(): void {
@@ -176,8 +160,6 @@ export class DashboardController implements ViewController {
     if (elRevenueTrend) {
       const sign = kpis.revenueChangePct >= 0 ? '+' : '';
       elRevenueTrend.textContent = `${sign}${kpis.revenueChangePct}% vs mes`;
-      elRevenueTrend.style.color = 'var(--text-secondary)';
-      elRevenueTrend.style.background = 'var(--bg-card-subtle, var(--bg-surface-elevated))';
     }
 
     const elTickets = this.container.querySelector<HTMLElement>('[data-ref="stat-tickets-value"]');
@@ -187,8 +169,6 @@ export class DashboardController implements ViewController {
     if (elTicketsTrend) {
       const sign = kpis.ticketsSoldChangePct >= 0 ? '+' : '';
       elTicketsTrend.textContent = `${sign}${kpis.ticketsSoldChangePct}% vs ayer`;
-      elTicketsTrend.style.color = 'var(--text-secondary)';
-      elTicketsTrend.style.background = 'var(--bg-card-subtle, var(--bg-surface-elevated))';
     }
 
     const elGiveaways = this.container.querySelector<HTMLElement>('[data-ref="stat-giveaways-value"]');
@@ -456,7 +436,7 @@ export class DashboardController implements ViewController {
     if (orders.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-tertiary);">
+          <td colspan="7" class="dashboard-table-empty">
             No hay órdenes registradas en este periodo.
           </td>
         </tr>
@@ -466,11 +446,6 @@ export class DashboardController implements ViewController {
 
     const rowsHtml = orders
       .map((ord) => {
-        let badgeClass = 'giveaway-badge';
-        if (ord.status === 'completed') badgeClass += ' giveaway-badge--active';
-        else if (ord.status === 'in_review') badgeClass += ' giveaway-badge--warning';
-        else if (ord.status === 'cancelled' || ord.status === 'expired') badgeClass += ' giveaway-badge--danger';
-
         const statusLabels: Record<string, string> = {
           cancelled: 'Cancelada',
           completed: 'Pagada',
@@ -494,22 +469,13 @@ export class DashboardController implements ViewController {
 
         return `
           <tr>
-            <td><span class="admin-order-id">${ord.id}</span></td>
-            <td>
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-weight: 600; color: var(--text-primary);">${ord.customerName}</span>
-                <span style="font-size: 11px; color: var(--text-tertiary);">${ord.customerPhone}</span>
-              </div>
-            </td>
-            <td><span style="color: var(--text-secondary);">${ord.giveawayTitle}</span></td>
-            <td><span style="font-weight: 600;">${formatNumber(ord.ticketCount)} boletos</span></td>
-            <td><span style="font-weight: 700; color: var(--text-primary);">${amountFormatted}</span></td>
-            <td>
-              <span class="${badgeClass}">
-                <span>${statusLabel}</span>
-              </span>
-            </td>
-            <td><span style="font-size: 12px; color: var(--text-secondary);">${dateStr}</span></td>
+            <td><span class="component-badge component-badge--sm component-badge--mono-bold">${escapeHtml(ord.id)}</span></td>
+            <td><span class="component-badge component-badge--sm">${escapeHtml(ord.customerName)} (${escapeHtml(ord.customerPhone)})</span></td>
+            <td><span class="component-badge component-badge--sm">${escapeHtml(ord.giveawayTitle)}</span></td>
+            <td><span class="component-badge component-badge--sm component-badge--mono-bold">${formatNumber(ord.ticketCount)} boletos</span></td>
+            <td><span class="component-badge component-badge--sm">${amountFormatted}</span></td>
+            <td><span class="component-badge component-badge--sm">${statusLabel}</span></td>
+            <td><span class="component-badge component-badge--sm">${dateStr}</span></td>
           </tr>
         `;
       })
@@ -532,7 +498,7 @@ export class DashboardController implements ViewController {
           <div class="admin-gateway-item">
             <div class="admin-gateway-item__info">
               <span class="admin-gateway-item__name">
-                <svg class="component-icon" style="width: 14px; height: 14px; color: #10b981;" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+                <svg class="component-icon admin-gateway-item__icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
                 ${gw.name}
               </span>
               <div class="admin-gateway-item__metrics">

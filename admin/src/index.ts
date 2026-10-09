@@ -1,7 +1,9 @@
 import { checkDbConnection, closeDbConnections } from './config/database.config.js';
 import { config, isAllowedOrigin } from './config/env.config.js';
 import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
+import { requireAuth } from './middlewares/auth.middleware.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
+import authRoutes from './routes/auth.routes.js';
 import bankAccountsRoutes from './routes/bank-accounts.routes.js';
 import customersRoutes from './routes/customers.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
@@ -153,13 +155,14 @@ function createExpressApp(): express.Express {
     next();
   });
 
-  app.use('/api/bank-accounts', bankAccountsRoutes);
-  app.use('/api/customers', customersRoutes);
-  app.use('/api/dashboard', dashboardRoutes);
-  app.use('/api/giveaways', giveawaysRoutes);
+  app.use('/api/auth', authRoutes);
   app.use('/api/health', healthRoutes);
-  app.use('/api/orders', ordersRoutes);
-  app.use('/api/winners', winnersRoutes);
+  app.use('/api/bank-accounts', requireAuth, bankAccountsRoutes);
+  app.use('/api/customers', requireAuth, customersRoutes);
+  app.use('/api/dashboard', requireAuth, dashboardRoutes);
+  app.use('/api/giveaways', requireAuth, giveawaysRoutes);
+  app.use('/api/orders', requireAuth, ordersRoutes);
+  app.use('/api/winners', requireAuth, winnersRoutes);
 
   const adminPublicDir = path.resolve(ADMIN_ROOT_DIR, 'public');
   const rootPublicDir = path.resolve(ADMIN_ROOT_DIR, '..', 'public');

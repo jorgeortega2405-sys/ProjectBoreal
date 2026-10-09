@@ -654,6 +654,10 @@ html.dark-theme .component-badge--interactive:hover .component-badge__icon--colo
   width: 100%;
 }
 
+.login-actions {
+  margin-top: 8px;
+}
+
 /* Campo con Floating Label Asociado Nativamente */
 .field,
 .form-field {

@@ -304,12 +304,103 @@
 }
 
 /* Modificadores utilitarios */
+.view-skeleton {
+  pointer-events: none;
+  user-select: none;
+}
+
 .skeleton--w-full { width: 100%; }
 .skeleton--w-75 { width: 75%; }
 .skeleton--w-50 { width: 50%; }
 .skeleton--w-35 { width: 35%; }
 .skeleton--w-25 { width: 25%; }
 .skeleton--mx-auto { margin-left: auto; margin-right: auto; }
+.skeleton--h-11 { height: 11px; }
+.skeleton--h-16 { height: 16px; }
+.skeleton--h-22 { height: 22px; }
+.skeleton--h-26 { height: 26px; }
+.skeleton--h-28 { height: 28px; }
+.skeleton--h-32 { height: 32px; }
+.skeleton--h-36 { height: 36px; }
+.skeleton--h-40 { height: 40px; }
+.skeleton--h-44 { height: 44px; }
+.skeleton--h-48 { height: 48px; }
+.skeleton--h-52 { height: 52px; }
+.skeleton--h-160 { height: 160px; }
+.skeleton--h-320 { height: 320px; }
+.skeleton--w-35-px { width: 35px; }
+.skeleton--w-40-px { width: 40px; }
+.skeleton--w-45-px { width: 45px; }
+.skeleton--w-50-px { width: 50px; }
+.skeleton--w-75-px { width: 75px; }
+.skeleton--w-80-px { width: 80px; }
+.skeleton--w-85-px { width: 85px; }
+.skeleton--w-90-px { width: 90px; }
+.skeleton--w-95-px { width: 95px; }
+.skeleton--w-100-px { width: 100px; }
+.skeleton--w-105-px { width: 105px; }
+.skeleton--w-110-px { width: 110px; }
+.skeleton--w-115-px { width: 115px; }
+.skeleton--w-120-px { width: 120px; }
+.skeleton--w-125-px { width: 125px; }
+.skeleton--w-130-px { width: 130px; }
+.skeleton--w-140-px { width: 140px; }
+.skeleton--w-160-px { width: 160px; }
+.skeleton--w-170-px { width: 170px; }
+.skeleton--w-180-px { width: 180px; }
+.skeleton--w-200-px { width: 200px; }
+.skeleton--w-240-px { width: 240px; }
+.skeleton--w-260-px { width: 260px; }
+.skeleton--pill { border-radius: 9999px; }
+.skeleton-form-layout { max-width: 900px; margin: 0 auto; }
+.skeleton-login-wrapper { display: flex; align-items: center; justify-content: center; min-height: 80vh; }
+.skeleton-login-card { width: 100%; max-width: 400px; padding: 36px 28px; border-radius: var(--radius-xl, 20px); }
+.skeleton-not-found-card { padding: 48px 24px; }
+
+/* Vista de error 404 */
+.view-body--not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.not-found-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 480px;
+  gap: 16px;
+}
+
+.not-found-code {
+  font-size: 72px;
+  font-weight: 900;
+  letter-spacing: -2px;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+.not-found-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.not-found-desc {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.not-found-action {
+  margin-top: 12px;
+}
 
 /* Layout genérico agrupado centrado (700px) */
 .grouped-flow-layout {
@@ -705,6 +796,19 @@ html.dark-theme .component-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.component-badge--mono-bold {
+  font-family: var(--sl-font-mono, monospace);
+  font-weight: 700;
+}
+
+.component-badge--semibold {
+  font-weight: 600;
+}
+
+.component-badge--bold {
+  font-weight: 700;
 }
 
 .component-badge--interactive {

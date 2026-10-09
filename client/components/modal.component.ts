@@ -188,7 +188,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
             ${showCancel ? `<button type="button" class="component-button component-button--h34" data-ref="btn-modal-cancel">${cancelText}</button>` : ''}
             ${showConfirm ? `<button type="button" class="component-button component-button--h34 ${confirmClass}" data-ref="btn-modal-confirm">${confirmText}</button>` : ''}
           </div>
-          <div class="banner banner--danger" data-ref="modal-error" style="display: none;"></div>
+          <div class="banner banner--danger is-hidden" data-ref="modal-error"></div>
         </div>` : ''}
       </div>
     </div>
@@ -248,10 +248,10 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
       if (!errorBanner) return;
       if (msg) {
         errorBanner.textContent = msg;
-        errorBanner.style.display = 'block';
+        errorBanner.classList.remove('is-hidden');
       } else {
         errorBanner.textContent = '';
-        errorBanner.style.display = 'none';
+        errorBanner.classList.add('is-hidden');
       }
     },
     setTitle: (newTitle: string) => {

@@ -1,0 +1,31 @@
+<div class="login-container" data-ref="login-view">
+  <div class="login-card" data-ref="login-card">
+    <div class="login-header" data-ref="login-header">
+      <h1 class="login-title" data-ref="login-title">Panel de Administración</h1>
+      <p class="login-subtitle" data-ref="login-subtitle">Ingresa tus credenciales para acceder a la gestión de Project Boreal.</p>
+    </div>
+
+    <form class="login-form" data-ref="form-login" novalidate autocomplete="on">
+      <label class="field" data-ref="field-email">
+        <input class="field__input" data-ref="input-email" type="email" placeholder=" " autocomplete="email" required />
+        <span class="field__label">Correo electrónico</span>
+      </label>
+
+      <label class="field" data-ref="field-password">
+        <input class="field__input field__input--has-action" data-ref="input-password" type="password" placeholder=" " autocomplete="current-password" required />
+        <span class="field__label">Contraseña</span>
+        <button type="button" class="field__action" data-ref="btn-toggle-password" data-tooltip="Mostrar contraseña" aria-label="Mostrar contraseña">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+        </button>
+      </label>
+
+      <div class="field-group login-actions" data-ref="login-actions">
+        <button type="submit" class="component-button component-button--h55 component-button--black component-button--w-full" data-ref="btn-submit-login">
+          <span class="component-button__text">Iniciar Sesión</span>
+        </button>
+      </div>
+
+      <div class="banner banner--danger is-hidden" data-ref="login-error"></div>
+    </form>
+  </div>
+</div>

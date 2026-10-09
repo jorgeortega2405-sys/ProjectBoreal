@@ -23,11 +23,11 @@
     <form class="giveaway-create-layout" data-ref="form-giveaway-edit" novalidate>
       <div class="giveaway-create__form-panel" data-ref="edit-form-panel">
         
-        <div class="banner banner--warning is-hidden" data-ref="banner-sales-warning" style="padding: 12px 16px; border-radius: var(--radius-md, 12px); border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.08); font-size: 13px; color: var(--text-primary); line-height: 1.45;">
+        <div class="banner banner--warning giveaway-edit-banner-sales is-hidden" data-ref="banner-sales-warning">
           <strong>Aviso de integridad:</strong> Este sorteo cuenta con <strong data-ref="text-paid-count">0 boletos vendidos</strong>. El precio del boleto, total de emisión y slug están bloqueados para proteger los derechos de los participantes.
         </div>
 
-        <div class="banner banner--info is-hidden" data-ref="banner-completed-info" style="padding: 12px 16px; border-radius: var(--radius-md, 12px); border: 1px solid rgba(59, 130, 246, 0.35); background: rgba(59, 130, 246, 0.08); font-size: 13px; color: var(--text-primary); line-height: 1.45;">
+        <div class="banner banner--info giveaway-edit-banner-completed is-hidden" data-ref="banner-completed-info">
           <strong>Sorteo Concluido:</strong> Este sorteo ya ha sido ejecutado y se encuentra en modo de solo lectura.
         </div>
 
@@ -49,13 +49,13 @@
             </label>
 
             <label class="field" data-ref="field-type-readonly">
-              <input class="field__input" data-ref="input-type-display" type="text" placeholder=" " readonly disabled style="opacity: 0.85; cursor: not-allowed;" />
+              <input class="field__input field__input--disabled-readonly" data-ref="input-type-display" type="text" placeholder=" " readonly disabled />
               <span class="field__label">Modalidad (No editable)</span>
             </label>
           </div>
 
           <label class="field field--textarea" data-ref="field-description">
-            <textarea class="field__input" data-ref="textarea-description" placeholder=" " rows="3" style="min-height: 80px; height: 95px; resize: vertical;"></textarea>
+            <textarea class="field__input field__textarea-autogrow" data-ref="textarea-description" placeholder=" " rows="3"></textarea>
             <span class="field__label">Descripción o bases del premio</span>
           </label>
         </div>
@@ -149,7 +149,7 @@
           </div>
 
           <div class="giveaway-create__banks-list" data-ref="banks-container">
-            <div class="skeleton-placeholder" style="padding: 16px; font-size: 13px; color: var(--text-tertiary);">Cargando cuentas bancarias...</div>
+            <div class="skeleton-placeholder skeleton-banks-loading">Cargando cuentas bancarias...</div>
           </div>
         </div>
 
@@ -170,19 +170,19 @@
         <div class="giveaway-create__preview-card-wrap">
           <div class="giveaway-create__preview-header">
             <span class="giveaway-create__preview-title">Vista Previa</span>
-            <span class="giveaway-card__meta-badge" data-ref="preview-live-indicator" style="position: static; height: 22px; font-size: 11px; padding: 0 8px;">En Vivo</span>
+            <span class="giveaway-card__meta-badge giveaway-preview-live-indicator" data-ref="preview-live-indicator">En Vivo</span>
           </div>
 
           <div class="canvas-card" data-ref="preview-canvas-card">
             <div class="canvas-card__thumbnail">
               <img class="canvas-card__image" data-ref="preview-img" src="/images/giveaways/standard/cash-cartoon-3d/cash-cartoon-3d-main.svg" alt="Vista previa del sorteo" loading="lazy" />
-              <div data-ref="preview-img-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: var(--bg-surface); color: var(--text-tertiary);">
-                <svg class="component-icon" style="width: 36px; height: 36px;"><use href="/icons.svg#confirmation_number"></use></svg>
+              <div class="canvas-card__img-fallback is-hidden" data-ref="preview-img-fallback">
+                <svg class="component-icon canvas-card__img-fallback-icon"><use href="/icons.svg#confirmation_number"></use></svg>
               </div>
 
               <div class="giveaway-card__meta-badge" data-ref="preview-badge-type">Estándar</div>
               <span class="canvas-card__btn-sync" data-ref="preview-badge-price">$0.00 MXN</span>
-              <div class="giveaway-card__timer-badge" data-ref="preview-badge-status" style="background: rgba(16, 185, 129, 0.85); color: #ffffff;">
+              <div class="giveaway-card__timer-badge giveaway-card__timer-badge--active" data-ref="preview-badge-status">
                 Activo
               </div>
             </div>

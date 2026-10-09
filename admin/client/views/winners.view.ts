@@ -77,7 +77,6 @@ export class WinnersController implements ViewController {
   private btnClearSearch: HTMLButtonElement | null = null;
   private btnPaginationNext: HTMLButtonElement | null = null;
   private btnPaginationPrev: HTMLButtonElement | null = null;
-  private btnRefresh: HTMLButtonElement | null = null;
   private btnResetSearch: HTMLButtonElement | null = null;
   private btnToggleSearch: HTMLButtonElement | null = null;
   private container: HTMLElement;
@@ -106,7 +105,6 @@ export class WinnersController implements ViewController {
     this.btnToggleSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
     this.inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-winners"]');
     this.btnClearSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-search"]');
-    this.btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-winners"]');
     this.btnResetSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-search"]');
     this.btnPaginationPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-prev"]');
     this.btnPaginationNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-next"]');
@@ -131,22 +129,6 @@ export class WinnersController implements ViewController {
   bindEvents(): void {
     const signal = this.abortController?.signal;
 
-    this.btnRefresh?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        const icon = this.btnRefresh?.querySelector('[data-ref="icon-refresh"]');
-        icon?.classList.add('admin-refresh-spin');
-        void this.loadWinners().finally(() => {
-          setTimeout(() => {
-            icon?.classList.remove('admin-refresh-spin');
-          }, 600);
-        });
-        void this.loadKpis();
-      },
-      { signal }
-    );
-
     this.btnToggleSearch?.addEventListener(
       'click',
       (e) => {
@@ -159,7 +141,7 @@ export class WinnersController implements ViewController {
         } else {
           this.searchToolbar.classList.add('is-hidden');
           if (this.inputSearch) this.inputSearch.value = '';
-          if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+          if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
           if (this.searchQuery) {
             this.searchQuery = '';
             this.currentPage = 1;
@@ -175,7 +157,7 @@ export class WinnersController implements ViewController {
       () => {
         const val = (this.inputSearch?.value || '').trim();
         if (this.btnClearSearch) {
-          this.btnClearSearch.style.display = val.length > 0 ? 'inline-flex' : 'none';
+          this.btnClearSearch.classList.toggle('is-hidden', val.length === 0);
         }
         if (this.searchDebounceTimer) {
           clearTimeout(this.searchDebounceTimer);
@@ -194,7 +176,7 @@ export class WinnersController implements ViewController {
       (e) => {
         e.preventDefault();
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
         this.searchQuery = '';
         this.currentPage = 1;
         void this.loadWinners();
@@ -208,7 +190,7 @@ export class WinnersController implements ViewController {
       (e) => {
         e.preventDefault();
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
         this.searchQuery = '';
         this.selectedWinner = null;
         this.currentPage = 1;
@@ -393,8 +375,8 @@ export class WinnersController implements ViewController {
 
   private updateSelectionUi(): void {
     const isSelected = this.selectedWinner !== null;
-    if (this.defaultActions) this.defaultActions.style.display = isSelected ? 'none' : 'flex';
-    if (this.selectedActions) this.selectedActions.style.display = isSelected ? 'flex' : 'none';
+    if (this.defaultActions) this.defaultActions.classList.toggle('is-hidden', isSelected);
+    if (this.selectedActions) this.selectedActions.classList.toggle('is-hidden', !isSelected);
 
     const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr');
     rows.forEach((row) => {
@@ -434,14 +416,14 @@ export class WinnersController implements ViewController {
 
     if (this.winners.length === 0) {
       tbody.innerHTML = '';
-      if (tableCard) tableCard.style.display = 'none';
-      if (emptyState) emptyState.style.display = 'block';
+      if (tableCard) tableCard.classList.add('is-hidden');
+      if (emptyState) emptyState.classList.remove('is-hidden');
       this.updatePaginationUi();
       return;
     }
 
-    if (tableCard) tableCard.style.display = 'block';
-    if (emptyState) emptyState.style.display = 'none';
+    if (tableCard) tableCard.classList.remove('is-hidden');
+    if (emptyState) emptyState.classList.add('is-hidden');
 
     this.updatePaginationUi();
     const startIndex = (this.currentPage - 1) * this.pageSize;
@@ -458,48 +440,40 @@ export class WinnersController implements ViewController {
     const isClaimed = w.delivery_status === 'claimed';
     const isSelected = this.selectedWinner?.giveaway_uuid === w.giveaway_uuid;
 
-    let statusBadgeHtml = '<span class="component-badge component-badge--sm" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">Por Contactar</span>';
-
+    let statusText = 'Por Contactar';
     if (isDelivered) {
-      statusBadgeHtml = '<span class="component-badge component-badge--sm" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">Entregado</span>';
+      statusText = 'Entregado';
     } else if (isClaimed) {
-      statusBadgeHtml = '<span class="component-badge component-badge--sm" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">Reclamado</span>';
+      statusText = 'Reclamado';
     } else if (isContacted) {
-      statusBadgeHtml = '<span class="component-badge component-badge--sm" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">Contactado</span>';
+      statusText = 'Contactado';
     }
 
     const prizeText = w.prize_amount !== null ? formatCurrency(w.prize_amount) : 'En Especie';
+    const locationText = w.winner_state ? ` • ${escapeHtml(w.winner_state)}` : '';
 
     return `
       <tr class="winners-table__tr ${isSelected ? 'is-selected' : ''}" data-ref="tr-winner-${w.giveaway_uuid}" data-uuid="${w.giveaway_uuid}">
         <td class="winners-table__td">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-weight: 600; color: var(--text-primary); font-size: 13.5px;">${escapeHtml(w.giveaway_title)}</span>
-            <span style="font-size: 11px; color: var(--text-secondary);">${w.giveaway_type === 'daily' ? 'Sorteo Diario' : 'Sorteo Estándar'}</span>
-          </div>
+          <span class="component-badge component-badge--sm">${escapeHtml(w.giveaway_title)}</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(w.winner_name)}</span>
+          <span class="component-badge component-badge--sm">${escapeHtml(w.winner_name)}</span>
         </td>
         <td class="winners-table__td">
-          <span class="component-badge component-badge--sm" style="font-family: var(--sl-font-mono, monospace); font-weight: 900; color: #10b981; font-size: 13px;">
-            #${String(w.winner_ticket_number).padStart(3, '0')}
-          </span>
+          <span class="component-badge component-badge--sm component-badge--mono-bold">#${String(w.winner_ticket_number).padStart(3, '0')}</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">${prizeText}</span>
+          <span class="component-badge component-badge--sm component-badge--semibold">${prizeText}</span>
         </td>
         <td class="winners-table__td">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-family: var(--sl-font-mono, monospace); font-size: 12.5px; color: var(--text-secondary);">${formatPhone(w.winner_phone)}</span>
-            ${w.winner_state ? `<span style="font-size: 11px; color: var(--text-tertiary);">${escapeHtml(w.winner_state)}</span>` : ''}
-          </div>
+          <span class="component-badge component-badge--sm">${formatPhone(w.winner_phone)}${locationText}</span>
         </td>
         <td class="winners-table__td">
-          ${statusBadgeHtml}
+          <span class="component-badge component-badge--sm">${statusText}</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-size: 12px; color: var(--text-secondary);">${formatDate(w.winner_announced_at)}</span>
+          <span class="component-badge component-badge--sm">${formatDate(w.winner_announced_at)}</span>
         </td>
       </tr>
     `;
@@ -532,13 +506,12 @@ export class WinnersController implements ViewController {
     }
 
     const modalBody = document.createElement('div');
+    modalBody.className = 'winner-evidence-modal';
     modalBody.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 14px; align-items: center; width: 100%;">
-        <div style="width: 100%; max-height: 420px; overflow: hidden; border-radius: 12px; background: #000; display: flex; align-items: center; justify-content: center;">
-          <img src="${escapeHtml(url)}" alt="Evidencia de entrega" style="max-width: 100%; max-height: 420px; object-fit: contain;" />
-        </div>
-        ${winner.testimonial ? `<p style="font-style: italic; font-size: 13px; color: var(--text-secondary); text-align: center; margin: 0;">"${escapeHtml(winner.testimonial)}"</p>` : ''}
+      <div class="winner-evidence-preview">
+        <img class="winner-evidence-img" src="${escapeHtml(url)}" alt="Evidencia de entrega" />
       </div>
+      ${winner.testimonial ? `<p class="winner-testimonial-quote">"${escapeHtml(winner.testimonial)}"</p>` : ''}
     `;
 
     openModal({
@@ -555,8 +528,8 @@ export class WinnersController implements ViewController {
     bodyContainer.className = 'winner-delivery-modal';
 
     bodyContainer.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 14px; width: 100%; box-sizing: border-box;">
-        <div style="padding: 12px 14px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; font-size: 13px;">
+      <div class="winner-delivery-form">
+        <div class="winner-delivery-info">
           <strong>Ganador:</strong> ${escapeHtml(winner.winner_name)} • <strong>Boleto #${String(winner.winner_ticket_number).padStart(3, '0')}</strong><br/>
           <strong>Teléfono:</strong> ${formatPhone(winner.winner_phone)} • <strong>Sorteo:</strong> ${escapeHtml(winner.giveaway_title)}
         </div>
@@ -572,7 +545,7 @@ export class WinnersController implements ViewController {
         </label>
 
         <label class="field" data-ref="field-contact-notes">
-          <textarea class="field__input" data-ref="input-contact-notes" placeholder=" " rows="3" style="resize: vertical; min-height: 70px;">${escapeHtml(winner.contact_notes || '')}</textarea>
+          <textarea class="field__input winner-textarea--notes" data-ref="input-contact-notes" placeholder=" " rows="3">${escapeHtml(winner.contact_notes || '')}</textarea>
           <span class="field__label">Bitácora de Contacto y Notas de la Llamada</span>
         </label>
 
@@ -582,7 +555,7 @@ export class WinnersController implements ViewController {
         </label>
 
         <label class="field" data-ref="field-testimonial">
-          <textarea class="field__input" data-ref="input-testimonial" placeholder=" " rows="2" style="resize: vertical;">${escapeHtml(winner.testimonial || '')}</textarea>
+          <textarea class="field__input winner-textarea--testimonial" data-ref="input-testimonial" placeholder=" " rows="2">${escapeHtml(winner.testimonial || '')}</textarea>
           <span class="field__label">Testimonio o Mensaje del Ganador</span>
         </label>
       </div>

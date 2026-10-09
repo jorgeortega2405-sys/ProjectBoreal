@@ -64,6 +64,30 @@
   max-width: 720px;
 }
 
+.legal-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background-color: var(--accent-pink-subtle);
+  color: var(--accent-pink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.legal-icon-badge .component-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.legal-effective-date {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}
+
 .settings-group {
   display: flex;
   flex-direction: column;

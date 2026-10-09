@@ -167,7 +167,7 @@ export class WinnersView {
     if (!tbody || !tableCard || !wrapper) return;
 
     if (this.filteredWinners.length === 0) {
-      tableCard.style.display = 'none';
+      tableCard.classList.add('is-hidden');
       removeEmptyState(wrapper, 'winners-empty');
       renderEmptyState({
         container: wrapper,
@@ -181,7 +181,7 @@ export class WinnersView {
       return;
     }
 
-    tableCard.style.display = 'block';
+    tableCard.classList.remove('is-hidden');
     removeEmptyState(wrapper, 'winners-empty');
 
     tbody.innerHTML = this.filteredWinners

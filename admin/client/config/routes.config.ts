@@ -16,6 +16,14 @@ export interface RouteDefinition {
 export const APP_ROUTES: RouteDefinition[] = [
   {
     handler: async () => {
+      const { createLoginView } = await import('../views/login.view.js');
+      return await createLoginView();
+    },
+    id: 'login',
+    match: (path) => path === '/login' || path === '/iniciar-sesion',
+  },
+  {
+    handler: async () => {
       const { createDashboardView } = await import('../views/dashboard.view.js');
       return await createDashboardView();
     },

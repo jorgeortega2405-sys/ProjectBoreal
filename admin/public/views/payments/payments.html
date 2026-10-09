@@ -47,7 +47,7 @@
                 <div class="avatar-menu__section-header">
                   <span class="drawer-section__title">Sorteo</span>
                 </div>
-                <div class="menu-panel__list" data-ref="filter-giveaways-dropdown-list" style="max-height: 180px; overflow-y: auto;">
+                <div class="menu-panel__list filter-giveaways-dropdown-list" data-ref="filter-giveaways-dropdown-list">
                   <button type="button" class="menu-item is-active" data-giveaway-filter="all">
                     <span class="menu-item__text">Todos los sorteos</span>
                   </button>
@@ -55,10 +55,6 @@
               </div>
             </div>
           </div>
-
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-payments" data-tooltip="Actualizar" aria-label="Actualizar">
-            <svg class="component-icon" data-ref="icon-refresh" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
-          </button>
 
           <div class="component-inline-control component-inline-control--fixed component-inline-control--pagination" data-ref="pagination-inline-control">
             <div class="component-inline-control__group" data-ref="inline-group-page-prev">
@@ -75,7 +71,7 @@
           </div>
         </div>
 
-        <div class="view-header__actions" data-ref="payments-selected-actions" style="display: none; align-items: center; gap: 8px;">
+        <div class="view-header__actions view-header__actions--selected is-hidden" data-ref="payments-selected-actions">
           <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
@@ -84,11 +80,11 @@
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
           </button>
 
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-approve" data-tooltip="Aprobar y Liquidar Pago" aria-label="Aprobar y Liquidar Pago" style="color: #10b981;">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn btn-action-approve-icon" data-ref="btn-action-approve" data-tooltip="Aprobar y Liquidar Pago" aria-label="Aprobar y Liquidar Pago">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
           </button>
 
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-reject" data-tooltip="Rechazar Comprobante" aria-label="Rechazar Comprobante" style="color: #ef4444;">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn btn-action-reject-icon" data-ref="btn-action-reject" data-tooltip="Rechazar Comprobante" aria-label="Rechazar Comprobante">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
           </button>
 
@@ -106,90 +102,56 @@
           <div class="component-search__input-box" data-ref="search-input-box">
             <input class="component-search__input" data-ref="input-search-payments" placeholder="Buscar por cliente, folio, teléfono, clave SPEI..." type="text" maxlength="100" autocomplete="off" />
           </div>
-          <button type="button" class="component-button component-button--h34 component-button--icon-only" data-ref="btn-clear-search" style="display: none; margin-right: 4px;" aria-label="Limpiar búsqueda">
-            <svg class="component-icon" aria-hidden="true" style="font-size: 18px;"><use href="/icons.svg#close"></use></svg>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
       </div>
     </div>
 
-    <div class="view-body" data-ref="payments-content-container" style="width: 100%; box-sizing: border-box; padding: 20px 24px 60px;">
-      <!-- 4 Metric KPI Cards Grid (Spriteboard Admin Style - Monochromatic) -->
-      <div class="dashboard-stats-grid" data-ref="payments-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-bottom: 24px; width: 100%;">
-        <!-- Card 1: En Revisión -->
-        <div class="dashboard-stat-card" data-ref="card-stat-review" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">En Revisión</span>
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-            </div>
+    <div class="view-body admin-view-body" data-ref="payments-content-container">
+      <div class="dashboard-stats-grid" data-ref="payments-stats-grid">
+        <div class="dashboard-stat-card" data-ref="card-stat-review">
+          <div class="dashboard-stat-card__header">
+            <span class="dashboard-stat-card__title">En Revisión</span>
+            <span class="stat-trend-badge">Comprobantes</span>
           </div>
-          <div>
-            <div class="stat-card-value" data-ref="kpi-review-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-              <span data-ref="kpi-review-amount" style="font-size: 12px; color: var(--text-secondary);">$0.00 MXN</span>
-              <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Comprobantes</span>
-            </div>
-          </div>
+          <div class="stat-card-value" data-ref="kpi-review-count">0</div>
+          <span class="dashboard-stat-card__desc" data-ref="kpi-review-amount">$0.00 MXN</span>
         </div>
 
-        <!-- Card 2: Pendientes de Pago -->
-        <div class="dashboard-stat-card" data-ref="card-stat-pending" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pendientes</span>
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
-            </div>
+        <div class="dashboard-stat-card" data-ref="card-stat-pending">
+          <div class="dashboard-stat-card__header">
+            <span class="dashboard-stat-card__title">Pendientes</span>
+            <span class="stat-trend-badge">Apartados</span>
           </div>
-          <div>
-            <div class="stat-card-value" data-ref="kpi-pending-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-              <span data-ref="kpi-pending-amount" style="font-size: 12px; color: var(--text-secondary);">$0.00 MXN</span>
-              <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Apartados</span>
-            </div>
-          </div>
+          <div class="stat-card-value" data-ref="kpi-pending-count">0</div>
+          <span class="dashboard-stat-card__desc" data-ref="kpi-pending-amount">$0.00 MXN</span>
         </div>
 
-        <!-- Card 3: Pagos Liquidados -->
-        <div class="dashboard-stat-card" data-ref="card-stat-completed" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Pagos Liquidados</span>
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-            </div>
+        <div class="dashboard-stat-card" data-ref="card-stat-completed">
+          <div class="dashboard-stat-card__header">
+            <span class="dashboard-stat-card__title">Pagos Liquidados</span>
+            <span class="stat-trend-badge">Confirmados</span>
           </div>
-          <div>
-            <div class="stat-card-value" data-ref="kpi-completed-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-              <span data-ref="kpi-completed-amount" style="font-size: 12px; color: var(--text-secondary);">$0.00 MXN</span>
-              <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Confirmados</span>
-            </div>
-          </div>
+          <div class="stat-card-value" data-ref="kpi-completed-count">0</div>
+          <span class="dashboard-stat-card__desc" data-ref="kpi-completed-amount">$0.00 MXN</span>
         </div>
 
-        <!-- Card 4: Canceladas / Expiradas -->
-        <div class="dashboard-stat-card" data-ref="card-stat-cancelled" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px); padding: 18px 20px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Canceladas / Expiradas</span>
-            <div style="width: 36px; height: 36px; border-radius: 10px; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-              <svg class="component-icon" style="width: 18px; height: 18px; color: var(--text-primary);" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
-            </div>
+        <div class="dashboard-stat-card" data-ref="card-stat-cancelled">
+          <div class="dashboard-stat-card__header">
+            <span class="dashboard-stat-card__title">Canceladas / Expiradas</span>
+            <span class="stat-trend-badge">Disponibles</span>
           </div>
-          <div>
-            <div class="stat-card-value" data-ref="kpi-cancelled-count" style="font-size: 28px; font-weight: 800; color: var(--text-primary); line-height: 1.1; margin-bottom: 6px;">0</div>
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
-              <span style="font-size: 12px; color: var(--text-secondary);">Boletos liberados</span>
-              <span class="stat-trend-badge" style="font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--bg-card-subtle, var(--bg-surface-elevated)); color: var(--text-secondary); border: 1px solid var(--border-color);">Disponibles</span>
-            </div>
-          </div>
+          <div class="stat-card-value" data-ref="kpi-cancelled-count">0</div>
+          <span class="dashboard-stat-card__desc">Boletos liberados</span>
         </div>
       </div>
 
-      <!-- Orders Table Container -->
       <div class="payments-content-area" data-ref="payments-content-area">
-        <section class="canvas-section" data-ref="payments-section" style="padding: 0; width: 100%;">
+        <section class="canvas-section canvas-section--full" data-ref="payments-section">
           <div class="winners-daily-wrapper" data-ref="payments-table-wrapper">
-            <div class="winners-daily-table-card" data-ref="payments-table-card" style="display: block;">
+            <div class="winners-daily-table-card" data-ref="payments-table-card">
               <div class="winners-daily-table-scroll">
                 <table class="winners-daily-table" data-ref="payments-table">
                   <thead>
@@ -211,13 +173,15 @@
           </div>
         </section>
 
-        <div class="giveaways-empty-state" data-ref="payments-empty-state" style="display: none; padding: 60px 20px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg, 16px);">
-          <div style="width: 56px; height: 56px; border-radius: 50%; background: var(--bg-surface); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-            <svg class="component-icon" style="width: 28px; height: 28px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+        <div class="component-empty-state is-hidden" data-ref="payments-empty-state">
+          <div class="component-empty-state__badge">
+            <svg class="component-icon component-empty-state__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
           </div>
-          <h3 style="margin: 0 0 6px; font-size: 18px; font-weight: 700; color: var(--text-primary);">Sin órdenes ni comprobantes</h3>
-          <p style="margin: 0 0 20px; font-size: 13.5px; color: var(--text-secondary); max-width: 400px; margin-left: auto; margin-right: auto;">No se encontraron órdenes registradas con los filtros seleccionados.</p>
-          <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-filters">Restablecer Filtros</button>
+          <h3 class="component-empty-state__title">Sin órdenes ni comprobantes</h3>
+          <p class="component-empty-state__desc">No se encontraron órdenes registradas con los filtros seleccionados.</p>
+          <div class="component-empty-state__actions">
+            <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-filters">Restablecer Filtros</button>
+          </div>
         </div>
       </div>
     </div>

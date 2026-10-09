@@ -284,6 +284,36 @@ CREATE TABLE IF NOT EXISTS `winner_deliveries` (
   CONSTRAINT `fk_deliveries_giveaway` FOREIGN KEY (`giveaway_id`) REFERENCES `giveaways` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ============================================================================
+-- Tabla de Usuarios Administradores (Panel Admin)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `admin_users` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `uuid` CHAR(36) NOT NULL UNIQUE,
+  `name` VARCHAR(150) NOT NULL,
+  `email` VARCHAR(191) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `last_login_at` DATETIME NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_admin_users_email` (`email`),
+  INDEX `idx_admin_users_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `admin_users` (`id`, `uuid`, `name`, `email`, `password_hash`, `is_active`)
+VALUES (
+  1,
+  'e1a2b3c4-d5e6-7f8a-9b0c-1d2e3f4a5b6c',
+  'Administrador General',
+  'admin@projectboreal.com',
+  'scrypt$16384$8$1$a7160b258a0111fb673fafdd8a9ace1d$ee6541a3fce37d9b20a8cbf4ed465504d3a0dd6b8a58952c494a0b3ac0c1156824de616048be2bb2ce62ce590896147f1450d54506337189aa62032348d307ec',
+  1
+)
+ON DUPLICATE KEY UPDATE
+  `name` = VALUES(`name`),
+  `is_active` = VALUES(`is_active`);
+
 GRANT SELECT, INSERT, UPDATE, DELETE, INDEX, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
 

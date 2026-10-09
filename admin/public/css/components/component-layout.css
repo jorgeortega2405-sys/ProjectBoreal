@@ -2044,7 +2044,14 @@ html.dark-theme .component-top--gradient .design-share-btn:hover {
   color: var(--text-primary);
 }
 
-.winners-daily-table .component-badge {
+.winners-daily-table .component-badge,
+.component-table .component-badge {
   user-select: text;
+  white-space: nowrap;
+  font-weight: 500;
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
+
 

@@ -1,6 +1,7 @@
 import { ensureSidebarMounted, setupLayoutScrollSync, updateSidebarActiveState } from './components/layout.component.js';
 import { closeAllModals } from './components/modal.component.js';
 import { findRoute } from './config/routes.config.js';
+import { createSkeletonElement } from './config/skeleton-routes.js';
 import { translateElement } from './services/i18n.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { ViewController } from './types/common.types.js';
@@ -86,9 +87,26 @@ export async function render(rawPath = window.location.pathname): Promise<void> 
   updateSidebarActiveState(sidebar, path);
 
   const navId = ++currentNavigation;
+  const matched = findRoute(path);
+  const routeId = matched ? matched.route.id : 'not-found';
+
+  if (activeViewElement) {
+    const controller = (activeViewElement as any)?.__controller as ViewController | undefined;
+    if (controller && typeof controller.destroy === 'function') {
+      try {
+        controller.destroy();
+      } catch {}
+    }
+    activeViewElement.remove();
+    activeViewElement = null;
+  }
+
+  const skeletonElement = createSkeletonElement(routeId);
+  activeViewElement = skeletonElement;
+  layoutContent.appendChild(skeletonElement);
+  layoutContent.scrollTop = 0;
 
   let nextViewElement: HTMLElement | null = null;
-  const matched = findRoute(path);
 
   try {
     if (matched) {

@@ -137,3 +137,66 @@
   gap: 16px;
   width: 100%;
 }
+
+.winner-evidence-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+}
+
+.winner-evidence-preview {
+  width: 100%;
+  max-height: 420px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.winner-evidence-img {
+  max-width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+}
+
+.winner-testimonial-quote {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: 0;
+}
+
+.winner-delivery-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.winner-delivery-info {
+  padding: 12px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.winner-textarea--notes {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.winner-textarea--testimonial {
+  resize: vertical;
+}
+
+.btn-action-whatsapp-icon {
+  color: #22c55e;
+}
+

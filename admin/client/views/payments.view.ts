@@ -107,7 +107,6 @@ export class PaymentsController implements ViewController {
   private btnClearSearch: HTMLButtonElement | null = null;
   private btnPaginationNext: HTMLButtonElement | null = null;
   private btnPaginationPrev: HTMLButtonElement | null = null;
-  private btnRefresh: HTMLButtonElement | null = null;
   private btnResetFilters: HTMLButtonElement | null = null;
   private btnToggleSearch: HTMLButtonElement | null = null;
   private container: HTMLElement;
@@ -146,7 +145,6 @@ export class PaymentsController implements ViewController {
     this.btnActionApprove = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-approve"]');
     this.btnActionReject = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-reject"]');
     this.btnActionCopySpei = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-copy-spei"]');
-    this.btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-payments"]');
     this.btnResetFilters = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-filters"]');
     this.btnPaginationPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-prev"]');
     this.btnPaginationNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-next"]');
@@ -172,22 +170,6 @@ export class PaymentsController implements ViewController {
   bindEvents(): void {
     const signal = this.abortController?.signal;
 
-    this.btnRefresh?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        const icon = this.btnRefresh?.querySelector('[data-ref="icon-refresh"]');
-        icon?.classList.add('admin-refresh-spin');
-        void this.loadOrders().finally(() => {
-          setTimeout(() => {
-            icon?.classList.remove('admin-refresh-spin');
-          }, 600);
-        });
-        void this.loadKpis();
-      },
-      { signal }
-    );
-
     this.btnToggleSearch?.addEventListener(
       'click',
       (e) => {
@@ -200,7 +182,7 @@ export class PaymentsController implements ViewController {
         } else {
           this.searchToolbar.classList.add('is-hidden');
           if (this.inputSearch) this.inputSearch.value = '';
-          if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+          this.btnClearSearch?.classList.add('is-hidden');
           if (this.searchQuery) {
             this.searchQuery = '';
             this.currentPage = 1;
@@ -273,9 +255,7 @@ export class PaymentsController implements ViewController {
       'input',
       () => {
         const val = (this.inputSearch?.value || '').trim();
-        if (this.btnClearSearch) {
-          this.btnClearSearch.style.display = val.length > 0 ? 'inline-flex' : 'none';
-        }
+        this.btnClearSearch?.classList.toggle('is-hidden', val.length === 0);
         if (this.searchDebounceTimer) {
           clearTimeout(this.searchDebounceTimer);
         }
@@ -293,7 +273,7 @@ export class PaymentsController implements ViewController {
       (e) => {
         e.preventDefault();
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        this.btnClearSearch?.classList.add('is-hidden');
         this.searchQuery = '';
         this.currentPage = 1;
         void this.loadOrders();
@@ -327,7 +307,7 @@ export class PaymentsController implements ViewController {
         this.currentPage = 1;
 
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        this.btnClearSearch?.classList.add('is-hidden');
 
         this.syncStatusUi();
         this.syncGiveawayDropdownUi();
@@ -551,8 +531,8 @@ export class PaymentsController implements ViewController {
 
   private updateSelectionUi(): void {
     const isSelected = this.selectedOrder !== null;
-    if (this.defaultActions) this.defaultActions.style.display = isSelected ? 'none' : 'flex';
-    if (this.selectedActions) this.selectedActions.style.display = isSelected ? 'flex' : 'none';
+    this.defaultActions?.classList.toggle('is-hidden', isSelected);
+    this.selectedActions?.classList.toggle('is-hidden', !isSelected);
 
     const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr');
     rows.forEach((row) => {
@@ -570,13 +550,13 @@ export class PaymentsController implements ViewController {
 
     if (this.orders.length === 0) {
       tbody.innerHTML = '';
-      if (tableCard) tableCard.style.display = 'none';
-      if (emptyState) emptyState.style.display = 'block';
+      tableCard?.classList.add('is-hidden');
+      emptyState?.classList.remove('is-hidden');
       return;
     }
 
-    if (tableCard) tableCard.style.display = 'block';
-    if (emptyState) emptyState.style.display = 'none';
+    tableCard?.classList.remove('is-hidden');
+    emptyState?.classList.add('is-hidden');
 
     tbody.innerHTML = this.orders.map((o) => this.buildOrderRowHtml(o)).join('');
     renderIcons(tbody);
@@ -584,91 +564,51 @@ export class PaymentsController implements ViewController {
   }
 
   private buildOrderRowHtml(order: AdminOrderSummary): string {
-    const isCompleted = order.status === 'completed';
     const isInReview = order.status === 'in_review';
+    const isCompleted = order.status === 'completed';
     const isPending = order.status === 'pending_payment';
-    const isCancelled = order.status === 'cancelled';
     const isExpired = order.status === 'expired';
     const isSelected = this.selectedOrder?.uuid === order.uuid;
 
-    let statusBadgeHtml = '';
+    let statusText = 'Cancelada';
     if (isInReview) {
-      if (order.spei_status === 'manual_review') {
-        statusBadgeHtml = `
-          <span class="component-badge component-badge--sm" style="background: rgba(139, 92, 246, 0.15); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.3);">
-            Revisión Manual
-          </span>
-        `;
-      } else {
-        statusBadgeHtml = `
-          <span class="component-badge component-badge--sm" style="background: rgba(59, 130, 246, 0.15); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3);">
-            En Revisión
-          </span>
-        `;
-      }
+      statusText = order.spei_status === 'manual_review' ? 'Revisión Manual' : 'En Revisión';
     } else if (isCompleted) {
-      statusBadgeHtml = `
-        <span class="component-badge component-badge--sm" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-          Liquidado
-        </span>
-      `;
+      statusText = 'Liquidado';
     } else if (isPending) {
-      statusBadgeHtml = `
-        <span class="component-badge component-badge--sm" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">
-          Pendiente
-        </span>
-      `;
+      statusText = 'Pendiente';
     } else if (isExpired) {
-      statusBadgeHtml = `
-        <span class="component-badge component-badge--sm" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-          Expirada
-        </span>
-      `;
-    } else {
-      statusBadgeHtml = `
-        <span class="component-badge component-badge--sm" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
-          Cancelada
-        </span>
-      `;
+      statusText = 'Expirada';
     }
 
-    const speiDisplay = order.tracking_key
-      ? `<span class="component-badge component-badge--sm" style="font-family: var(--sl-font-mono, monospace);">${escapeHtml(order.tracking_key.slice(0, 14))}...</span>`
-      : `<span style="color: var(--text-tertiary); font-size: 12px;">—</span>`;
+    const speiText = order.tracking_key ? `${escapeHtml(order.tracking_key.slice(0, 14))}...` : '—';
+    const contactText = `${formatPhone(order.customer_phone)}${order.customer_state ? ` • ${escapeHtml(order.customer_state)}` : ''}`;
 
     return `
       <tr class="winners-table__tr ${isSelected ? 'is-selected' : ''}" data-ref="tr-order-${order.uuid}" data-uuid="${order.uuid}">
         <td class="winners-table__td">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-family: var(--sl-font-mono, monospace); font-size: 11px; font-weight: 700; color: var(--text-tertiary);">ORD-${order.uuid.slice(0, 8).toUpperCase()}</span>
-            <span style="font-weight: 600; color: var(--text-primary); font-size: 13px;">${escapeHtml(order.giveaway_title)}</span>
-          </div>
+          <span class="component-badge component-badge--sm">ORD-${order.uuid.slice(0, 8).toUpperCase()} • ${escapeHtml(order.giveaway_title)}</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(order.customer_name)}</span>
+          <span class="component-badge component-badge--sm">${escapeHtml(order.customer_name)}</span>
         </td>
         <td class="winners-table__td">
-          <div style="display: flex; flex-direction: column; gap: 2px;">
-            <span style="font-family: var(--sl-font-mono, monospace); font-size: 12.5px; color: var(--text-secondary);">${formatPhone(order.customer_phone)}</span>
-            ${order.customer_state ? `<span style="font-size: 11px; color: var(--text-tertiary);">${escapeHtml(order.customer_state)}</span>` : ''}
-          </div>
+          <span class="component-badge component-badge--sm">${contactText}</span>
         </td>
         <td class="winners-table__td">
-          <span class="component-badge component-badge--sm" style="font-family: var(--sl-font-mono, monospace); font-weight: 700;">
-            ${formatNumber(order.ticket_count)} bol.
-          </span>
+          <span class="component-badge component-badge--sm component-badge--mono-bold">${formatNumber(order.ticket_count)} bol.</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">${formatCurrency(order.total_amount, order.currency)}</span>
+          <span class="component-badge component-badge--sm">${formatCurrency(order.total_amount, order.currency)}</span>
         </td>
         <td class="winners-table__td">
-          ${speiDisplay}
+          <span class="component-badge component-badge--sm component-badge--mono-bold">${speiText}</span>
         </td>
         <td class="winners-table__td">
-          ${statusBadgeHtml}
+          <span class="component-badge component-badge--sm">${statusText}</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-size: 12px; color: var(--text-secondary);">${formatDate(order.created_at)}</span>
+          <span class="component-badge component-badge--sm">${formatDate(order.created_at)}</span>
         </td>
       </tr>
     `;
@@ -732,7 +672,7 @@ export class PaymentsController implements ViewController {
       `
       : `
         <div class="inspect-receipt-pane inspect-receipt-pane--empty">
-          <svg class="component-icon" style="width: 56px; height: 56px; color: var(--text-tertiary);"><use href="/icons.svg#hourglass_empty"></use></svg>
+          <svg class="component-icon inspect-receipt-empty-icon"><use href="/icons.svg#hourglass_empty"></use></svg>
           <p>El cliente aún no ha adjuntado un comprobante digital.</p>
         </div>
       `;
@@ -762,10 +702,10 @@ export class PaymentsController implements ViewController {
             </div>
             <div class="inspect-diagnostics-item">
               <span class="inspect-diagnostics-label">Estado Banxico CEP:</span>
-              <strong style="color: ${banxico.verified ? '#10b981' : '#f59e0b'};">${escapeHtml(banxico.message || resp.notice || resp.notes || 'En espera de certificación')}</strong>
+              <strong class="${banxico.verified ? 'inspect-cep-verified' : 'inspect-cep-unverified'}">${escapeHtml(banxico.message || resp.notice || resp.notes || 'En espera de certificación')}</strong>
             </div>
           </div>
-          ${resp.errors && resp.errors.length ? `<div class="inspect-errors-list"><span style="color: #ef4444; font-weight: 600;">Inconsistencias detectadas:</span><ul>${resp.errors.map((e: string) => `<li>${escapeHtml(e)}</li>`).join('')}</ul></div>` : ''}
+          ${resp.errors && resp.errors.length ? `<div class="inspect-errors-list"><span class="inspect-errors-title">Inconsistencias detectadas:</span><ul>${resp.errors.map((e: string) => `<li>${escapeHtml(e)}</li>`).join('')}</ul></div>` : ''}
         </div>
       `;
     }
@@ -804,7 +744,7 @@ export class PaymentsController implements ViewController {
             </div>
             <div class="inspect-info-row">
               <span class="inspect-info-label">Monto a Liquidar:</span>
-              <span class="inspect-info-val" style="font-weight: 700; color: var(--text-primary); font-size: 16px;">${formatCurrency(order.total_amount, order.currency)}</span>
+              <span class="inspect-info-val inspect-amount-highlight">${formatCurrency(order.total_amount, order.currency)}</span>
             </div>
             <div class="inspect-tickets-box">
               ${allTicketsChips}
@@ -822,7 +762,7 @@ export class PaymentsController implements ViewController {
               <span class="inspect-info-val"><strong>${escapeHtml(order.tracking_key || 'Sin registrar')}</strong></span>
             </div>
             <div class="inspect-tracking-edit-row">
-              <label class="field" style="flex: 1;" data-ref="field-edit-tracking">
+              <label class="field inspect-tracking-field" data-ref="field-edit-tracking">
                 <input class="field__input" data-ref="input-edit-tracking" type="text" placeholder=" " value="${escapeHtml(order.tracking_key || '')}" />
                 <span class="field__label">Corregir Clave SPEI</span>
               </label>
@@ -907,7 +847,7 @@ export class PaymentsController implements ViewController {
     const order = this.orders.find((o) => o.uuid === orderUuid);
 
     const bodyHtml = `
-      <div style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.55;">
+      <div class="payment-dialog-text">
         ¿Deseas confirmar la aprobación manual de esta orden?<br/><br/>
         • <strong>Cliente:</strong> ${escapeHtml(order?.customer_name || '')}<br/>
         • <strong>Sorteo:</strong> ${escapeHtml(order?.giveaway_title || '')}<br/>
@@ -946,11 +886,11 @@ export class PaymentsController implements ViewController {
 
     const bodyContainer = document.createElement('div');
     bodyContainer.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.5;">
-        <p style="margin: 0;">
+      <div class="payment-reject-modal-content">
+        <p class="payment-reject-text">
           ¿Estás seguro de rechazar el comprobante de <strong>${escapeHtml(order?.customer_name || 'este cliente')}</strong>?
         </p>
-        <p style="margin: 0; font-size: 12.5px; color: var(--text-tertiary);">
+        <p class="payment-reject-subtext">
           Los <strong>${formatNumber(order?.ticket_count || 1)} boletos</strong> apartados serán liberados inmediatamente y quedarán disponibles para otros compradores.
         </p>
         <label class="field" data-ref="field-rejection-reason">

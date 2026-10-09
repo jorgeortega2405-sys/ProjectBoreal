@@ -104,7 +104,6 @@ export class BankAccountsController implements ViewController {
   private btnActionToggleStatus: HTMLButtonElement | null = null;
   private btnClearSearch: HTMLButtonElement | null = null;
   private btnCreateAccount: HTMLButtonElement | null = null;
-  private btnRefresh: HTMLButtonElement | null = null;
   private btnResetSearch: HTMLButtonElement | null = null;
   private btnToggleSearch: HTMLButtonElement | null = null;
   private container: HTMLElement;
@@ -128,7 +127,6 @@ export class BankAccountsController implements ViewController {
     this.btnToggleSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
     this.inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-accounts"]');
     this.btnClearSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-search"]');
-    this.btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-accounts"]');
     this.btnCreateAccount = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-create-account"]');
     this.btnResetSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-search"]');
 
@@ -152,22 +150,6 @@ export class BankAccountsController implements ViewController {
 
   bindEvents(): void {
     const signal = this.abortController?.signal;
-
-    this.btnRefresh?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        const icon = this.btnRefresh?.querySelector('[data-ref="icon-refresh"]');
-        icon?.classList.add('admin-refresh-spin');
-        void this.loadAccounts().finally(() => {
-          setTimeout(() => {
-            icon?.classList.remove('admin-refresh-spin');
-          }, 600);
-        });
-        void this.loadKpis();
-      },
-      { signal }
-    );
 
     this.btnToggleSearch?.addEventListener(
       'click',
@@ -198,7 +180,7 @@ export class BankAccountsController implements ViewController {
       () => {
         const val = (this.inputSearch?.value || '').trim();
         if (this.btnClearSearch) {
-          this.btnClearSearch.style.display = val.length > 0 ? 'inline-flex' : 'none';
+          this.btnClearSearch.classList.toggle('is-hidden', val.length === 0);
         }
         if (this.searchDebounceTimer) {
           clearTimeout(this.searchDebounceTimer);
@@ -216,7 +198,7 @@ export class BankAccountsController implements ViewController {
       (e) => {
         e.preventDefault();
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
         this.searchQuery = '';
         void this.loadAccounts();
         this.inputSearch?.focus();
@@ -229,7 +211,7 @@ export class BankAccountsController implements ViewController {
       (e) => {
         e.preventDefault();
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
         this.searchQuery = '';
         if (this.isSearchActive) {
           this.toggleSearchToolbar(false);
@@ -339,7 +321,7 @@ export class BankAccountsController implements ViewController {
       this.searchToolbar.classList.add('is-hidden');
       this.btnToggleSearch?.classList.remove('is-active');
       if (this.inputSearch) this.inputSearch.value = '';
-      if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+      if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
       if (this.searchQuery) {
         this.searchQuery = '';
         void this.loadAccounts();
@@ -400,11 +382,11 @@ export class BankAccountsController implements ViewController {
 
     if (this.accounts.length === 0) {
       gridContainer.innerHTML = '';
-      if (emptyState) emptyState.style.display = 'block';
+      if (emptyState) emptyState.classList.remove('is-hidden');
       return;
     }
 
-    if (emptyState) emptyState.style.display = 'none';
+    if (emptyState) emptyState.classList.add('is-hidden');
     gridContainer.innerHTML = this.accounts.map((acc) => this.buildAccountCardHtml(acc)).join('');
     renderIcons(gridContainer);
     this.attachCardEvents(gridContainer);
@@ -484,7 +466,7 @@ export class BankAccountsController implements ViewController {
             ${acc.clabe ? `
               <span class="bank-badge bank-badge--clabe" data-ref="btn-badge-copy-clabe-${acc.uuid}" data-clabe="${escapeHtml(acc.clabe)}" data-tooltip="Clic para copiar CLABE">
                 <span>CLABE: ${escapeHtml(acc.clabe.slice(0, 4))}...${escapeHtml(acc.clabe.slice(-4))}</span>
-                <svg class="component-icon" style="width: 11px; height: 11px; margin-left: 2px;" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+                <svg class="component-icon bank-badge__icon-copy" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
               </span>
             ` : ''}
 
@@ -548,11 +530,11 @@ export class BankAccountsController implements ViewController {
     const isSelected = this.selectedAccount !== null;
 
     if (!isSelected) {
-      if (this.defaultActions) this.defaultActions.style.display = 'flex';
-      if (this.selectedActions) this.selectedActions.style.display = 'none';
+      if (this.defaultActions) this.defaultActions.classList.remove('is-hidden');
+      if (this.selectedActions) this.selectedActions.classList.add('is-hidden');
     } else {
-      if (this.defaultActions) this.defaultActions.style.display = 'none';
-      if (this.selectedActions) this.selectedActions.style.display = 'flex';
+      if (this.defaultActions) this.defaultActions.classList.add('is-hidden');
+      if (this.selectedActions) this.selectedActions.classList.remove('is-hidden');
 
       const acc = this.selectedAccount!;
       const isActive = Boolean(acc.is_active);
@@ -571,11 +553,11 @@ export class BankAccountsController implements ViewController {
       }
 
       if (this.btnActionCopyClabe) {
-        this.btnActionCopyClabe.style.display = acc.clabe ? 'inline-flex' : 'none';
+        this.btnActionCopyClabe.classList.toggle('is-hidden', !acc.clabe);
       }
 
       if (this.btnActionCopyCard) {
-        this.btnActionCopyCard.style.display = acc.card_number ? 'inline-flex' : 'none';
+        this.btnActionCopyCard.classList.toggle('is-hidden', !acc.card_number);
       }
     }
 
@@ -607,7 +589,7 @@ export class BankAccountsController implements ViewController {
   private openCreateAccountModal(): void {
     const bodyContainer = document.createElement('div');
     bodyContainer.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 14px; width: 100%; box-sizing: border-box;">
+      <div class="bank-modal-form">
         <label class="field" data-ref="field-bank-name">
           <input class="field__input" data-ref="input-bank-name" type="text" placeholder=" " maxlength="100" />
           <span class="field__label">Nombre del Banco o Institución (ej. BBVA, Mercado Pago, Santander)</span>
@@ -637,8 +619,8 @@ export class BankAccountsController implements ViewController {
           <span class="field__label">Número de Tarjeta (16 dígitos, opcional)</span>
         </label>
 
-        <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-secondary); cursor: pointer; margin-top: 4px;">
-          <input type="checkbox" data-ref="check-apply-all-giveaways" checked style="width: 16px; height: 16px;" />
+        <label class="bank-checkbox-label">
+          <input type="checkbox" class="bank-checkbox-input" data-ref="check-apply-all-giveaways" checked />
           <span>Habilitar inmediatamente en todos los sorteos activos y vigentes</span>
         </label>
       </div>
@@ -704,7 +686,7 @@ export class BankAccountsController implements ViewController {
   private openEditAccountModal(account: BankAccountDetail): void {
     const bodyContainer = document.createElement('div');
     bodyContainer.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 14px; width: 100%; box-sizing: border-box;">
+      <div class="bank-modal-form">
         <label class="field" data-ref="field-bank-name">
           <input class="field__input" data-ref="input-bank-name" type="text" placeholder=" " value="${escapeHtml(account.bank_name)}" maxlength="100" />
           <span class="field__label">Nombre del Banco o Institución</span>
@@ -805,7 +787,7 @@ export class BankAccountsController implements ViewController {
 
     if (giveaways.length === 0) {
       bodyContainer.innerHTML = `
-        <div style="padding: 30px; text-align: center; color: var(--text-secondary);">
+        <div class="bank-empty-state-modal">
           <p>No hay sorteos registrados en el sistema actualmente.</p>
         </div>
       `;
@@ -833,8 +815,8 @@ export class BankAccountsController implements ViewController {
         .join('');
 
       bodyContainer.innerHTML = `
-        <div style="display: flex; flex-direction: column; gap: 14px;">
-          <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">
+        <div class="bank-modal-form">
+          <p class="bank-assignment-desc">
             Selecciona los sorteos en los que los compradores podrán ver y transferir a <strong>${escapeHtml(account.bank_name)} (${escapeHtml(account.account_holder)})</strong>:
           </p>
           <div class="giveaways-assignment-list" data-ref="giveaways-assignment-list">
@@ -886,7 +868,7 @@ export class BankAccountsController implements ViewController {
 
   private openConfirmDeleteModal(account: BankAccountDetail): void {
     const bodyHtml = `
-      <div style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.55;">
+      <div class="bank-delete-dialog-text">
         ¿Estás seguro de eliminar la cuenta de <strong>${escapeHtml(account.bank_name)}</strong>?<br/><br/>
         • <strong>Titular:</strong> ${escapeHtml(account.account_holder)}<br/>
         • <strong>CLABE:</strong> ${escapeHtml(account.clabe || 'Sin CLABE')}<br/><br/>

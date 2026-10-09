@@ -200,3 +200,76 @@
   align-items: center;
   gap: 6px;
 }
+
+.customer-dossier-stat-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.customer-dossier-stat-val {
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.customer-dossier-stat-val--spent {
+  color: #10b981;
+}
+
+.customer-dossier-stat-val--phone {
+  font-size: 14px;
+}
+
+.customer-dossier-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.customer-dossier-header-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.customer-block-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.customer-block-modal-text {
+  margin: 0;
+}
+
+.customer-block-modal-subtext {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-tertiary);
+}
+
+.customer-order-amount-val {
+  color: var(--text-primary);
+}
+
+.customer-empty-orders-text {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 20px;
+}
+
+.btn-action-block--unblock {
+  color: #10b981 !important;
+}
+
+.btn-action-block--block {
+  color: #ef4444 !important;
+}
+
+

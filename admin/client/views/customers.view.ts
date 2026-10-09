@@ -94,7 +94,6 @@ export class CustomersController implements ViewController {
   private btnClearSearch: HTMLButtonElement | null = null;
   private btnPaginationNext: HTMLButtonElement | null = null;
   private btnPaginationPrev: HTMLButtonElement | null = null;
-  private btnRefresh: HTMLButtonElement | null = null;
   private btnResetSearch: HTMLButtonElement | null = null;
   private btnToggleSearch: HTMLButtonElement | null = null;
   private container: HTMLElement;
@@ -123,7 +122,6 @@ export class CustomersController implements ViewController {
     this.btnToggleSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
     this.inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-customers"]');
     this.btnClearSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-search"]');
-    this.btnRefresh = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-customers"]');
     this.btnResetSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-search"]');
     this.btnPaginationPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-prev"]');
     this.btnPaginationNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-next"]');
@@ -148,22 +146,6 @@ export class CustomersController implements ViewController {
   bindEvents(): void {
     const signal = this.abortController?.signal;
 
-    this.btnRefresh?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        const icon = this.btnRefresh?.querySelector('[data-ref="icon-refresh"]');
-        icon?.classList.add('admin-refresh-spin');
-        void this.loadCustomers().finally(() => {
-          setTimeout(() => {
-            icon?.classList.remove('admin-refresh-spin');
-          }, 600);
-        });
-        void this.loadKpis();
-      },
-      { signal }
-    );
-
     this.btnToggleSearch?.addEventListener(
       'click',
       (e) => {
@@ -176,7 +158,7 @@ export class CustomersController implements ViewController {
         } else {
           this.searchToolbar.classList.add('is-hidden');
           if (this.inputSearch) this.inputSearch.value = '';
-          if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+          if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
           if (this.searchQuery) {
             this.searchQuery = '';
             this.currentPage = 1;
@@ -192,7 +174,7 @@ export class CustomersController implements ViewController {
       () => {
         const val = (this.inputSearch?.value || '').trim();
         if (this.btnClearSearch) {
-          this.btnClearSearch.style.display = val.length > 0 ? 'inline-flex' : 'none';
+          this.btnClearSearch.classList.toggle('is-hidden', val.length === 0);
         }
         if (this.searchDebounceTimer) {
           clearTimeout(this.searchDebounceTimer);
@@ -211,7 +193,7 @@ export class CustomersController implements ViewController {
       (e) => {
         e.preventDefault();
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
         this.searchQuery = '';
         this.currentPage = 1;
         void this.loadCustomers();
@@ -225,7 +207,7 @@ export class CustomersController implements ViewController {
       (e) => {
         e.preventDefault();
         if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.style.display = 'none';
+        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
         this.searchQuery = '';
         this.selectedCustomer = null;
         this.currentPage = 1;
@@ -413,14 +395,15 @@ export class CustomersController implements ViewController {
 
   private updateSelectionUi(): void {
     const isSelected = this.selectedCustomer !== null;
-    if (this.defaultActions) this.defaultActions.style.display = isSelected ? 'none' : 'flex';
-    if (this.selectedActions) this.selectedActions.style.display = isSelected ? 'flex' : 'none';
+    if (this.defaultActions) this.defaultActions.classList.toggle('is-hidden', isSelected);
+    if (this.selectedActions) this.selectedActions.classList.toggle('is-hidden', !isSelected);
 
     if (isSelected && this.selectedCustomer && this.btnActionToggleBlock) {
       const isBlocked = this.selectedCustomer.is_blocked;
       this.btnActionToggleBlock.setAttribute('data-tooltip', isBlocked ? 'Desbloquear Participante' : 'Bloquear / Lista Negra');
       this.btnActionToggleBlock.setAttribute('aria-label', isBlocked ? 'Desbloquear Participante' : 'Bloquear / Lista Negra');
-      this.btnActionToggleBlock.style.color = isBlocked ? '#10b981' : '#ef4444';
+      this.btnActionToggleBlock.classList.toggle('btn-action-block--unblock', isBlocked);
+      this.btnActionToggleBlock.classList.toggle('btn-action-block--block', !isBlocked);
       const iconUse = this.btnActionToggleBlock.querySelector('use');
       if (iconUse) {
         iconUse.setAttribute('href', isBlocked ? '/icons.svg#check_circle' : '/icons.svg#block');
@@ -465,14 +448,14 @@ export class CustomersController implements ViewController {
 
     if (this.customers.length === 0) {
       tbody.innerHTML = '';
-      if (tableCard) tableCard.style.display = 'none';
-      if (emptyState) emptyState.style.display = 'block';
+      if (tableCard) tableCard.classList.add('is-hidden');
+      if (emptyState) emptyState.classList.remove('is-hidden');
       this.updatePaginationUi();
       return;
     }
 
-    if (tableCard) tableCard.style.display = 'block';
-    if (emptyState) emptyState.style.display = 'none';
+    if (tableCard) tableCard.classList.remove('is-hidden');
+    if (emptyState) emptyState.classList.add('is-hidden');
 
     this.updatePaginationUi();
     const startIndex = (this.currentPage - 1) * this.pageSize;
@@ -486,46 +469,33 @@ export class CustomersController implements ViewController {
   private buildCustomerRowHtml(c: CustomerSummary): string {
     const isBlocked = c.is_blocked;
     const isSelected = this.selectedCustomer?.customer_phone === c.customer_phone;
-    const initial = (c.customer_name || 'P').charAt(0).toUpperCase();
-
-    const blockBadge = isBlocked
-      ? '<span class="component-badge component-badge--sm" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">Bloqueado</span>'
-      : '<span class="component-badge component-badge--sm" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">Activo</span>';
+    const statusText = isBlocked ? 'Bloqueado' : 'Activo';
 
     return `
       <tr class="winners-table__tr ${isSelected ? 'is-selected' : ''}" data-ref="tr-customer-${c.customer_phone}" data-phone="${escapeHtml(c.customer_phone)}">
         <td class="winners-table__td">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--bg-surface-elevated, var(--bg-surface)); display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); font-weight: 700; font-size: 12px; color: var(--text-primary); flex-shrink: 0;">
-              ${initial}
-            </div>
-            <span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(c.customer_name)}</span>
-          </div>
+          <span class="component-badge component-badge--sm">${escapeHtml(c.customer_name)}</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-family: var(--sl-font-mono, monospace); font-size: 12.5px; color: var(--text-secondary);">${formatPhone(c.customer_phone)}</span>
+          <span class="component-badge component-badge--sm component-badge--mono-bold">${formatPhone(c.customer_phone)}</span>
         </td>
         <td class="winners-table__td">
-          ${c.customer_state ? `<span style="font-size: 12.5px; color: var(--text-secondary);">${escapeHtml(c.customer_state)}</span>` : '<span style="color: var(--text-tertiary); font-size: 12px;">—</span>'}
+          <span class="component-badge component-badge--sm">${c.customer_state ? escapeHtml(c.customer_state) : '—'}</span>
         </td>
         <td class="winners-table__td">
-          <span class="component-badge component-badge--sm" style="font-family: var(--sl-font-mono, monospace); font-weight: 700;">
-            ${c.total_tickets} bol.
-          </span>
+          <span class="component-badge component-badge--sm component-badge--mono-bold">${c.total_tickets} bol.</span>
         </td>
         <td class="winners-table__td">
-          <span class="component-badge component-badge--sm">
-            ${c.completed_orders_count} de ${c.total_orders_count}
-          </span>
+          <span class="component-badge component-badge--sm">${c.completed_orders_count} de ${c.total_orders_count}</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-weight: 700; color: #10b981; font-size: 13px;">${formatCurrency(c.total_spent)}</span>
+          <span class="component-badge component-badge--sm">${formatCurrency(c.total_spent)}</span>
         </td>
         <td class="winners-table__td">
-          ${blockBadge}
+          <span class="component-badge component-badge--sm">${statusText}</span>
         </td>
         <td class="winners-table__td">
-          <span style="font-size: 12px; color: var(--text-secondary);">${formatDate(c.last_order_at || c.first_order_at)}</span>
+          <span class="component-badge component-badge--sm">${formatDate(c.last_order_at || c.first_order_at)}</span>
         </td>
       </tr>
     `;
@@ -582,7 +552,6 @@ export class CustomersController implements ViewController {
               const isPaid = ord.status === 'completed';
               const isRev = ord.status === 'in_review';
               const isPend = ord.status === 'pending_payment';
-              const statusColor = isPaid ? '#10b981' : isRev ? '#3b82f6' : isPend ? '#f59e0b' : '#ef4444';
               const statusText = isPaid ? 'Liquidada' : isRev ? 'En Revisión' : isPend ? 'Pendiente' : 'Cancelada';
 
               return `
@@ -594,41 +563,41 @@ export class CustomersController implements ViewController {
                       <span>•</span>
                       <span>${ord.ticket_count} boletos</span>
                       <span>•</span>
-                      <strong style="color: var(--text-primary);">${formatCurrency(ord.total_amount)}</strong>
+                      <strong class="customer-order-amount-val">${formatCurrency(ord.total_amount)}</strong>
                     </div>
                   </div>
                   <div>
-                    <span class="component-badge component-badge--sm" style="background: ${statusColor}15; color: ${statusColor}; border: 1px solid ${statusColor}40;">${statusText}</span>
+                    <span class="component-badge component-badge--sm">${statusText}</span>
                   </div>
                 </div>
               `;
             })
             .join('')
-        : '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">Sin órdenes registradas.</p>';
+        : '<p class="customer-empty-orders-text">Sin órdenes registradas.</p>';
 
     bodyContainer.innerHTML = `
       <div class="customer-dossier-stats">
         <div class="customer-dossier-stat-box">
-          <span style="font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase;">Total Invertido</span>
-          <strong style="font-size: 16px; color: #10b981;">${formatCurrency(customer.total_spent)}</strong>
+          <span class="customer-dossier-stat-label">Total Invertido</span>
+          <strong class="customer-dossier-stat-val customer-dossier-stat-val--spent">${formatCurrency(customer.total_spent)}</strong>
         </div>
         <div class="customer-dossier-stat-box">
-          <span style="font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase;">Órdenes Pagadas</span>
-          <strong style="font-size: 16px; color: var(--text-primary);">${customer.completed_orders_count} de ${customer.total_orders_count}</strong>
+          <span class="customer-dossier-stat-label">Órdenes Pagadas</span>
+          <strong class="customer-dossier-stat-val">${customer.completed_orders_count} de ${customer.total_orders_count}</strong>
         </div>
         <div class="customer-dossier-stat-box">
-          <span style="font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase;">Boletos Totales</span>
-          <strong style="font-size: 16px; color: var(--text-primary);">${customer.total_tickets}</strong>
+          <span class="customer-dossier-stat-label">Boletos Totales</span>
+          <strong class="customer-dossier-stat-val">${customer.total_tickets}</strong>
         </div>
         <div class="customer-dossier-stat-box">
-          <span style="font-size: 11px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase;">Teléfono</span>
-          <strong style="font-size: 14px; color: var(--text-primary);">${formatPhone(customer.customer_phone)}</strong>
+          <span class="customer-dossier-stat-label">Teléfono</span>
+          <strong class="customer-dossier-stat-val customer-dossier-stat-val--phone">${formatPhone(customer.customer_phone)}</strong>
         </div>
       </div>
 
-      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-        <h4 style="margin: 0; font-size: 14px; font-weight: 700; color: var(--text-primary);">Historial de Compras y Apartados</h4>
-        <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" class="component-button component-button--secondary component-button--h32" style="color: #22c55e;">
+      <div class="customer-dossier-header-row">
+        <h4 class="customer-dossier-header-title">Historial de Compras y Apartados</h4>
+        <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" class="component-button component-button--secondary component-button--h32 btn-action-whatsapp-icon">
           <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call"></use></svg>
           <span>WhatsApp Directo</span>
         </a>
@@ -652,11 +621,11 @@ export class CustomersController implements ViewController {
   private openBlockCustomerModal(phone: string, name: string): void {
     const bodyContainer = document.createElement('div');
     bodyContainer.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.5;">
-        <p style="margin: 0;">
+      <div class="customer-block-modal-content">
+        <p class="customer-block-modal-text">
           ¿Deseas bloquear al cliente <strong>${escapeHtml(name || phone)}</strong> (${formatPhone(phone)})?
         </p>
-        <p style="margin: 0; font-size: 12.5px; color: var(--text-tertiary);">
+        <p class="customer-block-modal-subtext">
           Al estar en la lista negra, este número telefónico tendrá bloqueada la creación de nuevos apartados en la tienda.
         </p>
         <label class="field" data-ref="field-block-reason">

@@ -542,3 +542,55 @@ html.dark-theme .bank-card-item.is-selected:hover .canvas-card__thumbnail {
 .switch-control input:checked + .switch-control__slider:before {
   transform: translateX(20px);
 }
+
+.bank-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bank-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.bank-checkbox-input {
+  width: 16px;
+  height: 16px;
+}
+
+.bank-empty-state-modal {
+  padding: 30px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.bank-assignment-desc {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.bank-delete-dialog-text {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.btn-action-danger-icon {
+  color: var(--color-danger, #ef4444);
+}
+
+.bank-badge__icon-copy {
+  width: 11px;
+  height: 11px;
+  margin-left: 2px;
+}
+

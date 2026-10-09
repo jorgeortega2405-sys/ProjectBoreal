@@ -22,6 +22,9 @@ export async function getApi<T>(endpoint: string): Promise<ApiResponse<T>> {
       },
     });
     if (!res.ok) {
+      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
+        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
+      }
       const errorJson = await res.json().catch(() => null);
       return {
         data: errorJson?.data,
@@ -52,6 +55,9 @@ export async function postApi<T>(endpoint: string, body?: unknown): Promise<ApiR
     });
     const json = await res.json();
     if (!res.ok || !json.success) {
+      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
+        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
+      }
       return {
         data: json.data,
         error: json.error || 'Error al procesar la solicitud.',
@@ -77,6 +83,9 @@ export async function putApi<T>(endpoint: string, body?: unknown): Promise<ApiRe
     });
     const json = await res.json();
     if (!res.ok || !json.success) {
+      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
+        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
+      }
       return {
         data: json.data,
         error: json.error || 'Error al procesar la solicitud.',
@@ -102,6 +111,9 @@ export async function patchApi<T>(endpoint: string, body?: unknown): Promise<Api
     });
     const json = await res.json();
     if (!res.ok || !json.success) {
+      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
+        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
+      }
       return {
         data: json.data,
         error: json.error || 'Error al procesar la solicitud.',
@@ -126,6 +138,9 @@ export async function deleteApi<T>(endpoint: string): Promise<ApiResponse<T>> {
     });
     const json = await res.json();
     if (!res.ok || !json.success) {
+      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
+        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
+      }
       return {
         data: json.data,
         error: json.error || 'Error al procesar la solicitud.',
