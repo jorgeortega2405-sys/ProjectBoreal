@@ -664,7 +664,7 @@ export class PaymentsController implements ViewController {
             <button type="button" class="component-button component-button--secondary component-button--h32 component-button--icon-only" data-ref="btn-rotate" data-tooltip="Rotar" aria-label="Rotar">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
             </button>
-            <a href="/api/orders/${order.uuid}/receipt" target="_blank" download="${order.receipt_filename || 'comprobante'}" class="component-button component-button--secondary component-button--h32 component-button--icon-only" data-tooltip="Descargar original" aria-label="Descargar original">
+            <a class="component-button component-button--secondary component-button--h32 component-button--icon-only" href="/api/orders/${order.uuid}/receipt" target="_blank" download="${order.receipt_filename || 'comprobante'}" data-tooltip="Descargar original" aria-label="Descargar original">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
             </a>
           </div>
@@ -672,7 +672,7 @@ export class PaymentsController implements ViewController {
       `
       : `
         <div class="inspect-receipt-pane inspect-receipt-pane--empty">
-          <svg class="component-icon inspect-receipt-empty-icon"><use href="/icons.svg#hourglass_empty"></use></svg>
+          <svg class="component-icon inspect-receipt-empty-icon"><use href="/icons.svg#schedule"></use></svg>
           <p>El cliente aún no ha adjuntado un comprobante digital.</p>
         </div>
       `;
@@ -863,7 +863,7 @@ export class PaymentsController implements ViewController {
       confirmText: 'Aprobar y Liquidar Pago',
       description: 'Aprobación manual de orden de compra.',
       onConfirm: async () => {
-        const res = await postApi<{ order: AdminOrderDetail }>(`/api/orders/${orderUuid}/approve`, {
+        const res = await postApi<AdminOrderDetail>(`/api/orders/${orderUuid}/approve`, {
           notes: 'Aprobación manual realizada desde el panel administrativo.',
         });
         if (res.success) {
@@ -909,7 +909,7 @@ export class PaymentsController implements ViewController {
       description: 'Cancelación de orden por comprobante inválido.',
       onConfirm: async () => {
         const reason = (inputReason?.value || '').trim() || 'Comprobante rechazado por el administrador.';
-        const res = await postApi<{ order: AdminOrderDetail }>(`/api/orders/${orderUuid}/reject`, {
+        const res = await postApi<AdminOrderDetail>(`/api/orders/${orderUuid}/reject`, {
           reason,
         });
         if (res.success) {

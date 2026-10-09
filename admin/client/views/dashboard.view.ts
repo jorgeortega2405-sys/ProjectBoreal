@@ -436,7 +436,7 @@ export class DashboardController implements ViewController {
     if (orders.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" class="dashboard-table-empty">
+          <td class="dashboard-table-empty" colspan="7">
             No hay órdenes registradas en este periodo.
           </td>
         </tr>

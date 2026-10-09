@@ -360,9 +360,8 @@ export async function getGiveawayByUuid(uuid: string): Promise<AdminGiveawayItem
 
 export async function createGiveaway(input: CreateGiveawayInput): Promise<AdminGiveawayItem> {
   const conn = await pool.getConnection();
-  await conn.beginTransaction();
-
   try {
+    await conn.beginTransaction();
     const uuid = crypto.randomUUID();
     const title = input.title.trim();
     if (!title) {
@@ -490,9 +489,8 @@ export async function updateGiveaway(uuid: string, input: UpdateGiveawayInput): 
   }
 
   const conn = await pool.getConnection();
-  await conn.beginTransaction();
-
   try {
+    await conn.beginTransaction();
     const hasSales = current.paid_tickets > 0;
 
     let ticketPrice = current.ticket_price;
@@ -685,9 +683,8 @@ export async function executeManualDraw(uuid: string): Promise<AdminGiveawayItem
   }
 
   const conn = await pool.getConnection();
-  await conn.beginTransaction();
-
   try {
+    await conn.beginTransaction();
     const [countRows] = await conn.query<RowDataPacket[]>(
       `SELECT COUNT(*) AS total_paid FROM giveaway_tickets WHERE giveaway_id = ? AND status = 'paid'`,
       [current.id]

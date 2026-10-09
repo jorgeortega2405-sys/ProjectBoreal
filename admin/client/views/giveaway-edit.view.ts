@@ -292,7 +292,7 @@ export class GiveawayEditController implements ViewController {
       .map(
         (b) => `
         <label class="giveaway-create__bank-item">
-          <input type="checkbox" name="bank_account" value="${b.id}" ${assignedIds.has(b.id) ? 'checked' : ''} ${this.isCompleted ? 'disabled' : ''} />
+          <input class="giveaway-create__bank-checkbox" name="bank_account" type="checkbox" value="${b.id}" ${assignedIds.has(b.id) ? 'checked' : ''} ${this.isCompleted ? 'disabled' : ''} />
           <div class="giveaway-create__bank-info">
             <span class="giveaway-create__bank-name">${escapeHtml(b.bank_name)} • ${escapeHtml(b.account_holder)}</span>
             <span class="giveaway-create__bank-meta">${escapeHtml(b.account_type.toUpperCase())} ${b.clabe ? `• CLABE: ${escapeHtml(b.clabe)}` : ''} ${b.card_number ? `• Tarjeta: ${escapeHtml(b.card_number)}` : ''}</span>

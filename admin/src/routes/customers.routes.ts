@@ -1,5 +1,6 @@
 import { blockCustomer, getAllCustomers, getCustomerDetail, getCustomersKpis, unblockCustomer } from '../services/customers.service.js';
 import { logger } from '../services/logger.service.js';
+import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
 
 const router = Router();
@@ -73,9 +74,9 @@ router.post('/:phone/block', async (req: Request, res: Response): Promise<void> 
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Error al bloquear cliente en admin:', err?.message || err);
+    logger.app.warn('Error al bloquear cliente en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al bloquear cliente.',
+      error: getSafeErrorMessage(err, 'Error al bloquear cliente.'),
       success: false,
     });
   }
@@ -90,9 +91,9 @@ router.delete('/:phone/block', async (req: Request, res: Response): Promise<void
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Error al desbloquear cliente en admin:', err?.message || err);
+    logger.app.warn('Error al desbloquear cliente en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al desbloquear cliente.',
+      error: getSafeErrorMessage(err, 'Error al desbloquear cliente.'),
       success: false,
     });
   }

@@ -1,5 +1,6 @@
 import { createGiveaway, deleteDraftGiveaway, executeManualDraw, getActiveBankAccounts, getAllGiveaways, getGiveawayByUuid, isDailyGiveawayPauseScheduled, setDailyGiveawayPauseScheduled, updateGiveaway, updateGiveawayStatus } from '../services/giveaways.service.js';
 import { logger } from '../services/logger.service.js';
+import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
 
 const router = Router();
@@ -110,9 +111,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Validación o error al crear sorteo en admin:', err?.message || err);
+    logger.app.warn('Validación o error al crear sorteo en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al validar los datos del sorteo.',
+      error: getSafeErrorMessage(err, 'Error al validar los datos del sorteo.'),
       success: false,
     });
   }
@@ -128,9 +129,9 @@ router.put('/:uuid', async (req: Request, res: Response): Promise<void> => {
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Validación o error al actualizar sorteo en admin:', err?.message || err);
+    logger.app.warn('Validación o error al actualizar sorteo en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al actualizar el sorteo.',
+      error: getSafeErrorMessage(err, 'Error al actualizar el sorteo.'),
       success: false,
     });
   }
@@ -154,9 +155,9 @@ router.patch('/:uuid/status', async (req: Request, res: Response): Promise<void>
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Validación o error al cambiar estado de sorteo en admin:', err?.message || err);
+    logger.app.warn('Validación o error al cambiar estado de sorteo en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al modificar el estado del sorteo.',
+      error: getSafeErrorMessage(err, 'Error al modificar el estado del sorteo.'),
       success: false,
     });
   }
@@ -174,7 +175,7 @@ router.post('/:uuid/draw', async (req: Request, res: Response): Promise<void> =>
   } catch (err: any) {
     logger.app.error('Error al ejecutar sorteo manual en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al ejecutar el sorteo.',
+      error: getSafeErrorMessage(err, 'Error al ejecutar el sorteo.'),
       success: false,
     });
   }
@@ -189,9 +190,9 @@ router.delete('/:uuid', async (req: Request, res: Response): Promise<void> => {
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Error al eliminar borrador de sorteo en admin:', err?.message || err);
+    logger.app.warn('Error al eliminar borrador de sorteo en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al eliminar el sorteo.',
+      error: getSafeErrorMessage(err, 'Error al eliminar el sorteo.'),
       success: false,
     });
   }

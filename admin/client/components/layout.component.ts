@@ -8,6 +8,7 @@ import { getEffectiveTheme, getTheme, toggleTheme } from '../services/theme.serv
 export let isDrawerOpen = false;
 let sidebarInstance: HTMLElement | null = null;
 let sidebarInitPromise: Promise<HTMLElement> | null = null;
+let themeChangeHandler: (() => void) | null = null;
 
 export function getIsSidebarOpen(): boolean {
   return isDrawerOpen;
@@ -178,12 +179,20 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     }
   });
 
-  window.addEventListener('themechange', () => {
+  if (themeChangeHandler) {
+    window.removeEventListener('themechange', themeChangeHandler);
+  }
+  themeChangeHandler = () => {
     updateThemeButtonState(sidebar);
-  });
+  };
+  window.addEventListener('themechange', themeChangeHandler);
 }
 
 export function unmountSidebar(): void {
+  if (themeChangeHandler) {
+    window.removeEventListener('themechange', themeChangeHandler);
+    themeChangeHandler = null;
+  }
   if (sidebarInstance) {
     sidebarInstance.remove();
     sidebarInstance = null;

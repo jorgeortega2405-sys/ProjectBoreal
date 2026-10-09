@@ -56,8 +56,6 @@ export function openBankInfoModal(options: BankInfoModalOptions): void {
           ${t('orders.receipt_instruction')}
         </div>
 
-        <div class="banner banner--danger is-hidden" data-ref="split-modal-error"></div>
-
         <div class="payment-split__actions" data-ref="payment-actions">
           <button type="button" class="component-button component-button--black component-button--h45 component-button--w-full" data-ref="btn-modal-upload-receipt">
             <svg class="component-icon" data-ref="upload-receipt-icon" aria-hidden="true"><use href="/icons.svg#upload_file"></use></svg>
@@ -67,6 +65,8 @@ export function openBankInfoModal(options: BankInfoModalOptions): void {
             <span>Cerrar</span>
           </button>
         </div>
+
+        <div class="banner banner--danger is-hidden" data-ref="split-modal-error"></div>
       </div>
 
       <div class="payment-split__right" data-ref="payment-split-right">

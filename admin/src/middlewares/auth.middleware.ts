@@ -62,3 +62,32 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   req.adminUser = user;
   next();
 }
+
+export function hasPermission(user: SafeAdminUser | undefined, permission: string): boolean {
+  if (!user) return false;
+  if (!user.permissions || user.permissions.length === 0) return true;
+  return user.permissions.includes(permission) || user.permissions.includes('*');
+}
+
+export function requirePermission(permission: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const user = req.adminUser;
+    if (!user) {
+      res.status(401).json({
+        error: 'No autorizado. Se requiere iniciar sesión.',
+        success: false,
+      });
+      return;
+    }
+
+    if (!hasPermission(user, permission)) {
+      res.status(403).json({
+        error: 'Acceso denegado: permisos insuficientes para realizar esta operación.',
+        success: false,
+      });
+      return;
+    }
+
+    next();
+  };
+}

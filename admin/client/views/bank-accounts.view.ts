@@ -412,12 +412,12 @@ export class BankAccountsController implements ViewController {
 
             <div class="bank-debit-card__top">
               <div class="bank-debit-card__brand">
-                <svg class="component-icon bank-debit-card__bank-icon" aria-hidden="true"><use href="/icons.svg#account_balance"></use></svg>
+                <svg class="component-icon bank-debit-card__bank-icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
                 <span class="bank-debit-card__bank-title">${escapeHtml(acc.bank_name)}</span>
               </div>
 
               <div class="bank-debit-card__top-right">
-                <svg class="component-icon bank-debit-card__nfc-icon" aria-hidden="true"><use href="/icons.svg#contactless"></use></svg>
+                <svg class="component-icon bank-debit-card__nfc-icon" aria-hidden="true"><use href="/icons.svg#credit_card"></use></svg>
               </div>
             </div>
 
@@ -620,7 +620,7 @@ export class BankAccountsController implements ViewController {
         </label>
 
         <label class="bank-checkbox-label">
-          <input type="checkbox" class="bank-checkbox-input" data-ref="check-apply-all-giveaways" checked />
+          <input class="bank-checkbox-input" data-ref="check-apply-all-giveaways" type="checkbox" checked />
           <span>Habilitar inmediatamente en todos los sorteos activos y vigentes</span>
         </label>
       </div>
@@ -659,7 +659,7 @@ export class BankAccountsController implements ViewController {
           return false;
         }
 
-        const res = await postApi<{ account: BankAccountDetail }>('/api/bank-accounts', {
+        const res = await postApi<BankAccountDetail>('/api/bank-accounts', {
           account_holder: accountHolder,
           account_type: accountType,
           apply_to_all_active_giveaways: applyToAll,
@@ -806,7 +806,7 @@ export class BankAccountsController implements ViewController {
                 </div>
               </div>
               <label class="switch-control" data-tooltip="${isEnabled ? 'Deshabilitar en este sorteo' : 'Habilitar en este sorteo'}">
-                <input type="checkbox" ${isEnabled ? 'checked' : ''} data-ref="check-giveaway-${g.giveaway_id}" data-giveaway-id="${g.giveaway_id}" />
+                <input class="switch-control__input" data-ref="check-giveaway-${g.giveaway_id}" data-giveaway-id="${g.giveaway_id}" type="checkbox" ${isEnabled ? 'checked' : ''} />
                 <span class="switch-control__slider"></span>
               </label>
             </div>

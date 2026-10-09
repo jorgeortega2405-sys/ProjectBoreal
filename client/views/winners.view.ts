@@ -226,5 +226,7 @@ export class WinnersView {
 
 export async function createWinnersView(_initialTab?: string): Promise<HTMLElement> {
   const view = new WinnersView();
-  return await view.init();
+  const root = await view.init();
+  (root as any).__controller = view;
+  return root;
 }

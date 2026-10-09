@@ -1,5 +1,6 @@
 import { createBankAccount, deleteBankAccount, getAllBankAccounts, getBankAccountByUuid, getBankAccountsKpis, toggleBankAccountStatus, updateBankAccount, updateBankAccountGiveaways } from '../services/bank-accounts.service.js';
 import { logger } from '../services/logger.service.js';
+import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
 
 const router = Router();
@@ -72,9 +73,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Validación o error al crear cuenta bancaria en admin:', err?.message || err);
+    logger.app.warn('Validación o error al crear cuenta bancaria en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al validar los datos de la cuenta bancaria.',
+      error: getSafeErrorMessage(err, 'Error al validar los datos de la cuenta bancaria.'),
       success: false,
     });
   }
@@ -90,9 +91,9 @@ router.put('/:uuid', async (req: Request, res: Response): Promise<void> => {
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Validación o error al actualizar cuenta bancaria en admin:', err?.message || err);
+    logger.app.warn('Validación o error al actualizar cuenta bancaria en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al actualizar la cuenta bancaria.',
+      error: getSafeErrorMessage(err, 'Error al actualizar la cuenta bancaria.'),
       success: false,
     });
   }
@@ -116,9 +117,9 @@ router.patch('/:uuid/status', async (req: Request, res: Response): Promise<void>
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Error al cambiar estado de cuenta bancaria en admin:', err?.message || err);
+    logger.app.warn('Error al cambiar estado de cuenta bancaria en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al modificar el estado de la cuenta.',
+      error: getSafeErrorMessage(err, 'Error al modificar el estado de la cuenta.'),
       success: false,
     });
   }
@@ -144,7 +145,7 @@ router.put('/:uuid/giveaways', async (req: Request, res: Response): Promise<void
   } catch (err: any) {
     logger.app.error('Error al actualizar asignaciones de sorteos en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al actualizar la cobertura de la cuenta en sorteos.',
+      error: getSafeErrorMessage(err, 'Error al actualizar la cobertura de la cuenta en sorteos.'),
       success: false,
     });
   }
@@ -159,9 +160,9 @@ router.delete('/:uuid', async (req: Request, res: Response): Promise<void> => {
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Error al eliminar cuenta bancaria en admin:', err?.message || err);
+    logger.app.warn('Error al eliminar cuenta bancaria en admin:', err);
     res.status(400).json({
-      error: err?.message || 'No se pudo eliminar la cuenta bancaria.',
+      error: getSafeErrorMessage(err, 'No se pudo eliminar la cuenta bancaria.'),
       success: false,
     });
   }

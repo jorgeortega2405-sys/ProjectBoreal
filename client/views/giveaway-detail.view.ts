@@ -1664,7 +1664,7 @@ export class GiveawayDetailController {
             <input class="field__input field__input--has-action" data-ref="input-buyer-phone" type="tel" maxlength="14" placeholder=" " value="" autocomplete="tel" />
             <span class="field__label" data-ref="label-buyer-phone">${t('orders.phone_label')}</span>
             <span class="field__action" data-ref="action-buyer-phone">
-              <svg class="component-icon" data-ref="icon-phone-call" aria-hidden="true"><use href="/icons.svg#call"></use></svg>
+              <svg class="component-icon" data-ref="icon-phone-call" aria-hidden="true"><use href="/icons.svg#smartphone"></use></svg>
             </span>
           </label>
         </div>

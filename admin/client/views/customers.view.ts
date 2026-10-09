@@ -597,8 +597,8 @@ export class CustomersController implements ViewController {
 
       <div class="customer-dossier-header-row">
         <h4 class="customer-dossier-header-title">Historial de Compras y Apartados</h4>
-        <a href="${whatsappLink}" target="_blank" rel="noopener noreferrer" class="component-button component-button--secondary component-button--h32 btn-action-whatsapp-icon">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call"></use></svg>
+        <a class="component-button component-button--secondary component-button--h32 btn-action-whatsapp-icon" href="${whatsappLink}" target="_blank" rel="noopener noreferrer">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#smartphone"></use></svg>
           <span>WhatsApp Directo</span>
         </a>
       </div>

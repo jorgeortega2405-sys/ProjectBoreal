@@ -265,6 +265,7 @@
     "winner_contact_info": "Nuestro equipo se pondrá en contacto contigo a través de tu número telefónico registrado para coordinar la entrega oficial de tu premio."
   },
   "legal": {
+    "subtitle": "Información regulatoria, bases de sorteos y políticas de servicio.",
     "effective_date": "Vigente a partir de: Octubre 2026",
     "terms_title": "Términos y Condiciones de Uso",
     "terms_desc": "Normas jurídicas que rigen el acceso a ProjectBoreal, el apartado de boletos y la participación en los sorteos.",
@@ -299,6 +300,8 @@
     "terms_sec6_title": "6. Validación Tecnológica con Banxico CEP y Criterio de Participación",
     "terms_sec6_p1": "Tras realizar la transferencia, el participante debe ingresar a la sección 'Validar Pago' de la Plataforma, ingresar su número telefónico y subir la captura del comprobante bancario (JPG, PNG, WEBP o PDF) o ingresar su Clave de Rastreo SPEI de hasta 30 caracteres.",
     "terms_sec6_p2": "El sistema procesa el comprobante mediante un worker automatizado con OCR y consulta el servicio del Comprobante Electrónico de Pago (CEP) del Banco de México (Banxico). Una vez cotejada la liquidación exitosa de los fondos y validado el monto correspondiente a la orden, esta pasará al estatus 'completed' y los boletos quedarán formalmente registrados con el estatus oficial 'paid'.",
+    "terms_sec6_item1": "Subir el comprobante de transferencia bancaria oficial a través de la plataforma.",
+    "terms_sec6_item2": "Verificación automática contra la infraestructura CEP del Banco de México (Banxico).",
     "terms_sec6_p3": "Regla de Oro de Participación: Únicamente los boletos en estatus 'paid' participan en el sorteo. Todo boleto que al momento del sorteo se encuentre en estatus 'reserved' o cuya transferencia no haya sido acreditada quedará definitiva y legalmente excluido de la extracción de ganadores.",
     "terms_sec7_title": "7. Umbral Mínimo, Cronómetro Regresivo y Cierre de Ventas",
     "terms_sec7_p1": "En sorteos configurados con umbral mínimo de venta ('min_threshold_pct'), una vez que la proporción de boletos en estatus 'paid' alcance la meta requerida, el sistema activará automáticamente un cronómetro oficial regresivo (habitualmente de 72 horas o más según el volumen de boletos) anunciado en tiempo real mediante WebSockets en la Plataforma.",

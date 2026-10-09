@@ -1,5 +1,6 @@
 import { getAllWinners, getWinnerDetail, getWinnersKpis, updateWinnerDelivery } from '../services/winners.service.js';
 import { logger } from '../services/logger.service.js';
+import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
 
 const router = Router();
@@ -73,9 +74,9 @@ router.put('/:uuid/delivery', async (req: Request, res: Response): Promise<void>
       success: true,
     });
   } catch (err: any) {
-    logger.app.warn('Error al actualizar entrega de ganador en admin:', err?.message || err);
+    logger.app.warn('Error al actualizar entrega de ganador en admin:', err);
     res.status(400).json({
-      error: err?.message || 'Error al actualizar el estado de entrega del premio.',
+      error: getSafeErrorMessage(err, 'Error al actualizar el estado de entrega del premio.'),
       success: false,
     });
   }
