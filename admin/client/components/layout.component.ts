@@ -1,9 +1,10 @@
 import { navigate } from '../app-router.js';
-import { logout } from '../services/auth.service.js';
+import { getCurrentUser, logout } from '../services/auth.service.js';
 import { translateElement } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { getEffectiveTheme, getTheme, toggleTheme } from '../services/theme.service.js';
+import { generateAvatarDataUri, getAvatarUrl } from '../utils/avatar.util.js';
 
 export let isDrawerOpen = false;
 let sidebarInstance: HTMLElement | null = null;
@@ -12,6 +13,37 @@ let themeChangeHandler: (() => void) | null = null;
 
 export function getIsSidebarOpen(): boolean {
   return isDrawerOpen;
+}
+
+export function updateSidebarUserInfo(sidebar: HTMLElement): void {
+  const user = getCurrentUser();
+  const userName = user?.name || 'Administrador';
+  const userEmail = user?.email || 'admin@projectboreal.com';
+  const avatarSrc = generateAvatarDataUri(userName);
+
+  const railAvatarImg = sidebar.querySelector<HTMLImageElement>('[data-ref="rail-avatar-img"]');
+  if (railAvatarImg) {
+    railAvatarImg.src = avatarSrc;
+    railAvatarImg.alt = userName;
+    railAvatarImg.classList.add('image-loaded');
+  }
+
+  const activeAccountAvatar = sidebar.querySelector<HTMLImageElement>('[data-ref="active-account-avatar"]');
+  if (activeAccountAvatar) {
+    activeAccountAvatar.src = avatarSrc;
+    activeAccountAvatar.alt = userName;
+    activeAccountAvatar.classList.add('image-loaded');
+  }
+
+  const activeAccountName = sidebar.querySelector<HTMLElement>('[data-ref="active-account-name"]');
+  if (activeAccountName) {
+    activeAccountName.textContent = userName;
+  }
+
+  const activeAccountEmail = sidebar.querySelector<HTMLElement>('[data-ref="active-account-email"]');
+  if (activeAccountEmail) {
+    activeAccountEmail.textContent = userEmail;
+  }
 }
 
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
@@ -44,12 +76,20 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     path.startsWith('/ganadores') ||
     path === '/premios' ||
     path.startsWith('/premios');
+  const isSettings =
+    path === '/settings' ||
+    path.startsWith('/settings') ||
+    path === '/configuracion' ||
+    path.startsWith('/configuracion') ||
+    path === '/ajustes' ||
+    path.startsWith('/ajustes');
   const isDashboard =
     !isGiveaways &&
     !isPayments &&
     !isBankAccounts &&
     !isCustomers &&
     !isWinners &&
+    !isSettings &&
     (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
 
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
@@ -64,6 +104,9 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnCustomers = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-customers"]');
   const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
   const btnWinners = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-winners"]');
+  const itemAvatar = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
+  const btnAvatar = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
+  const btnMenuSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
   itemDashboard?.classList.toggle('is-active', isDashboard);
@@ -78,7 +121,11 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnCustomers?.classList.toggle('is-active', isCustomers);
   itemWinners?.classList.toggle('is-active', isWinners);
   btnWinners?.classList.toggle('is-active', isWinners);
+  itemAvatar?.classList.toggle('is-active', isSettings);
+  btnAvatar?.classList.toggle('is-active', isSettings);
+  btnMenuSettings?.classList.toggle('is-active', isSettings);
   btnToggle?.classList.toggle('is-active', isDrawerOpen);
+  updateSidebarUserInfo(sidebar);
 }
 
 export function updateThemeButtonState(sidebar: HTMLElement): void {
@@ -112,8 +159,11 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const itemBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-bank-accounts"]');
   const itemCustomers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-customers"]');
   const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
-  const btnTheme = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-theme"]');
-  const itemTheme = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-theme"]');
+  const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
+  const btnAvatar = avatarContainer?.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
+  const avatarMenu = avatarContainer?.querySelector<HTMLElement>('[data-ref="avatar-menu"]');
+  const btnMenuSettings = avatarContainer?.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
+  const btnMenuLogout = avatarContainer?.querySelector<HTMLElement>('[data-ref="btn-menu-logout"]');
 
   btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -150,42 +200,83 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     navigate('/winners');
   });
 
-  const handleLogout = async (e: Event) => {
-    e.preventDefault();
-    await logout();
-    unmountSidebar();
-    navigate('/login');
-  };
+  if (avatarContainer && btnAvatar && avatarMenu) {
+    let isMenuOpen = false;
 
-  const btnLogout = sidebar.querySelector<HTMLElement>('[data-ref="btn-logout"]');
-  const itemLogout = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-logout"]');
+    const positionAvatarMenu = () => {
+      if (window.innerWidth > 768) {
+        const btnRect = btnAvatar.getBoundingClientRect();
+        avatarMenu.style.position = 'fixed';
+        avatarMenu.style.left = `${Math.round(btnRect.right + 10)}px`;
+        const menuHeight = avatarMenu.offsetHeight || 160;
+        if (btnRect.top + menuHeight > window.innerHeight - 16) {
+          avatarMenu.style.top = 'auto';
+          avatarMenu.style.bottom = `${Math.max(16, window.innerHeight - btnRect.bottom)}px`;
+        } else {
+          avatarMenu.style.top = `${Math.max(16, Math.round(btnRect.top - 6))}px`;
+          avatarMenu.style.bottom = 'auto';
+        }
+      } else {
+        avatarMenu.style.position = '';
+        avatarMenu.style.left = '';
+        avatarMenu.style.top = '';
+        avatarMenu.style.bottom = '';
+      }
+    };
 
-  btnLogout?.addEventListener('click', handleLogout);
-  itemLogout?.addEventListener('click', (e) => {
-    if (e.target !== btnLogout && !btnLogout?.contains(e.target as Node)) {
-      void handleLogout(e);
-    }
-  });
+    const openAvatarMenu = () => {
+      isMenuOpen = true;
+      btnAvatar.classList.add('is-active');
+      avatarMenu.classList.add('is-open');
+      positionAvatarMenu();
+    };
 
-  const handleToggleTheme = (e: Event) => {
-    e.preventDefault();
-    toggleTheme();
-  };
+    const closeAvatarMenu = () => {
+      if (!isMenuOpen) return;
+      isMenuOpen = false;
+      const path = window.location.pathname;
+      const isSettings = path === '/settings' || path.startsWith('/settings') || path === '/configuracion' || path === '/ajustes';
+      btnAvatar.classList.toggle('is-active', isSettings);
+      avatarMenu.classList.remove('is-open');
+    };
 
-  btnTheme?.addEventListener('click', handleToggleTheme);
-  itemTheme?.addEventListener('click', (e) => {
-    if (e.target !== btnTheme && !btnTheme?.contains(e.target as Node)) {
-      handleToggleTheme(e);
-    }
-  });
+    const toggleAvatarMenu = (e: Event) => {
+      e.stopPropagation();
+      if (isMenuOpen) {
+        closeAvatarMenu();
+      } else {
+        openAvatarMenu();
+      }
+    };
 
-  if (themeChangeHandler) {
-    window.removeEventListener('themechange', themeChangeHandler);
+    btnAvatar.addEventListener('click', toggleAvatarMenu);
+
+    btnMenuSettings?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeAvatarMenu();
+      navigate('/settings');
+    });
+
+    btnMenuLogout?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      closeAvatarMenu();
+      await logout();
+      unmountSidebar();
+      navigate('/login');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (isMenuOpen && !avatarContainer.contains(e.target as Node)) {
+        closeAvatarMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isMenuOpen) {
+        closeAvatarMenu();
+      }
+    });
   }
-  themeChangeHandler = () => {
-    updateThemeButtonState(sidebar);
-  };
-  window.addEventListener('themechange', themeChangeHandler);
 }
 
 export function unmountSidebar(): void {
@@ -202,6 +293,7 @@ export function unmountSidebar(): void {
 
 export async function createSidebar(): Promise<HTMLElement> {
   if (sidebarInstance) {
+    updateSidebarUserInfo(sidebarInstance);
     updateSidebarActiveState(sidebarInstance, window.location.pathname);
     updateThemeButtonState(sidebarInstance);
     return sidebarInstance;
@@ -213,6 +305,7 @@ export async function createSidebar(): Promise<HTMLElement> {
   sidebarInitPromise = (async () => {
     const sidebar = await loadTemplate('/views/components/sidebar.html');
     setupRailNavigation(sidebar);
+    updateSidebarUserInfo(sidebar);
     updateSidebarActiveState(sidebar, window.location.pathname);
     updateThemeButtonState(sidebar);
     renderIcons(sidebar);

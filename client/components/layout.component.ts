@@ -153,7 +153,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const itemMore = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-more"]');
   const btnMore = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-more"]');
   const btnMenuSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
-  const btnMenuHelp = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-help"]');
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
   itemHome?.classList.toggle('is-active', isHome);
@@ -166,7 +165,6 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   itemMore?.classList.toggle('is-active', isMoreActive);
   btnMore?.classList.toggle('is-active', isMoreActive);
   btnMenuSettings?.classList.toggle('is-active', isSettings);
-  btnMenuHelp?.classList.toggle('is-active', isHelpOrLegal);
 
   if (!config) {
     isDrawerOpen = false;
@@ -335,7 +333,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const btnMore = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-rail-more"]');
   const moreMenu = moreContainer?.querySelector<HTMLElement>('[data-ref="more-menu"]');
   const btnMenuSettings = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
-  const btnMenuHelp = moreContainer?.querySelector<HTMLElement>('[data-ref="btn-menu-help"]');
 
   btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -413,12 +410,6 @@ function setupRailNavigation(sidebar: HTMLElement): void {
       e.preventDefault();
       closeMoreMenu();
       navigate('/settings');
-    });
-
-    btnMenuHelp?.addEventListener('click', (e) => {
-      e.preventDefault();
-      closeMoreMenu();
-      navigate('/terms');
     });
 
     document.addEventListener('click', (e) => {

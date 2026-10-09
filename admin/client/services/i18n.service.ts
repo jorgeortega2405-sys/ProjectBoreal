@@ -15,11 +15,53 @@ const FALLBACK_TRANSLATIONS: Record<string, any> = {
     cancel: 'Cancelar',
     close: 'Cerrar',
     continue: 'Continuar',
+    refresh: 'Actualizar',
     save: 'Guardar',
+  },
+  languages: {
+    es_MX: 'Español (México)',
   },
   nav: {
     dashboard: 'Dashboard',
+    giveaways: 'Sorteos',
+    logout: 'Cerrar sesión',
+    more: 'Más',
+    profile: 'Perfil',
+    settings: 'Configuración',
+    theme: 'Tema',
     toggle_drawer: 'Expandir navegación',
+    toggle_theme: 'Cambiar tema',
+  },
+  settings: {
+    accessibility_group: 'Accesibilidad y Rendimiento',
+    extended_toasts_desc: 'Mantén las notificaciones flotantes durante más tiempo en pantalla antes de descartarse.',
+    extended_toasts_title: 'Duración de notificaciones',
+    general_group: 'Preferencias generales',
+    high_contrast_desc: 'Mejora la legibilidad aumentando el contraste entre bordes, fondos y textos.',
+    high_contrast_title: 'Modo de alto contraste',
+    language_desc: 'Elige el idioma predeterminado para los textos y opciones de la plataforma.',
+    language_title: 'Idioma de la interfaz',
+    language_trigger_aria: 'Seleccionar idioma',
+    reduce_motion_desc: 'Minimiza el movimiento y efectos visuales de transición en toda la plataforma.',
+    reduce_motion_title: 'Reducir animaciones',
+    subtitle: 'Gestiona las preferencias generales, idioma, apariencia e interacción del panel de administración.',
+    theme_dark: 'Modo oscuro',
+    theme_desc: 'Personaliza la interfaz visual seleccionando un tema claro, oscuro o sincronizado con el sistema.',
+    theme_light: 'Modo claro',
+    theme_system: 'Sincronizar con el sistema',
+    theme_title: 'Tema de la aplicación',
+    theme_trigger_aria: 'Seleccionar tema',
+    title: 'Configuración',
+  },
+  toasts: {
+    extended_toasts_disabled: 'Duración estándar restaurada',
+    extended_toasts_enabled: 'Notificaciones persistentes activadas',
+    high_contrast_disabled: 'Alto contraste desactivado',
+    high_contrast_enabled: 'Modo de alto contraste activado',
+    language_updated: 'Idioma preferido actualizado',
+    reduce_motion_disabled: 'Animaciones normales restauradas',
+    reduce_motion_enabled: 'Animaciones reducidas activadas',
+    theme_updated: 'Tema visual actualizado',
   },
 };
 
@@ -105,7 +147,10 @@ export function translateElement(element: HTMLElement): HTMLElement {
 export async function setLanguage(lang: string): Promise<void> {
   currentLanguage = lang;
   try {
-    const res = await fetch(`/translations/${lang}.json`);
+    let res = await fetch(`/translations/${lang}.json`);
+    if (!res.ok && lang === 'es-MX') {
+      res = await fetch('/translations/es.json');
+    }
     if (res.ok) {
       translations = await res.json();
     } else {
@@ -114,11 +159,16 @@ export async function setLanguage(lang: string): Promise<void> {
   } catch {
     translations = FALLBACK_TRANSLATIONS;
   }
+  try {
+    localStorage.setItem('boreal_admin_lang', lang);
+    localStorage.setItem('boreal_language', lang);
+    localStorage.setItem('boreal_lang', lang);
+  } catch {}
   translateElement(document.body);
-  window.dispatchEvent(new CustomEvent('languagechange', { detail: { lang } }));
+  window.dispatchEvent(new CustomEvent('languagechange', { detail: { lang, language: lang } }));
 }
 
 export async function initI18n(): Promise<void> {
-  const saved = localStorage.getItem('boreal_admin_lang') || localStorage.getItem('boreal_lang') || 'es';
+  const saved = localStorage.getItem('boreal_admin_lang') || localStorage.getItem('boreal_language') || localStorage.getItem('boreal_lang') || 'es-MX';
   await setLanguage(saved);
 }

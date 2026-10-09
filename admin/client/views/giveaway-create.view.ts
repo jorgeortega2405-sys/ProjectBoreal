@@ -23,6 +23,7 @@ interface BankAccountItem {
 interface GiveawayDuplicateData {
   countdown_hours?: number;
   description?: string | null;
+  image_urls?: string[];
   min_threshold_pct?: number;
   package_options?: number[];
   primary_image_url?: string;
@@ -56,22 +57,40 @@ function toLocalIso(date: Date): string {
   return `${y}-${m}-${d}T${hh}:${mm}`;
 }
 
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error('Error al leer el archivo.'));
+    reader.readAsDataURL(file);
+  });
+}
+
 export class GiveawayCreateController implements ViewController {
   private abortController: AbortController | null = null;
   private bannerError: HTMLElement | null = null;
   private banksContainer: HTMLElement | null = null;
+  private btnAddSecondaryImg: HTMLButtonElement | null = null;
   private btnBack: HTMLButtonElement | null = null;
   private btnCancel: HTMLButtonElement | null = null;
+  private btnChangeCover: HTMLButtonElement | null = null;
   private btnHeaderCancel: HTMLButtonElement | null = null;
   private btnHeaderSave: HTMLButtonElement | null = null;
+  private btnRemoveCover: HTMLButtonElement | null = null;
   private btnSubmit: HTMLButtonElement | null = null;
   private container: HTMLElement;
+  private coverDropzone: HTMLElement | null = null;
+  private coverPreviewCard: HTMLElement | null = null;
+  private coverPreviewName: HTMLElement | null = null;
+  private coverPreviewThumb: HTMLImageElement | null = null;
   private form: HTMLFormElement | null = null;
   private inputCountdownHours: HTMLInputElement | null = null;
+  private inputCoverFile: HTMLInputElement | null = null;
   private inputEndDate: HTMLInputElement | null = null;
   private inputImageUrl: HTMLInputElement | null = null;
   private inputMinThreshold: HTMLInputElement | null = null;
   private inputPackageOptions: HTMLInputElement | null = null;
+  private inputSecondaryFiles: HTMLInputElement | null = null;
   private inputSlug: HTMLInputElement | null = null;
   private inputStartDate: HTMLInputElement | null = null;
   private inputTicketPrice: HTMLInputElement | null = null;
@@ -86,6 +105,8 @@ export class GiveawayCreateController implements ViewController {
   private previewTickets: HTMLElement | null = null;
   private previewTitle: HTMLElement | null = null;
   private routeContext?: RouteContext;
+  private secondaryGrid: HTMLElement | null = null;
+  private secondaryImages: string[] = [];
   private selectedStatus: 'active' | 'draft' = 'active';
   private selectedType: 'standard' | 'daily' = 'standard';
   private statDuration: HTMLElement | null = null;
@@ -127,6 +148,18 @@ export class GiveawayCreateController implements ViewController {
     this.inputMinThreshold = this.container.querySelector<HTMLInputElement>('[data-ref="input-min-threshold"]');
     this.inputCountdownHours = this.container.querySelector<HTMLInputElement>('[data-ref="input-countdown-hours"]');
     this.inputImageUrl = this.container.querySelector<HTMLInputElement>('[data-ref="input-image-url"]');
+
+    this.coverDropzone = this.container.querySelector<HTMLElement>('[data-ref="cover-dropzone"]');
+    this.inputCoverFile = this.container.querySelector<HTMLInputElement>('[data-ref="input-cover-file"]');
+    this.coverPreviewCard = this.container.querySelector<HTMLElement>('[data-ref="cover-preview-card"]');
+    this.coverPreviewThumb = this.container.querySelector<HTMLImageElement>('[data-ref="cover-preview-thumb"]');
+    this.coverPreviewName = this.container.querySelector<HTMLElement>('[data-ref="cover-preview-name"]');
+    this.btnChangeCover = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-change-cover"]');
+    this.btnRemoveCover = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-remove-cover"]');
+
+    this.inputSecondaryFiles = this.container.querySelector<HTMLInputElement>('[data-ref="input-secondary-files"]');
+    this.btnAddSecondaryImg = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-add-secondary-img"]');
+    this.secondaryGrid = this.container.querySelector<HTMLElement>('[data-ref="secondary-images-grid"]');
 
     this.typeSelectedText = this.container.querySelector<HTMLElement>('[data-ref="type-selected-text"]');
     this.typeSelectedIconUse = this.container.querySelector<SVGUseElement>('[data-ref="type-selected-icon"] use');
@@ -197,7 +230,13 @@ export class GiveawayCreateController implements ViewController {
         if (data.package_options && this.inputPackageOptions) this.inputPackageOptions.value = data.package_options.join(', ');
         if (typeof data.min_threshold_pct === 'number' && this.inputMinThreshold) this.inputMinThreshold.value = String(data.min_threshold_pct);
         if (typeof data.countdown_hours === 'number' && this.inputCountdownHours) this.inputCountdownHours.value = String(data.countdown_hours);
-        if (data.primary_image_url && this.inputImageUrl) this.inputImageUrl.value = data.primary_image_url;
+        if (data.primary_image_url) {
+          this.setCoverImage(data.primary_image_url, 'Imagen duplicada');
+        }
+        if (data.image_urls && Array.isArray(data.image_urls)) {
+          this.secondaryImages = data.image_urls.filter((url) => url !== data.primary_image_url);
+          this.renderSecondaryGrid();
+        }
       }
     } catch (_) {}
   }
@@ -245,6 +284,120 @@ export class GiveawayCreateController implements ViewController {
     this.updateLivePreview();
   }
 
+  private setCoverImage(url: string, name = 'Imagen de portada'): void {
+    if (this.inputImageUrl) this.inputImageUrl.value = url;
+    if (this.coverPreviewThumb) this.coverPreviewThumb.src = url;
+    if (this.coverPreviewName) this.coverPreviewName.textContent = name;
+    if (this.coverDropzone) this.coverDropzone.classList.add('is-hidden');
+    if (this.coverPreviewCard) this.coverPreviewCard.classList.remove('is-hidden');
+    this.updateLivePreview();
+  }
+
+  private removeCoverImage(): void {
+    if (this.inputImageUrl) this.inputImageUrl.value = '';
+    if (this.inputCoverFile) this.inputCoverFile.value = '';
+    if (this.coverPreviewThumb) this.coverPreviewThumb.src = '';
+    if (this.coverPreviewCard) this.coverPreviewCard.classList.add('is-hidden');
+    if (this.coverDropzone) this.coverDropzone.classList.remove('is-hidden');
+    this.updateLivePreview();
+  }
+
+  private async uploadFile(file: File): Promise<string | null> {
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      const res = await postApi<{ url: string }>('/api/giveaways/upload', {
+        fileData: dataUrl,
+        fileName: file.name,
+      });
+      if (res.success && res.data?.url) {
+        return res.data.url;
+      }
+      showToast(res.error || 'Error al subir la imagen.', 'danger');
+      return null;
+    } catch (err: any) {
+      showToast(err?.message || 'Error inesperado al procesar la imagen.', 'danger');
+      return null;
+    }
+  }
+
+  private async handleCoverFile(file: File): Promise<void> {
+    if (!file.type.startsWith('image/')) {
+      showToast('Por favor selecciona un archivo de imagen válido.', 'danger');
+      return;
+    }
+    const uploadedUrl = await this.uploadFile(file);
+    if (uploadedUrl) {
+      this.setCoverImage(uploadedUrl, file.name);
+      showToast('Imagen de portada subida correctamente.', 'success');
+    }
+  }
+
+  private async handleSecondaryFiles(files: FileList): Promise<void> {
+    const validFiles: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      if (f.type.startsWith('image/')) {
+        validFiles.push(f);
+      }
+    }
+
+    if (validFiles.length === 0) {
+      showToast('Por favor selecciona archivos de imagen válidos.', 'danger');
+      return;
+    }
+
+    let successCount = 0;
+    for (const file of validFiles) {
+      const uploadedUrl = await this.uploadFile(file);
+      if (uploadedUrl) {
+        this.secondaryImages.push(uploadedUrl);
+        successCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      this.renderSecondaryGrid();
+      showToast(`${successCount} ${successCount === 1 ? 'imagen secundaria añadida' : 'imágenes secundarias añadidas'}.`, 'success');
+    }
+  }
+
+  private renderSecondaryGrid(): void {
+    const grid = this.secondaryGrid;
+    if (!grid) return;
+
+    const existingItems = grid.querySelectorAll('.giveaway-gallery-item');
+    existingItems.forEach((el) => el.remove());
+
+    const addButton = this.btnAddSecondaryImg;
+
+    this.secondaryImages.forEach((url, idx) => {
+      const itemEl = document.createElement('div');
+      itemEl.className = 'giveaway-gallery-item';
+      itemEl.innerHTML = `
+        <img class="giveaway-gallery-item__img" src="${escapeHtml(url)}" alt="Foto secundaria ${idx + 1}" loading="lazy" />
+        <span class="giveaway-gallery-item__badge">${idx + 1}</span>
+        <button type="button" class="giveaway-gallery-item__remove" data-index="${idx}" data-tooltip="Eliminar foto" aria-label="Eliminar foto">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      `;
+
+      const removeBtn = itemEl.querySelector<HTMLButtonElement>('.giveaway-gallery-item__remove');
+      removeBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.secondaryImages.splice(idx, 1);
+        this.renderSecondaryGrid();
+      });
+
+      if (addButton && addButton.parentNode === grid) {
+        grid.insertBefore(itemEl, addButton);
+      } else {
+        grid.appendChild(itemEl);
+      }
+    });
+
+    renderIcons(grid);
+  }
+
   private bindEvents(): void {
     const signal = this.abortController?.signal;
 
@@ -265,6 +418,52 @@ export class GiveawayCreateController implements ViewController {
     this.inputEndDate?.addEventListener('change', handleInput, { signal });
     this.inputMinThreshold?.addEventListener('input', handleInput, { signal });
     this.inputImageUrl?.addEventListener('input', handleInput, { signal });
+
+    this.coverDropzone?.addEventListener('click', () => {
+      this.inputCoverFile?.click();
+    }, { signal });
+
+    this.coverDropzone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      this.coverDropzone?.classList.add('is-dragover');
+    }, { signal });
+
+    this.coverDropzone?.addEventListener('dragleave', () => {
+      this.coverDropzone?.classList.remove('is-dragover');
+    }, { signal });
+
+    this.coverDropzone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      this.coverDropzone?.classList.remove('is-dragover');
+      if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+        void this.handleCoverFile(e.dataTransfer.files[0]);
+      }
+    }, { signal });
+
+    this.inputCoverFile?.addEventListener('change', () => {
+      if (this.inputCoverFile?.files && this.inputCoverFile.files.length > 0) {
+        void this.handleCoverFile(this.inputCoverFile.files[0]);
+      }
+    }, { signal });
+
+    this.btnChangeCover?.addEventListener('click', () => {
+      this.inputCoverFile?.click();
+    }, { signal });
+
+    this.btnRemoveCover?.addEventListener('click', () => {
+      this.removeCoverImage();
+    }, { signal });
+
+    this.btnAddSecondaryImg?.addEventListener('click', () => {
+      this.inputSecondaryFiles?.click();
+    }, { signal });
+
+    this.inputSecondaryFiles?.addEventListener('change', () => {
+      if (this.inputSecondaryFiles?.files && this.inputSecondaryFiles.files.length > 0) {
+        void this.handleSecondaryFiles(this.inputSecondaryFiles.files);
+        this.inputSecondaryFiles.value = '';
+      }
+    }, { signal });
 
     const typeOptions = this.container.querySelectorAll<HTMLButtonElement>('[data-type-value]');
     typeOptions.forEach((btn) => {
@@ -298,22 +497,6 @@ export class GiveawayCreateController implements ViewController {
       );
     });
 
-    const presetButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-ref^="btn-preset-"]');
-    presetButtons.forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        () => {
-          const url = btn.getAttribute('data-url');
-          if (!url || !this.inputImageUrl) return;
-          this.inputImageUrl.value = url;
-          presetButtons.forEach((b) => b.classList.remove('is-active'));
-          btn.classList.add('is-active');
-          this.updateLivePreview();
-        },
-        { signal }
-      );
-    });
-
     if (this.previewImg) {
       this.previewImg.addEventListener(
         'error',
@@ -339,7 +522,7 @@ export class GiveawayCreateController implements ViewController {
     const typeVal = this.selectedType;
     const priceVal = Math.max(0, Number(this.inputTicketPrice?.value) || 0);
     const totalVal = Math.max(0, Number(this.inputTotalTickets?.value) || 0);
-    const imageVal = this.inputImageUrl?.value.trim() || '/images/giveaways/standard/cash-cartoon-3d/cash-cartoon-3d-main.svg';
+    const imageVal = this.inputImageUrl?.value.trim() || '';
     const statusVal = this.selectedStatus;
     const minThresholdVal = Math.min(100, Math.max(0, Number(this.inputMinThreshold?.value) || 0));
 
@@ -363,8 +546,17 @@ export class GiveawayCreateController implements ViewController {
       this.previewBadgeStatus.classList.toggle('giveaway-card__timer-badge--draft', !isActive);
     }
 
-    if (this.previewImg && this.previewImg.src !== imageVal) {
-      this.previewImg.src = imageVal;
+    if (this.previewImg) {
+      if (imageVal) {
+        if (this.previewImg.src !== imageVal) {
+          this.previewImg.src = imageVal;
+        }
+        this.previewImg.classList.remove('is-hidden');
+        if (this.previewImgFallback) this.previewImgFallback.classList.add('is-hidden');
+      } else {
+        this.previewImg.classList.add('is-hidden');
+        if (this.previewImgFallback) this.previewImgFallback.classList.remove('is-hidden');
+      }
     }
 
     if (this.previewTickets) {
@@ -500,8 +692,8 @@ export class GiveawayCreateController implements ViewController {
     }
 
     if (!primaryImage) {
-      this.showError('Por favor define la URL de la imagen principal del sorteo.');
-      this.inputImageUrl?.focus();
+      this.showError('Por favor sube o selecciona la imagen de portada del sorteo.');
+      this.coverDropzone?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       return;
     }
 
@@ -516,12 +708,14 @@ export class GiveawayCreateController implements ViewController {
       .map((s) => parseInt(s.trim(), 10))
       .filter((n) => !isNaN(n) && n > 0);
 
+    const allImages = [primaryImage, ...this.secondaryImages];
+
     const payload = {
       bank_account_ids: selectedBanks,
       countdown_hours: Number(this.inputCountdownHours?.value || 72),
       description: this.textareaDesc?.value.trim() || undefined,
       end_date: new Date(endDate).toISOString(),
-      image_urls: [primaryImage],
+      image_urls: allImages,
       min_threshold_pct: Number(this.inputMinThreshold?.value || 0),
       package_options: parsedPackages.length > 0 ? parsedPackages : [1, 5, 10, 20],
       primary_image_url: primaryImage,

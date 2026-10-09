@@ -1,6 +1,7 @@
 import { checkDbConnection, closeDbConnections } from './config/database.config.js';
 import { config, isAllowedOrigin } from './config/env.config.js';
 import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
+import { handleAvatarRequest } from './controllers/avatar.controller.js';
 import { requireAuth } from './middlewares/auth.middleware.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
 import authRoutes from './routes/auth.routes.js';
@@ -155,6 +156,8 @@ function createExpressApp(): express.Express {
     next();
   });
 
+  app.get('/api/avatar', handleAvatarRequest);
+  app.get('/api/avatar.svg', handleAvatarRequest);
   app.use('/api/auth', authRoutes);
   app.use('/api/health', healthRoutes);
   app.use('/api/bank-accounts', requireAuth, bankAccountsRoutes);

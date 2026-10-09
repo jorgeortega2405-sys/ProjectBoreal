@@ -131,6 +131,20 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
+      const { createSettingsView } = await import('../views/settings.view.js');
+      return await createSettingsView();
+    },
+    id: 'settings',
+    match: (path) =>
+      path === '/settings' ||
+      path.startsWith('/settings') ||
+      path === '/configuracion' ||
+      path.startsWith('/configuracion') ||
+      path === '/ajustes' ||
+      path.startsWith('/ajustes'),
+  },
+  {
+    handler: async () => {
       const { createNotFoundView } = await import('../views/not-found.view.js');
       return await createNotFoundView();
     },

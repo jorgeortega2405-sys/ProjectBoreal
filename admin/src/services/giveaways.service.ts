@@ -2,7 +2,9 @@ import { pool } from '../config/database.config.js';
 import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 import crypto from 'crypto';
+import fs from 'fs';
 import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import path from 'path';
 
 export interface AdminGiveawayItem {
   available_tickets: number;
@@ -803,4 +805,66 @@ export async function deleteDraftGiveaway(uuid: string): Promise<boolean> {
 
   logger.app.info(`Sorteo eliminado permanentemente '${current.title}' (UUID: ${uuid})`);
   return true;
+}
+
+export async function saveUploadedGiveawayImage(fileData: string, originalName?: string): Promise<string> {
+  if (!fileData || typeof fileData !== 'string') {
+    throw new Error('No se proporcionaron datos de imagen válidos.');
+  }
+
+  let mimeType = 'image/jpeg';
+  let base64String = fileData;
+
+  if (fileData.startsWith('data:')) {
+    const match = fileData.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+      throw new Error('Formato de datos de imagen base64 no válido.');
+    }
+    mimeType = match[1];
+    base64String = match[2];
+  }
+
+  const allowedMimeTypes: Record<string, string> = {
+    'image/gif': 'gif',
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/svg+xml': 'svg',
+    'image/webp': 'webp',
+  };
+
+  let ext = allowedMimeTypes[mimeType.toLowerCase()];
+  if (!ext && originalName) {
+    const extMatch = originalName.split('.').pop()?.toLowerCase();
+    if (extMatch && ['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'].includes(extMatch)) {
+      ext = extMatch === 'jpeg' ? 'jpg' : extMatch;
+    }
+  }
+
+  if (!ext) {
+    throw new Error('Tipo de archivo no permitido. Solo se admiten formatos PNG, JPG, WEBP, SVG y GIF.');
+  }
+
+  const buffer = Buffer.from(base64String, 'base64');
+  const maxSize = 10 * 1024 * 1024;
+  if (buffer.length > maxSize) {
+    throw new Error('El archivo excede el tamaño máximo permitido de 10 MB.');
+  }
+
+  const filename = `giveaway-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+  const rootUploadsDir = path.resolve(process.cwd(), 'public/uploads/giveaways');
+  const adminUploadsDir = path.resolve(process.cwd(), 'admin/public/uploads/giveaways');
+
+  await Promise.all([
+    fs.promises.mkdir(rootUploadsDir, { recursive: true }),
+    fs.promises.mkdir(adminUploadsDir, { recursive: true }),
+  ]);
+
+  await Promise.all([
+    fs.promises.writeFile(path.join(rootUploadsDir, filename), buffer),
+    fs.promises.writeFile(path.join(adminUploadsDir, filename), buffer),
+  ]);
+
+  logger.app.info(`Imagen de sorteo subida con éxito: /uploads/giveaways/${filename}`);
+  return `/uploads/giveaways/${filename}`;
 }

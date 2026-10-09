@@ -1,9 +1,9 @@
+import { openModal } from './modal.component.js';
 import { t } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
 import { BankAccount, Order } from '../types/order.types.js';
 import { escapeHtml } from '../utils/dom.util.js';
 import { formatCurrency } from '../utils/number.util.js';
-import { openModal } from './modal.component.js';
 
 export interface BankInfoModalOptions {
   bankAccounts: BankAccount[];

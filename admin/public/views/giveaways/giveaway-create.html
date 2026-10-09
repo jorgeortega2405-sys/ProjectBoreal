@@ -136,28 +136,54 @@
         <div class="giveaway-create__section" data-ref="section-media">
           <div class="giveaway-create__section-header">
             <h2 class="giveaway-create__section-title">Imagen de Portada</h2>
-            <p class="giveaway-create__section-desc">Selecciona una imagen rápida del catálogo o ingresa una URL personalizada.</p>
+            <p class="giveaway-create__section-desc">Selecciona o sube la imagen principal que representará este sorteo.</p>
           </div>
 
-          <div class="giveaway-create__presets" data-ref="image-presets-container">
-            <button type="button" class="giveaway-create__preset-btn is-active" data-ref="btn-preset-cartoon" data-url="/images/giveaways/standard/cash-cartoon-3d/cash-cartoon-3d-main.svg">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#paid"></use></svg>
-              <span>Efectivo 3D</span>
-            </button>
-            <button type="button" class="giveaway-create__preset-btn" data-ref="btn-preset-dark" data-url="/images/giveaways/standard/cash-dark-luxe/cash-dark-luxe-main.jpg">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
-              <span>Dark Luxe</span>
-            </button>
-            <button type="button" class="giveaway-create__preset-btn" data-ref="btn-preset-glass" data-url="/images/giveaways/standard/cash-glass-prism/cash-glass-prism-main.jpg">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#diamond"></use></svg>
-              <span>Glass Prism</span>
-            </button>
+          <div class="giveaway-upload-dropzone" data-ref="cover-dropzone">
+            <input class="is-hidden" data-ref="input-cover-file" type="file" accept="image/png, image/jpeg, image/webp, image/svg+xml, image/gif" />
+            <svg class="component-icon giveaway-upload-dropzone__icon" aria-hidden="true"><use href="/icons.svg#add_photo_alternate"></use></svg>
+            <p class="giveaway-upload-dropzone__title">Haz clic para seleccionar o arrastra una imagen de portada</p>
+            <p class="giveaway-upload-dropzone__subtitle">Formatos recomendados: PNG, JPG, WEBP o SVG (Máx. 10 MB)</p>
           </div>
 
-          <label class="field" data-ref="field-image-url">
-            <input class="field__input" data-ref="input-image-url" type="text" value="/images/giveaways/standard/cash-cartoon-3d/cash-cartoon-3d-main.svg" placeholder=" " required />
-            <span class="field__label">URL Imagen Principal *</span>
-          </label>
+          <div class="giveaway-upload-preview is-hidden" data-ref="cover-preview-card">
+            <div class="giveaway-upload-preview__left">
+              <img class="giveaway-upload-preview__img" data-ref="cover-preview-thumb" src="" alt="Portada del sorteo" />
+              <div class="giveaway-upload-preview__info">
+                <span class="giveaway-upload-preview__name" data-ref="cover-preview-name">portada.jpg</span>
+                <span class="giveaway-upload-preview__meta" data-ref="cover-preview-status">Imagen principal seleccionada</span>
+              </div>
+            </div>
+            <div class="giveaway-upload-preview__actions">
+              <button type="button" class="component-button component-button--h35" data-ref="btn-change-cover">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+                <span>Cambiar</span>
+              </button>
+              <button type="button" class="component-button component-button--h35 component-button--icon-only" data-ref="btn-remove-cover" data-tooltip="Quitar portada" aria-label="Quitar portada">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+            </div>
+          </div>
+
+          <input class="is-hidden" data-ref="input-image-url" type="hidden" value="" />
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-secondary-media">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Imágenes Secundarias (Galería)</h2>
+            <p class="giveaway-create__section-desc">Agrega fotos adicionales del premio para la galería pública (Opcional).</p>
+          </div>
+
+          <div class="giveaway-gallery-manager" data-ref="gallery-manager">
+            <input class="is-hidden" data-ref="input-secondary-files" type="file" accept="image/png, image/jpeg, image/webp, image/svg+xml, image/gif" multiple />
+            
+            <div class="giveaway-gallery-grid" data-ref="secondary-images-grid">
+              <button type="button" class="giveaway-gallery-add-btn" data-ref="btn-add-secondary-img">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add_to_photos"></use></svg>
+                <span class="giveaway-gallery-add-btn__text">Añadir fotos</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         <div class="giveaway-create__section" data-ref="section-banks">

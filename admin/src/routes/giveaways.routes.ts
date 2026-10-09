@@ -1,4 +1,4 @@
-import { createGiveaway, deleteDraftGiveaway, executeManualDraw, getActiveBankAccounts, getAllGiveaways, getGiveawayByUuid, isDailyGiveawayPauseScheduled, setDailyGiveawayPauseScheduled, updateGiveaway, updateGiveawayStatus } from '../services/giveaways.service.js';
+import { createGiveaway, deleteDraftGiveaway, executeManualDraw, getActiveBankAccounts, getAllGiveaways, getGiveawayByUuid, isDailyGiveawayPauseScheduled, saveUploadedGiveawayImage, setDailyGiveawayPauseScheduled, updateGiveaway, updateGiveawayStatus } from '../services/giveaways.service.js';
 import { logger } from '../services/logger.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
@@ -73,6 +73,31 @@ router.get('/bank-accounts', async (_req: Request, res: Response): Promise<void>
     logger.app.error('Error al listar cuentas bancarias en admin:', err);
     res.status(500).json({
       error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+});
+
+router.post('/upload', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fileData, fileName } = req.body;
+    if (!fileData) {
+      res.status(400).json({
+        error: 'No se recibieron datos de la imagen a subir.',
+        success: false,
+      });
+      return;
+    }
+    const url = await saveUploadedGiveawayImage(fileData, fileName);
+    res.status(200).json({
+      data: { url },
+      message: 'Imagen subida exitosamente.',
+      success: true,
+    });
+  } catch (err: any) {
+    logger.app.warn('Error al subir imagen de sorteo en admin:', err);
+    res.status(400).json({
+      error: getSafeErrorMessage(err, 'Error al procesar y almacenar la imagen.'),
       success: false,
     });
   }
