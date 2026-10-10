@@ -787,8 +787,9 @@ export async function executeManualDraw(uuid: string): Promise<AdminGiveawayItem
       }
     }
 
+    const potPct = current.type === 'daily' ? await getDailyGiveawayPotPercentage() : 50;
     const prizeAmount = current.type === 'daily'
-      ? Math.round(totalPaid * (current.ticket_price * 0.50))
+      ? Math.round(totalPaid * (current.ticket_price * (potPct / 100)))
       : (current.prize_amount !== null ? current.prize_amount : null);
 
     await conn.query(

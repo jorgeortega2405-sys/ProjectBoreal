@@ -551,6 +551,27 @@ export class GiveawayDetailController {
     this.reservedSet = new Set<number>(ticketData?.reserved || []);
   }
 
+  private getDailyDrawTimeInfo(dateStr: string | null | undefined): { dateLabel: string; isToday: boolean; timeLabel: string } {
+    if (!dateStr) {
+      return { dateLabel: '', isToday: true, timeLabel: '20:00' };
+    }
+    const clean = dateStr.includes('T') ? dateStr : dateStr.replace(' ', 'T');
+    const d = new Date(clean);
+    if (isNaN(d.getTime())) {
+      return { dateLabel: '', isToday: true, timeLabel: '20:00' };
+    }
+    const now = new Date();
+    const isToday =
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const timeLabel = `${hh}:${mm}`;
+    const dateLabel = formatShortDate(dateStr, getCurrentLanguage());
+    return { dateLabel, isToday, timeLabel };
+  }
+
   private renderInfo(): void {
     if (!this.giveaway) return;
     const g = this.giveaway;
@@ -576,11 +597,13 @@ export class GiveawayDetailController {
       } else if (isUpcoming) {
         statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.upcoming_status'))}</span>`;
       } else if (g.type === 'daily') {
-        statusBadgeEl.innerHTML = `<span>Sorteo Diario</span>`;
+        statusBadgeEl.innerHTML = `<span>${escapeHtml(t('giveaway.daily_badge'))}</span>`;
       } else {
         statusBadgeEl.innerHTML = `<span>${escapeHtml(t('home.active_badge'))}</span>`;
       }
     }
+
+    const dailyDrawInfo = this.getDailyDrawTimeInfo(g.end_date || g.draw_date);
 
     const drawBadgeEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-draw-date-badge"]');
     const dateTextEl = this.container.querySelector<HTMLElement>('[data-ref="giveaway-draw-date-text"]');
@@ -591,13 +614,15 @@ export class GiveawayDetailController {
         dateTextEl.textContent = t('giveaway.upcoming_badge', { date: dateText });
       } else if (g.type === 'daily') {
         drawBadgeEl.classList.remove('is-hidden');
-        dateTextEl.textContent = 'Hoy 23:59 hrs';
+        dateTextEl.textContent = dailyDrawInfo.isToday
+          ? t('giveaway.daily_draw_today', { time: dailyDrawInfo.timeLabel })
+          : t('giveaway.daily_draw_date', { date: dailyDrawInfo.dateLabel, time: dailyDrawInfo.timeLabel });
       } else if (g.min_threshold_pct > 0 && !g.threshold_reached_at) {
         drawBadgeEl.classList.remove('is-hidden');
         dateTextEl.textContent = t('home.threshold_target', { target: g.min_threshold_pct });
       } else if (g.draw_date) {
         drawBadgeEl.classList.remove('is-hidden');
-        const formattedDate = new Date(g.draw_date).toLocaleDateString('es-ES', {
+        const formattedDate = new Date(g.draw_date).toLocaleDateString(getCurrentLanguage(), {
           day: 'numeric',
           month: 'short',
           year: 'numeric',
@@ -654,6 +679,13 @@ export class GiveawayDetailController {
         if (potAmountEl) {
           potAmountEl.textContent = formatCurrency(g.current_pot || 0, g.currency || 'MXN', { decimals: 0 });
         }
+        const potTextEl = dailyPotBanner.querySelector<HTMLElement>('[data-ref="daily-banner-text"]');
+        if (potTextEl) {
+          const potPct = g.pot_percentage ?? 50;
+          potTextEl.textContent = dailyDrawInfo.isToday
+            ? t('giveaway.daily_pot_desc_today', { pct: potPct, time: dailyDrawInfo.timeLabel })
+            : t('giveaway.daily_pot_desc_date', { date: dailyDrawInfo.dateLabel, pct: potPct, time: dailyDrawInfo.timeLabel });
+        }
       }
     }
   }
@@ -680,7 +712,7 @@ export class GiveawayDetailController {
           .map((url, idx) => {
             const isActive = url === this.activeImageUrl;
             return `
-              <button type="button" class="giveaway-gallery__dot ${isActive ? 'is-active' : ''}" data-ref="dot-${idx}" data-url="${url}" aria-label="Foto ${idx + 1}"></button>
+              <button type="button" class="giveaway-gallery__dot ${isActive ? 'is-active' : ''}" data-ref="dot-${idx}" data-url="${url}" aria-label="${escapeHtml(t('giveaway.gallery_photo_aria', { index: idx + 1 }))}"></button>
             `;
           })
           .join('');
@@ -697,7 +729,7 @@ export class GiveawayDetailController {
           const isActive = url === this.activeImageUrl;
           return `
             <button type="button" class="giveaway-gallery__thumb ${isActive ? 'is-active' : ''}" data-ref="thumb-${idx}" data-url="${url}">
-              <img class="giveaway-gallery__thumb-img" src="${url}" alt="Thumbnail ${idx + 1}" loading="lazy" />
+              <img class="giveaway-gallery__thumb-img" src="${url}" alt="${escapeHtml(t('giveaway.gallery_thumb_alt', { index: idx + 1 }))}" loading="lazy" />
             </button>
           `;
         })
@@ -811,7 +843,10 @@ export class GiveawayDetailController {
 
     banner.classList.remove('is-hidden');
     if (summaryEl) {
-      summaryEl.textContent = `${formatNumber(order.ticket_count)} boletos apartados (${formatCurrency(order.total_amount, order.currency)})`;
+      summaryEl.textContent = t('giveaway.pending_order_summary', {
+        amount: formatCurrency(order.total_amount, order.currency),
+        count: formatNumber(order.ticket_count),
+      });
     }
 
     this.stopPendingOrderTimer();
@@ -824,7 +859,9 @@ export class GiveawayDetailController {
       const mins = Math.floor(diff / 60);
       const secs = diff % 60;
       if (timerEl) {
-        timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')} restantes`;
+        timerEl.textContent = t('giveaway.pending_order_remaining', {
+          time: `${mins}:${secs.toString().padStart(2, '0')}`,
+        });
       }
     };
 
@@ -1119,7 +1156,7 @@ export class GiveawayDetailController {
             <button type="button" class="dropdown-trigger" data-ref="btn-trigger-quantity" aria-haspopup="listbox" aria-expanded="false">
               <div class="dropdown-trigger__left">
                 <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-                <span class="dropdown-trigger__text" data-ref="quantity-selected-text">${isCustomMode ? t('giveaway.random_modal_custom_option') : (selectedQty === 1 ? '1 boleto' : `${formatNumber(selectedQty)} boletos`)}</span>
+                <span class="dropdown-trigger__text" data-ref="quantity-selected-text">${isCustomMode ? t('giveaway.random_modal_custom_option') : (selectedQty === 1 ? t('giveaway.one_ticket') : t('giveaway.n_tickets', { count: formatNumber(selectedQty) }))}</span>
               </div>
               <div class="dropdown-trigger__right">
                 <span class="dropdown-trigger__price" data-ref="quantity-selected-price">${formatCurrency(selectedQty * price, currency)}</span>
@@ -1132,7 +1169,7 @@ export class GiveawayDetailController {
                   ${options.map((qty) => `
                     <button type="button" class="menu-item${!isCustomMode && qty === selectedQty ? ' is-active' : ''}" data-ref="option-qty-${qty}" data-qty="${qty}">
                       <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-                      <span class="menu-item__text">${qty === 1 ? '1 boleto' : `${formatNumber(qty)} boletos`}</span>
+                      <span class="menu-item__text">${qty === 1 ? t('giveaway.one_ticket') : t('giveaway.n_tickets', { count: formatNumber(qty) })}</span>
                       <span class="menu-item__subtext">${formatCurrency(qty * price, currency)}</span>
                     </button>
                   `).join('')}
@@ -1164,7 +1201,7 @@ export class GiveawayDetailController {
         <div class="random-pick-modal__summary" data-ref="random-pick-summary">
           <div class="random-pick-modal__summary-item">
             <span class="random-pick-modal__summary-label">${t('giveaway.random_modal_tickets_label')}</span>
-            <span class="random-pick-modal__summary-value" data-ref="random-summary-count">${selectedQty === 1 ? '1 boleto' : `${formatNumber(selectedQty)} boletos`}</span>
+            <span class="random-pick-modal__summary-value" data-ref="random-summary-count">${selectedQty === 1 ? t('giveaway.one_ticket') : t('giveaway.n_tickets', { count: formatNumber(selectedQty) })}</span>
           </div>
           <div class="random-pick-modal__summary-item">
             <span class="random-pick-modal__summary-label">${t('giveaway.random_modal_total_label')}</span>
@@ -1188,7 +1225,7 @@ export class GiveawayDetailController {
 
     const updateModalDisplay = () => {
       const totalAmount = selectedQty * price;
-      const label = selectedQty === 1 ? '1 boleto' : `${formatNumber(selectedQty)} boletos`;
+      const label = selectedQty === 1 ? t('giveaway.one_ticket') : t('giveaway.n_tickets', { count: formatNumber(selectedQty) });
       const priceText = formatCurrency(totalAmount, currency);
 
       if (summaryCount) summaryCount.textContent = label;
@@ -1283,7 +1320,7 @@ export class GiveawayDetailController {
       if (val > maxAllowedSafe) {
         val = maxAllowedSafe;
         customInput.value = String(maxAllowedSafe);
-        showToast(`Máximo permitido: ${maxAllowedSafe} boletos por orden`, 'warning');
+        showToast(t('giveaway.random_modal_custom_hint', { max: maxAllowedSafe }), 'warning');
       } else if (val < 1) {
         val = 1;
       }
@@ -1306,7 +1343,7 @@ export class GiveawayDetailController {
 
     const modal = openModal({
       bodyHtml: modalBody,
-      cancelText: 'Cancelar',
+      cancelText: t('common.cancel'),
       confirmClass: 'component-button--black',
       confirmText: `${t('giveaway.random_modal_confirm')} (${selectedQty})`,
       description: t('giveaway.random_modal_desc'),
@@ -1499,7 +1536,7 @@ export class GiveawayDetailController {
         } else {
           const maxAllowed = this.getMaxAllowedTickets();
           if (this.selectedTickets.size >= maxAllowed) {
-            showToast(`No puedes seleccionar más de ${maxAllowed} boletos por orden.`, 'warning');
+            showToast(t('giveaway.toast_max_tickets', { max: maxAllowed }), 'warning');
             return;
           }
           this.selectedTickets.add(num);
@@ -1693,7 +1730,7 @@ export class GiveawayDetailController {
           <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-buyer-city" aria-haspopup="listbox" aria-expanded="false" disabled>
             <div class="dropdown-trigger__left" data-ref="trigger-city-left">
               <svg class="component-icon dropdown-trigger__icon" data-ref="icon-city-trigger" aria-hidden="true"><use href="/icons.svg#domain"></use></svg>
-              <span class="dropdown-trigger__text" data-ref="text-buyer-city-selected">Selecciona tu ciudad / municipio</span>
+              <span class="dropdown-trigger__text" data-ref="text-buyer-city-selected">${t('orders.select_city_placeholder')}</span>
             </div>
             <svg class="component-icon dropdown-trigger__chevron" data-ref="icon-city-chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
           </button>
@@ -1704,7 +1741,7 @@ export class GiveawayDetailController {
 
         <div class="modal-reservation-summary" data-ref="reservation-summary">
           <div class="modal-reservation-summary__row" data-ref="summary-row">
-            <span class="modal-reservation-summary__label" data-ref="summary-label">${count === 1 ? '1 boleto seleccionado' : `${formatNumber(count)} boletos seleccionados`}:</span>
+            <span class="modal-reservation-summary__label" data-ref="summary-label">${count === 1 ? t('giveaway.selected_summary_one') : t('giveaway.selected_summary', { count: formatNumber(count) })}:</span>
             <span class="modal-reservation-summary__total" data-ref="summary-total">${formatCurrency(totalAmount, currency)}</span>
           </div>
           <div class="modal-reservation-summary__tickets" data-ref="summary-tickets">
@@ -1860,7 +1897,7 @@ export class GiveawayDetailController {
         cityTrigger.disabled = false;
       }
       if (citySelectedText) {
-        citySelectedText.textContent = 'Selecciona tu ciudad / municipio';
+        citySelectedText.textContent = t('orders.select_city_placeholder');
       }
       selectedCity = '';
 
@@ -1920,30 +1957,30 @@ export class GiveawayDetailController {
         const state = selectedState.trim();
 
         if (name.length < 2) {
-          modal.setError('Ingresa tu nombre completo para continuar.');
+          modal.setError(t('orders.err_name_required'));
           return false;
         }
 
         if (selectedLada.code === '+52') {
           const mexPhone = normalizeMexicanPhone(rawPhone);
           if (mexPhone.length !== 10) {
-            modal.setError('Ingresa un número celular válido de 10 dígitos.');
+            modal.setError(t('orders.err_phone_mex_invalid'));
             return false;
           }
         } else {
           if (cleanDigits.length < 7 || cleanDigits.length > 15) {
-            modal.setError('Ingresa un número telefónico válido (entre 7 y 15 dígitos).');
+            modal.setError(t('orders.err_phone_intl_invalid'));
             return false;
           }
         }
 
         if (!state) {
-          modal.setError('Selecciona tu estado de la República.');
+          modal.setError(t('orders.err_state_required'));
           return false;
         }
 
         if (!selectedCity) {
-          modal.setError('Selecciona tu ciudad o municipio.');
+          modal.setError(t('orders.err_city_required'));
           return false;
         }
 
@@ -1961,7 +1998,7 @@ export class GiveawayDetailController {
         });
 
         if (!res.success || !res.data) {
-          modal.setError(res.error || 'No fue posible apartar los boletos.');
+          modal.setError(res.error || t('orders.err_reserve_failed'));
           return false;
         }
 

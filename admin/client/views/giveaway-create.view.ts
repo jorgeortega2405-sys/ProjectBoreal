@@ -244,7 +244,7 @@ export class GiveawayCreateController implements ViewController {
   private setType(type: 'standard' | 'daily'): void {
     this.selectedType = type;
     if (this.typeSelectedText) {
-      this.typeSelectedText.textContent = type === 'daily' ? 'Sorteo Diario 50/50' : 'Sorteo Estándar';
+      this.typeSelectedText.textContent = type === 'daily' ? 'Sorteo Diario' : 'Sorteo Estándar';
     }
     if (this.typeSelectedIconUse) {
       this.typeSelectedIconUse.setAttribute('href', type === 'daily' ? '/icons.svg#schedule' : '/icons.svg#stars');
@@ -532,7 +532,7 @@ export class GiveawayCreateController implements ViewController {
     }
 
     if (this.previewBadgeType) {
-      this.previewBadgeType.textContent = typeVal === 'daily' ? 'Diario 50/50' : 'Estándar';
+      this.previewBadgeType.textContent = typeVal === 'daily' ? 'Diario' : 'Estándar';
     }
 
     if (this.previewBadgePrice) {

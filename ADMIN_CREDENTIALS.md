@@ -43,7 +43,7 @@ VALUES (
   1
 );
 
--- Asignar un rol (ej. BILLING_AGENT, OPERATIONS_MANAGER, SUPPORT_L1, AUDITOR, SUPER_ADMIN, etc.)
+-- Asignar un rol (ej. BILLING_AGENT, OPERATIONS_MANAGER, CUSTOMER_SUCCESS, AUDITOR, HR_MANAGER, SUPER_ADMIN, etc.)
 INSERT INTO `admin_user_roles` (`admin_user_id`, `role_id`)
 SELECT u.`id`, r.`id`
 FROM `admin_users` u
@@ -51,11 +51,12 @@ INNER JOIN `roles` r ON r.`name` = 'BILLING_AGENT'
 WHERE u.`email` = 'nuevo_admin@projectboreal.com';
 ```
 
-### Gestión de Roles y Permisos desde el Panel (`/roles`)
-Las cuentas con el permiso `roles:manage` (como `SUPER_ADMIN`, `PLATFORM_ADMIN`, `IAM_ADMIN` o `SECURITY_ADMIN`) pueden acceder a la sección **Roles y Permisos** (`/roles`) dentro del panel administrativo para:
-- Inspeccionar los **34 roles** organizacionales agrupados por categoría (`platform`, `finance`, `operations`, `support`, `data`, `engineering`).
-- Activar o desactivar cualquiera de los **19 permisos granulares** (`role_permissions`) de un rol en tiempo real.
-- Asignar o revocar roles a cuentas registradas en `admin_users` (`admin_user_roles`).
+### Catálogo de Roles Activos en Base de Datos (`roles`)
+El panel administrativo utiliza **14 roles operativos** con permisos efectivos asignados en `role_permissions`:
+- **Platform**: `SUPER_ADMIN`, `SECURITY_ADMIN`, `COMPLIANCE_ADMIN`, `AUDITOR`
+- **Finance**: `FINANCE_ADMIN`, `BILLING_MANAGER`, `BILLING_AGENT`
+- **Operations & HR**: `OPERATIONS_MANAGER`, `OPERATIONS_AGENT`, `HR_MANAGER`, `HR_RECRUITER`
+- **Support & Data**: `SUPPORT_MANAGER`, `CUSTOMER_SUCCESS`, `DATA_ANALYST`
 
 ### Desactivar o reactivar un administrador:
 ```sql

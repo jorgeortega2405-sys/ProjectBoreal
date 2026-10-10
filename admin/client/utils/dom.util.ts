@@ -28,6 +28,23 @@ export interface DropdownController {
   update: () => void;
 }
 
+export interface DatePickerDropdownOptions {
+  fieldRef?: string;
+  initialValue?: string;
+  inputRef?: string;
+  key: string;
+  label: string;
+  maxDate?: string;
+  minDate?: string;
+  onChange?: (isoDate: string) => void;
+  placement?: Placement;
+}
+
+export interface DatePickerDropdownController extends DropdownController {
+  getValue: () => string;
+  setValue: (isoDate: string, silent?: boolean) => void;
+}
+
 export interface RenderEmptyStateOptions {
   container: HTMLElement;
   dataRef?: string;
@@ -475,4 +492,443 @@ export function escapeHtml(str: string | null | undefined): string {
     .replace(/'/g, '&#039;');
 }
 
+const CALENDAR_MONTHS_ES = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+const CALENDAR_MONTHS_SHORT_ES = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+];
+
+const CALENDAR_WEEKDAYS_ES = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'];
+
+function getTodayIsoLocal(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parseIsoDateParts(iso: string | undefined | null): { day: number; month: number; year: number } {
+  const clean = (iso || '').trim().slice(0, 10);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean);
+  if (match) {
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const probe = new Date(year, month, day);
+    if (
+      probe.getFullYear() === year &&
+      probe.getMonth() === month &&
+      probe.getDate() === day
+    ) {
+      return { day, month, year };
+    }
+  }
+  const now = new Date();
+  return {
+    day: now.getDate(),
+    month: now.getMonth(),
+    year: now.getFullYear(),
+  };
+}
+
+function toIsoDateString(year: number, month: number, day: number): string {
+  const d = new Date(year, month, day);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dayStr = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dayStr}`;
+}
+
+export function formatDateTriggerLabel(iso: string | undefined | null): string {
+  const { day, month, year } = parseIsoDateParts(iso);
+  const dayPadded = String(day).padStart(2, '0');
+  const monthShort = CALENDAR_MONTHS_SHORT_ES[month] || 'ene';
+  return `${dayPadded} ${monthShort} ${year}`;
+}
+
+export function buildDatePickerDropdownHtml(options: DatePickerDropdownOptions): string {
+  const key = options.key;
+  const fieldRef = options.fieldRef || `field-dropdown-${key}`;
+  const inputRef = options.inputRef || `input-${key}`;
+  const parts = parseIsoDateParts(options.initialValue);
+  const initialIso = toIsoDateString(parts.year, parts.month, parts.day);
+  const displayLabel = formatDateTriggerLabel(initialIso);
+  const weekdaysHtml = CALENDAR_WEEKDAYS_ES.map(
+    (wd, idx) => `<span class="dropdown-calendar__weekday" data-ref="cal-wd-${escapeHtml(key)}-${idx}">${wd}</span>`
+  ).join('');
+
+  return `
+    <div class="field field--dropdown" data-ref="${escapeHtml(fieldRef)}">
+      <input class="is-hidden" data-ref="${escapeHtml(inputRef)}" type="hidden" value="${escapeHtml(initialIso)}" />
+      <span class="field__label" data-ref="label-date-${escapeHtml(key)}">${escapeHtml(options.label)}</span>
+      <div class="settings-dropdown-wrapper dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-${escapeHtml(key)}">
+        <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-${escapeHtml(key)}" aria-label="${escapeHtml(options.label)}">
+          <div class="dropdown-trigger__left" data-ref="trigger-left-${escapeHtml(key)}">
+            <svg class="component-icon dropdown-trigger__icon" data-ref="icon-selected-${escapeHtml(key)}" aria-hidden="true"><use class="component-icon__use" data-ref="icon-use-${escapeHtml(key)}" href="/icons.svg#calendar_month"></use></svg>
+            <span class="dropdown-trigger__text" data-ref="text-selected-${escapeHtml(key)}">${escapeHtml(displayLabel)}</span>
+          </div>
+          <svg class="component-icon dropdown-trigger__chevron" data-ref="chevron-${escapeHtml(key)}" aria-hidden="true"><use class="component-icon__use" data-ref="chevron-use-${escapeHtml(key)}" href="/icons.svg#expand_more"></use></svg>
+        </button>
+        <div class="dropdown-backdrop" data-ref="dropdown-backdrop-${escapeHtml(key)}">
+          <div class="menu-panel menu-panel--dropdown menu-panel--calendar menu-panel--h-auto" data-ref="dropdown-menu-${escapeHtml(key)}">
+            <div class="menu-panel__drag-zone" data-ref="dropdown-drag-zone-${escapeHtml(key)}" aria-hidden="true">
+              <div class="menu-panel__drag-handle" data-ref="dropdown-drag-handle-${escapeHtml(key)}"></div>
+            </div>
+            <div class="dropdown-calendar" data-ref="calendar-root-${escapeHtml(key)}">
+              <div class="dropdown-calendar__header" data-ref="cal-header-${escapeHtml(key)}">
+                <button type="button" class="dropdown-calendar__period-btn" data-ref="btn-cal-period-${escapeHtml(key)}" aria-label="Seleccionar mes y año">
+                  <span class="dropdown-calendar__period-text" data-ref="cal-period-text-${escapeHtml(key)}">${CALENDAR_MONTHS_ES[parts.month]} ${parts.year}</span>
+                  <svg class="component-icon dropdown-calendar__period-icon" data-ref="cal-period-icon-${escapeHtml(key)}" aria-hidden="true"><use class="component-icon__use" data-ref="cal-period-use-${escapeHtml(key)}" href="/icons.svg#expand_more"></use></svg>
+                </button>
+                <div class="dropdown-calendar__nav" data-ref="cal-nav-${escapeHtml(key)}">
+                  <button type="button" class="dropdown-calendar__nav-btn" data-ref="btn-cal-prev-${escapeHtml(key)}" aria-label="Anterior">
+                    <svg class="component-icon" data-ref="cal-prev-icon-${escapeHtml(key)}" aria-hidden="true"><use class="component-icon__use" data-ref="cal-prev-use-${escapeHtml(key)}" href="/icons.svg#chevron_left"></use></svg>
+                  </button>
+                  <button type="button" class="dropdown-calendar__nav-btn" data-ref="btn-cal-next-${escapeHtml(key)}" aria-label="Siguiente">
+                    <svg class="component-icon" data-ref="cal-next-icon-${escapeHtml(key)}" aria-hidden="true"><use class="component-icon__use" data-ref="cal-next-use-${escapeHtml(key)}" href="/icons.svg#chevron_right"></use></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="dropdown-calendar__days-view" data-ref="cal-days-view-${escapeHtml(key)}">
+                <div class="dropdown-calendar__weekdays" data-ref="cal-weekdays-${escapeHtml(key)}">
+                  ${weekdaysHtml}
+                </div>
+                <div class="dropdown-calendar__grid" data-ref="cal-grid-${escapeHtml(key)}"></div>
+              </div>
+              <div class="dropdown-calendar__ym-view is-hidden" data-ref="cal-ym-view-${escapeHtml(key)}">
+                <div class="dropdown-calendar__years-row" data-ref="cal-years-row-${escapeHtml(key)}"></div>
+                <div class="dropdown-calendar__months-grid" data-ref="cal-months-grid-${escapeHtml(key)}"></div>
+              </div>
+              <div class="dropdown-calendar__footer" data-ref="cal-footer-${escapeHtml(key)}">
+                <button type="button" class="dropdown-calendar__today-btn" data-ref="btn-cal-today-${escapeHtml(key)}">Hoy</button>
+                <span class="dropdown-calendar__selected-info" data-ref="cal-selected-info-${escapeHtml(key)}">${escapeHtml(displayLabel)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function setupDatePickerDropdown(
+  container: HTMLElement,
+  options: DatePickerDropdownOptions
+): DatePickerDropdownController | null {
+  const key = options.key;
+  const inputRef = options.inputRef || `input-${key}`;
+  const wrapper = container.querySelector<HTMLElement>(`[data-ref="dropdown-wrapper-${key}"]`);
+  if (!wrapper) return null;
+
+  const hiddenInput = container.querySelector<HTMLInputElement>(`[data-ref="${inputRef}"]`);
+  const triggerTextEl = container.querySelector<HTMLElement>(`[data-ref="text-selected-${key}"]`);
+  const calendarRoot = container.querySelector<HTMLElement>(`[data-ref="calendar-root-${key}"]`);
+  const periodBtn = container.querySelector<HTMLButtonElement>(`[data-ref="btn-cal-period-${key}"]`);
+  const periodTextEl = container.querySelector<HTMLElement>(`[data-ref="cal-period-text-${key}"]`);
+  const prevBtn = container.querySelector<HTMLButtonElement>(`[data-ref="btn-cal-prev-${key}"]`);
+  const nextBtn = container.querySelector<HTMLButtonElement>(`[data-ref="btn-cal-next-${key}"]`);
+  const daysViewEl = container.querySelector<HTMLElement>(`[data-ref="cal-days-view-${key}"]`);
+  const ymViewEl = container.querySelector<HTMLElement>(`[data-ref="cal-ym-view-${key}"]`);
+  const gridEl = container.querySelector<HTMLElement>(`[data-ref="cal-grid-${key}"]`);
+  const yearsRowEl = container.querySelector<HTMLElement>(`[data-ref="cal-years-row-${key}"]`);
+  const monthsGridEl = container.querySelector<HTMLElement>(`[data-ref="cal-months-grid-${key}"]`);
+  const todayBtn = container.querySelector<HTMLButtonElement>(`[data-ref="btn-cal-today-${key}"]`);
+  const selectedInfoEl = container.querySelector<HTMLElement>(`[data-ref="cal-selected-info-${key}"]`);
+
+  const initialParts = parseIsoDateParts(hiddenInput?.value || options.initialValue);
+  let selectedIso = toIsoDateString(initialParts.year, initialParts.month, initialParts.day);
+  let viewYear = initialParts.year;
+  let viewMonth = initialParts.month;
+  let viewMode: 'days' | 'ym' = 'days';
+
+  const setViewMode = (mode: 'days' | 'ym') => {
+    viewMode = mode;
+    if (mode === 'ym') {
+      daysViewEl?.classList.add('is-hidden');
+      ymViewEl?.classList.remove('is-hidden');
+      periodBtn?.classList.add('is-active');
+    } else {
+      ymViewEl?.classList.add('is-hidden');
+      daysViewEl?.classList.remove('is-hidden');
+      periodBtn?.classList.remove('is-active');
+    }
+    renderCalendar();
+  };
+
+  const renderCalendar = () => {
+    const todayIso = getTodayIsoLocal();
+
+    if (periodTextEl) {
+      periodTextEl.textContent =
+        viewMode === 'days'
+          ? `${CALENDAR_MONTHS_ES[viewMonth]} ${viewYear}`
+          : `Año ${viewYear}`;
+    }
+
+    if (selectedInfoEl) {
+      selectedInfoEl.textContent = formatDateTriggerLabel(selectedIso);
+    }
+
+    if (viewMode === 'ym') {
+      if (yearsRowEl) {
+        const years: number[] = [viewYear - 2, viewYear - 1, viewYear, viewYear + 1, viewYear + 2];
+        yearsRowEl.innerHTML = years
+          .map((yr) => {
+            const isCurrentYr = yr === viewYear;
+            return `<button type="button" class="dropdown-calendar__year-chip${isCurrentYr ? ' is-active' : ''}" data-ref="btn-cal-year-${escapeHtml(key)}-${yr}" data-cal-year="${yr}">${yr}</button>`;
+          })
+          .join('');
+      }
+      if (monthsGridEl) {
+        const selectedParts = parseIsoDateParts(selectedIso);
+        monthsGridEl.innerHTML = CALENDAR_MONTHS_ES.map((mName, idx) => {
+          const isSelectedMonth = idx === viewMonth && selectedParts.year === viewYear;
+          const isActiveViewMonth = idx === viewMonth;
+          const classes = [
+            'dropdown-calendar__month-btn',
+            isActiveViewMonth ? 'is-active' : '',
+            isSelectedMonth ? 'is-selected' : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
+          return `<button type="button" class="${classes}" data-ref="btn-cal-month-${escapeHtml(key)}-${idx}" data-cal-month="${idx}">${mName.slice(0, 3)}</button>`;
+        }).join('');
+      }
+      return;
+    }
+
+    if (!gridEl) return;
+
+    const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
+    const startOffset = (firstDayOfWeek + 6) % 7;
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
+
+    const cells: string[] = [];
+    for (let i = 0; i < 42; i++) {
+      let cellYear = viewYear;
+      let cellMonth = viewMonth;
+      let cellDay = 1;
+      let isOutside = false;
+
+      if (i < startOffset) {
+        isOutside = true;
+        cellDay = daysInPrevMonth - startOffset + i + 1;
+        cellMonth = viewMonth - 1;
+        if (cellMonth < 0) {
+          cellMonth = 11;
+          cellYear = viewYear - 1;
+        }
+      } else if (i >= startOffset + daysInMonth) {
+        isOutside = true;
+        cellDay = i - (startOffset + daysInMonth) + 1;
+        cellMonth = viewMonth + 1;
+        if (cellMonth > 11) {
+          cellMonth = 0;
+          cellYear = viewYear + 1;
+        }
+      } else {
+        cellDay = i - startOffset + 1;
+      }
+
+      const iso = toIsoDateString(cellYear, cellMonth, cellDay);
+      const isToday = iso === todayIso;
+      const isSelected = iso === selectedIso;
+      const isDisabled =
+        Boolean(options.minDate && iso < options.minDate) ||
+        Boolean(options.maxDate && iso > options.maxDate);
+
+      const classList = [
+        'dropdown-calendar__day',
+        isOutside ? 'is-outside' : '',
+        isToday ? 'is-today' : '',
+        isSelected ? 'is-selected' : '',
+        isDisabled ? 'is-disabled' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      cells.push(
+        `<button type="button" class="${classList}" data-ref="btn-cal-day-${escapeHtml(key)}-${iso}" data-cal-date="${iso}"${isDisabled ? ' disabled' : ''}>${cellDay}</button>`
+      );
+    }
+
+    gridEl.innerHTML = cells.join('');
+  };
+
+  const applySelectedDate = (isoDate: string, closeAfter: boolean, silent = false) => {
+    const parts = parseIsoDateParts(isoDate);
+    selectedIso = toIsoDateString(parts.year, parts.month, parts.day);
+    viewYear = parts.year;
+    viewMonth = parts.month;
+
+    const labelText = formatDateTriggerLabel(selectedIso);
+    if (triggerTextEl) {
+      triggerTextEl.textContent = labelText;
+    }
+    if (selectedInfoEl) {
+      selectedInfoEl.textContent = labelText;
+    }
+    if (hiddenInput) {
+      hiddenInput.value = selectedIso;
+      if (!silent) {
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    renderCalendar();
+    if (!silent && typeof options.onChange === 'function') {
+      options.onChange(selectedIso);
+    }
+    if (closeAfter) {
+      baseController.close();
+    }
+  };
+
+  const baseController = setupDropdown(wrapper, {
+    isSelect: false,
+    matchWidth: false,
+    onOpen: () => {
+      const currentParts = parseIsoDateParts(selectedIso);
+      viewYear = currentParts.year;
+      viewMonth = currentParts.month;
+      setViewMode('days');
+    },
+    placement: options.placement || 'bottom-start',
+  });
+
+  const onCalendarClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const dayBtn = target.closest<HTMLButtonElement>('[data-cal-date]');
+    if (dayBtn && !dayBtn.disabled) {
+      e.preventDefault();
+      const iso = dayBtn.getAttribute('data-cal-date');
+      if (iso) {
+        applySelectedDate(iso, true);
+      }
+      return;
+    }
+
+    const yearBtn = target.closest<HTMLButtonElement>('[data-cal-year]');
+    if (yearBtn) {
+      e.preventDefault();
+      const yr = Number(yearBtn.getAttribute('data-cal-year'));
+      if (!isNaN(yr)) {
+        viewYear = yr;
+        renderCalendar();
+      }
+      return;
+    }
+
+    const monthBtn = target.closest<HTMLButtonElement>('[data-cal-month]');
+    if (monthBtn) {
+      e.preventDefault();
+      const mIdx = Number(monthBtn.getAttribute('data-cal-month'));
+      if (!isNaN(mIdx) && mIdx >= 0 && mIdx <= 11) {
+        viewMonth = mIdx;
+        setViewMode('days');
+      }
+      return;
+    }
+  };
+
+  const onPeriodClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setViewMode(viewMode === 'days' ? 'ym' : 'days');
+  };
+
+  const onPrevClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (viewMode === 'ym') {
+      viewYear -= 1;
+    } else {
+      viewMonth -= 1;
+      if (viewMonth < 0) {
+        viewMonth = 11;
+        viewYear -= 1;
+      }
+    }
+    renderCalendar();
+  };
+
+  const onNextClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (viewMode === 'ym') {
+      viewYear += 1;
+    } else {
+      viewMonth += 1;
+      if (viewMonth > 11) {
+        viewMonth = 0;
+        viewYear += 1;
+      }
+    }
+    renderCalendar();
+  };
+
+  const onTodayClick = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setViewMode('days');
+    applySelectedDate(getTodayIsoLocal(), true);
+  };
+
+  calendarRoot?.addEventListener('click', onCalendarClick);
+  periodBtn?.addEventListener('click', onPeriodClick);
+  prevBtn?.addEventListener('click', onPrevClick);
+  nextBtn?.addEventListener('click', onNextClick);
+  todayBtn?.addEventListener('click', onTodayClick);
+
+  renderCalendar();
+
+  return {
+    close: baseController.close,
+    destroy: () => {
+      calendarRoot?.removeEventListener('click', onCalendarClick);
+      periodBtn?.removeEventListener('click', onPeriodClick);
+      prevBtn?.removeEventListener('click', onPrevClick);
+      nextBtn?.removeEventListener('click', onNextClick);
+      todayBtn?.removeEventListener('click', onTodayClick);
+      baseController.destroy();
+    },
+    getValue: () => selectedIso,
+    open: baseController.open,
+    setValue: (isoDate: string, silent = true) => {
+      applySelectedDate(isoDate, false, silent);
+    },
+    toggle: baseController.toggle,
+    update: baseController.update,
+  };
+}
+
 export { getEmptyIllustration };
+

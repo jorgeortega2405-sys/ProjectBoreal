@@ -58,7 +58,7 @@ function sortGiveaways(list: Giveaway[]): Giveaway[] {
 
 function computeThresholdBadge(item: Giveaway): string | null {
   if (item.type === 'daily' && item.status === 'active') {
-    return 'Sorteo Diario';
+    return t('giveaway.daily_badge');
   }
   if (item.min_threshold_pct > 0 && !item.threshold_reached_at && item.status !== 'completed') {
     const total = item.total_tickets || 100;

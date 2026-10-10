@@ -10,8 +10,8 @@ import customersRoutes from './routes/customers.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import giveawaysRoutes from './routes/giveaways.routes.js';
 import healthRoutes from './routes/health.routes.js';
+import hrRoutes from './routes/hr.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
-import rolesRoutes from './routes/roles.routes.js';
 import winnersRoutes from './routes/winners.routes.js';
 import { logger } from './services/logger.service.js';
 import express, { NextFunction, Request, Response } from 'express';
@@ -165,8 +165,8 @@ function createExpressApp(): express.Express {
   app.use('/api/customers', requireAuth, customersRoutes);
   app.use('/api/dashboard', requireAuth, dashboardRoutes);
   app.use('/api/giveaways', requireAuth, giveawaysRoutes);
+  app.use('/api/hr', requireAuth, hrRoutes);
   app.use('/api/orders', requireAuth, ordersRoutes);
-  app.use('/api/roles', requireAuth, rolesRoutes);
   app.use('/api/winners', requireAuth, winnersRoutes);
 
   const adminPublicDir = path.resolve(ADMIN_ROOT_DIR, 'public');

@@ -2,9 +2,7 @@
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="giveaway-detail-scrollable">
     <div class="view-body" data-ref="giveaway-detail-body">
       <div class="giveaway-detail-container" data-ref="giveaway-container">
-        <!-- Layout 2 Columnas -->
         <div class="giveaway-detail__layout" data-ref="giveaway-layout">
-          <!-- Columna Izquierda: Galería -->
           <div class="giveaway-gallery" data-ref="giveaway-gallery">
             <div class="giveaway-gallery__main" data-ref="gallery-main-card">
               <img class="giveaway-gallery__main-img" data-ref="gallery-main-image" src="" alt="" />
@@ -16,7 +14,6 @@
             <div class="giveaway-gallery__thumbs" data-ref="gallery-thumbs"></div>
           </div>
 
-          <!-- Columna Derecha: Información y Compra -->
           <div class="giveaway-info" data-ref="giveaway-info">
             <div class="giveaway-info__badges" data-ref="giveaway-badges">
               <span class="giveaway-badge giveaway-badge--active" data-ref="giveaway-status-badge">
@@ -32,21 +29,17 @@
 
             <h1 class="giveaway-info__title" data-ref="giveaway-title"></h1>
 
-            <!-- Banner Sorteo Diario (Bolsa en vivo y regla) -->
             <div class="giveaway-daily-banner is-hidden" data-ref="banner-daily-pot">
               <div class="giveaway-daily-banner__header">
                 <span class="giveaway-daily-banner__pill">
                   <span class="giveaway-daily-banner__pulse"></span>
-                  <span>Bolsa Acumulada</span>
+                  <span data-i18n="giveaway.daily_pot_pill"></span>
                 </span>
-                <span class="giveaway-daily-banner__amount" data-ref="daily-banner-pot-amount">$0 MXN</span>
+                <span class="giveaway-daily-banner__amount" data-ref="daily-banner-pot-amount"></span>
               </div>
-              <p class="giveaway-daily-banner__text">
-                El ganador se lleva una parte del acumulado de boletos de hoy. Sorteo automático hoy a las 23:59 hrs.
-              </p>
+              <p class="giveaway-daily-banner__text" data-ref="daily-banner-text"></p>
             </div>
 
-            <!-- Banner Ganador Oficial (si el sorteo concluyó) -->
             <div class="banner banner--winner is-hidden" data-ref="banner-giveaway-winner">
               <div class="banner-title" data-ref="banner-winner-title">
                 <span data-i18n="giveaway.winner_congrats_title"></span>
@@ -60,13 +53,12 @@
               </div>
             </div>
 
-            <!-- Banner Orden Pendiente de Pago -->
             <div class="banner banner--warning is-hidden" data-ref="banner-pending-order">
               <div class="banner-pending-order__inner">
                 <div>
                   <div class="banner-pending-order__title">
                     <svg class="component-icon banner-pending-order__icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
-                    <span>Tienes boletos apartados pendientes de pago</span>
+                    <span data-i18n="giveaway.pending_order_banner_title"></span>
                   </div>
                   <div class="banner-pending-order__subtitle">
                     <span data-ref="pending-order-summary"></span> • <span class="banner-pending-order__timer" data-ref="pending-order-timer"></span>
@@ -74,16 +66,15 @@
                 </div>
                 <div class="banner-pending-order__actions">
                   <button type="button" class="component-button component-button--black component-button--h32" data-ref="btn-reopen-bank-modal">
-                    <span>Ver cuentas</span>
+                    <span data-i18n="giveaway.pending_order_view_accounts"></span>
                   </button>
                   <button type="button" class="component-button component-button--ghost component-button--h32" data-ref="btn-goto-validate-payment">
-                    <span>Subir comprobante</span>
+                    <span data-i18n="giveaway.pending_order_upload_receipt"></span>
                   </button>
                 </div>
               </div>
             </div>
 
-            <!-- Progreso de boletos -->
             <div class="giveaway-info__progress-section" data-ref="giveaway-progress-box">
               <div class="giveaway-info__progress-labels">
                 <span class="giveaway-info__progress-text" data-ref="giveaway-progress-text"></span>
@@ -95,7 +86,6 @@
               <div class="giveaway-info__threshold-hint is-hidden" data-ref="giveaway-threshold-hint"></div>
             </div>
 
-            <!-- Precio por boleto y botón de selección al azar -->
             <div class="giveaway-info__price-box" data-ref="giveaway-price-box">
               <div class="giveaway-info__price-content" data-ref="giveaway-price-content">
                 <div class="giveaway-info__price-value" data-ref="giveaway-price-value"></div>
@@ -103,20 +93,18 @@
               </div>
               <button type="button" class="component-button component-button--black component-button--h44" data-ref="btn-lucky-pick-header">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-                <span data-i18n="giveaway.generate_tickets">Generar boletos</span>
+                <span data-i18n="giveaway.generate_tickets"></span>
               </button>
             </div>
 
-            <!-- Resumen de selección en columna lateral -->
             <div class="giveaway-info__summary-box" data-ref="tickets-summary">
               <div class="giveaway-tickets__summary-info">
-                <div class="giveaway-tickets__summary-count" data-ref="summary-selected-count">0 boletos seleccionados</div>
-                <div class="giveaway-tickets__summary-subtotal" data-ref="summary-subtotal-price">Total: $0.00 MXN</div>
+                <div class="giveaway-tickets__summary-count" data-ref="summary-selected-count"></div>
+                <div class="giveaway-tickets__summary-subtotal" data-ref="summary-subtotal-price"></div>
               </div>
               <div class="giveaway-info__summary-chips is-hidden" data-ref="summary-selected-chips"></div>
             </div>
 
-            <!-- Botón de compra / acción -->
             <div class="giveaway-info__actions" data-ref="giveaway-actions">
               <button type="button" class="component-button component-button--black component-button--h55 component-button--w-full" data-ref="btn-buy-giveaway">
                 <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#shopping_cart"></use></svg>
@@ -132,15 +120,12 @@
               <span data-ref="banner-upcoming-text" data-i18n="giveaway.upcoming_banner"></span>
             </div>
 
-            <!-- Descripción -->
             <div class="giveaway-info__desc-box" data-ref="giveaway-desc-box">
               <p class="giveaway-info__desc-text" data-ref="giveaway-description"></p>
             </div>
-
-            </div>
           </div>
+        </div>
 
-        <!-- Sección Inferior: Selector de Boletos -->
         <section class="giveaway-tickets" data-ref="giveaway-tickets-section">
           <div class="giveaway-tickets__header">
             <h2 class="giveaway-tickets__title" data-i18n="giveaway.select_tickets_title"></h2>
@@ -165,33 +150,30 @@
 
             <div class="giveaway-tickets__search-box">
               <svg class="component-icon giveaway-tickets__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-              <input class="giveaway-tickets__search-input" data-ref="input-ticket-search" type="text" placeholder=" " autocomplete="off" data-i18n-placeholder="giveaway.search_ticket_placeholder" />
+              <input class="giveaway-tickets__search-input" data-ref="input-ticket-search" data-i18n-placeholder="giveaway.search_ticket_placeholder" type="text" placeholder=" " autocomplete="off" />
               <div class="giveaway-tickets__search-actions">
-                <button type="button" class="component-button component-button--ghost component-button--h30 component-button--icon-only component-button--pill" data-ref="btn-lucky-pick" data-i18n-tooltip="giveaway.lucky_pick" data-i18n-aria="giveaway.lucky_pick" data-tooltip="Al azar" aria-label="Al azar">
+                <button type="button" class="component-button component-button--ghost component-button--h30 component-button--icon-only component-button--pill" data-ref="btn-lucky-pick" data-i18n-tooltip="giveaway.lucky_pick" data-i18n-aria="giveaway.lucky_pick">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
                 </button>
-                <button type="button" class="component-button component-button--ghost component-button--h30 component-button--icon-only component-button--pill" data-ref="btn-clear-selection" data-i18n-tooltip="giveaway.clear_selection" data-i18n-aria="giveaway.clear_selection" data-tooltip="Limpiar selección" aria-label="Limpiar selección">
+                <button type="button" class="component-button component-button--ghost component-button--h30 component-button--icon-only component-button--pill" data-ref="btn-clear-selection" data-i18n-tooltip="giveaway.clear_selection" data-i18n-aria="giveaway.clear_selection">
                   <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#restart_alt"></use></svg>
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- Grilla de boletos -->
           <div class="giveaway-tickets__grid" data-ref="tickets-grid"></div>
 
-          <!-- Paginación de boletos -->
           <div class="giveaway-pagination" data-ref="tickets-pagination">
-            <button type="button" class="giveaway-pagination__btn" data-ref="btn-page-prev" aria-label="Página anterior">
+            <button type="button" class="giveaway-pagination__btn" data-ref="btn-page-prev" data-i18n-aria="giveaway.prev_page">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
             </button>
             <div class="giveaway-pagination__controls" data-ref="pagination-pages-list"></div>
-            <button type="button" class="giveaway-pagination__btn" data-ref="btn-page-next" aria-label="Página siguiente">
+            <button type="button" class="giveaway-pagination__btn" data-ref="btn-page-next" data-i18n-aria="giveaway.next_page">
               <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
             </button>
           </div>
         </section>
-
       </div>
     </div>
   </div>

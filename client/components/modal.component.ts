@@ -1,3 +1,4 @@
+import { t } from '../services/i18n.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { ModalInstance, ModalOptions } from '../types/common.types.js';
 
@@ -150,9 +151,9 @@ function setupModalDragToDismiss(
 export function openModal(options: ModalOptions = {}): ModalInstance {
   const {
     bodyHtml = '',
-    cancelText = 'Cancelar',
+    cancelText = t('common.cancel'),
     confirmClass = 'component-button--black',
-    confirmText = 'Continuar',
+    confirmText = t('common.continue'),
     description = '',
     onCancel = null,
     onClose = null,
@@ -169,7 +170,7 @@ export function openModal(options: ModalOptions = {}): ModalInstance {
 
   backdrop.innerHTML = `
     <div class="modal-container" data-ref="modal-container">
-      <button type="button" class="modal-close-btn" data-ref="btn-modal-close" aria-label="Cerrar">
+      <button type="button" class="modal-close-btn" data-ref="btn-modal-close" aria-label="${t('common.close')}">
         <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
       </button>
       <div class="modal-card modal-card--${size}" data-ref="modal-card">

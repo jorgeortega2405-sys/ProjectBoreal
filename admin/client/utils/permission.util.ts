@@ -7,8 +7,10 @@ export const MODULE_PERMISSIONS: Record<string, string[]> = {
   'giveaway-create': ['giveaways:create'],
   'giveaway-edit': ['giveaways:read', 'giveaways:manage'],
   'giveaways': ['giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw'],
+  'hr': ['hr:read', 'hr:create', 'hr:manage', 'hr:delete'],
+  'hr-create': ['hr:create', 'hr:manage'],
+  'hr-edit': ['hr:manage'],
   'payments': ['orders:read', 'orders:approve', 'orders:reject', 'orders:manage'],
-  'roles': ['roles:read', 'roles:manage'],
   'settings': [],
   'winners': ['winners:read', 'winners:manage'],
 };
@@ -98,8 +100,32 @@ export function resolveModuleFromPath(path: string): string | null {
   ) {
     return 'winners';
   }
-  if (path === '/roles' || path.startsWith('/roles') || path === '/permisos' || path.startsWith('/permisos')) {
-    return 'roles';
+  if (
+    path === '/hr/create' ||
+    path === '/hr/new' ||
+    path === '/recursos-humanos/crear' ||
+    path === '/recursos-humanos/contratar' ||
+    path === '/empleados/crear'
+  ) {
+    return 'hr-create';
+  }
+  if (
+    /^\/(?:hr|recursos-humanos|empleados|personal)\/([a-zA-Z0-9_-]+)\/edit$/.test(path) ||
+    /^\/(?:hr|recursos-humanos|empleados|personal)\/edit\/([a-zA-Z0-9_-]+)$/.test(path)
+  ) {
+    return 'hr-edit';
+  }
+  if (
+    path === '/hr' ||
+    path.startsWith('/hr') ||
+    path === '/recursos-humanos' ||
+    path.startsWith('/recursos-humanos') ||
+    path === '/empleados' ||
+    path.startsWith('/empleados') ||
+    path === '/personal' ||
+    path.startsWith('/personal')
+  ) {
+    return 'hr';
   }
   if (
     path === '/settings' ||
@@ -130,7 +156,7 @@ export function getDefaultLandingRoute(): string {
     { moduleId: 'bank-accounts', path: '/bank-accounts' },
     { moduleId: 'customers', path: '/customers' },
     { moduleId: 'winners', path: '/winners' },
-    { moduleId: 'roles', path: '/roles' },
+    { moduleId: 'hr', path: '/hr' },
   ];
 
   for (const item of priorityOrder) {

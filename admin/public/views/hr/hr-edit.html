@@ -1,0 +1,212 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="hr-edit-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="hr-edit-scrollable">
+    <div class="view-header" data-ref="hr-edit-header">
+      <div class="view-header__left" data-ref="hr-edit-header-left">
+        <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-back" data-tooltip="Volver a Recursos Humanos" aria-label="Volver a Recursos Humanos">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#arrow_back"></use></svg>
+        </button>
+        <h1 class="view-header__title" data-ref="hr-edit-title">Editar Ficha Laboral</h1>
+      </div>
+
+      <div class="view-header__right" data-ref="hr-edit-header-right">
+        <div class="view-header__actions" data-ref="hr-edit-header-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-header-cancel" data-tooltip="Cancelar" aria-label="Cancelar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+          <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-header-save" data-tooltip="Guardar Cambios" aria-label="Guardar Cambios">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <form class="giveaway-create-layout" data-ref="form-hr-employee" novalidate>
+      <div class="giveaway-create__form-panel" data-ref="hr-form-panel">
+        <div class="giveaway-create__section" data-ref="section-personal">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Datos Personales y Contacto</h2>
+            <p class="giveaway-create__section-desc">Información de identidad y medios de comunicación directa con el colaborador.</p>
+          </div>
+
+          <label class="field" data-ref="field-emp-full-name">
+            <input class="field__input" data-ref="input-emp-full-name" type="text" placeholder=" " maxlength="150" required />
+            <span class="field__label">Nombre Completo del Colaborador *</span>
+          </label>
+
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-emp-email">
+              <input class="field__input" data-ref="input-emp-email" type="email" placeholder=" " maxlength="150" required />
+              <span class="field__label">Correo Corporativo *</span>
+            </label>
+
+            <label class="field" data-ref="field-emp-phone">
+              <input class="field__input" data-ref="input-emp-phone" type="tel" placeholder=" " maxlength="15" required />
+              <span class="field__label">Teléfono Móvil (10 dígitos) *</span>
+            </label>
+          </div>
+
+          <label class="field" data-ref="field-emp-state">
+            <input class="field__input" data-ref="input-emp-state" type="text" placeholder=" " value="Ciudad de México" maxlength="80" />
+            <span class="field__label">Ciudad / Estado de Residencia</span>
+          </label>
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-job">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Posición, Departamento y Modalidad</h2>
+            <p class="giveaway-create__section-desc">Adscripción orgánica dentro de la empresa, esquema contractual y fecha de ingreso.</p>
+          </div>
+
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-emp-job-title">
+              <input class="field__input" data-ref="input-emp-job-title" type="text" placeholder=" " maxlength="120" required />
+              <span class="field__label">Puesto / Cargo *</span>
+            </label>
+
+            <div class="hr-slot-dropdown" data-ref="slot-dropdown-dept"></div>
+          </div>
+
+          <div class="hr-form-grid-3">
+            <div class="hr-slot-dropdown" data-ref="slot-dropdown-contract"></div>
+            <div class="hr-slot-dropdown" data-ref="slot-dropdown-modality"></div>
+            <div class="hr-slot-dropdown" data-ref="slot-dropdown-hire-date"></div>
+          </div>
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-payroll">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Compensación, Vacaciones y Dispersión Bancaria</h2>
+            <p class="giveaway-create__section-desc">Esquema salarial, prestación anual de descanso y cuenta receptora de nómina.</p>
+          </div>
+
+          <div class="hr-form-grid-3">
+            <label class="field" data-ref="field-emp-salary">
+              <input class="field__input" data-ref="input-emp-salary" type="number" step="0.01" min="0" placeholder=" " value="25000" required />
+              <span class="field__label">Salario Base Mensual (MXN) *</span>
+            </label>
+
+            <div class="hr-slot-dropdown" data-ref="slot-dropdown-frequency"></div>
+
+            <label class="field" data-ref="field-emp-vac-allowance">
+              <input class="field__input" data-ref="input-emp-vac-allowance" type="number" min="0" max="60" placeholder=" " value="12" />
+              <span class="field__label">Días de Vacaciones Anuales</span>
+            </label>
+          </div>
+
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-emp-bank-name">
+              <input class="field__input" data-ref="input-emp-bank-name" type="text" placeholder=" " value="BBVA México" maxlength="100" />
+              <span class="field__label">Banco para Nómina</span>
+            </label>
+
+            <label class="field" data-ref="field-emp-bank-clabe">
+              <input class="field__input" data-ref="input-emp-bank-clabe" type="text" placeholder=" " maxlength="18" />
+              <span class="field__label">CLABE Interbancaria (18 dígitos)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="giveaway-create__section" data-ref="section-fiscal">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Identificación Fiscal (SAT / IMSS) y Emergencias</h2>
+            <p class="giveaway-create__section-desc">Registros oficiales ante autoridades fiscales, seguridad social y contacto en caso de emergencia.</p>
+          </div>
+
+          <div class="hr-form-grid-3">
+            <label class="field" data-ref="field-emp-rfc">
+              <input class="field__input" data-ref="input-emp-rfc" type="text" placeholder=" " maxlength="13" />
+              <span class="field__label">RFC (Con Homoclave)</span>
+            </label>
+
+            <label class="field" data-ref="field-emp-curp">
+              <input class="field__input" data-ref="input-emp-curp" type="text" placeholder=" " maxlength="18" />
+              <span class="field__label">CURP</span>
+            </label>
+
+            <label class="field" data-ref="field-emp-nss">
+              <input class="field__input" data-ref="input-emp-nss" type="text" placeholder=" " maxlength="15" />
+              <span class="field__label">Número de Seguro Social (NSS)</span>
+            </label>
+          </div>
+
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-emp-emerg-name">
+              <input class="field__input" data-ref="input-emp-emerg-name" type="text" placeholder=" " maxlength="120" />
+              <span class="field__label">Contacto de Emergencia</span>
+            </label>
+
+            <label class="field" data-ref="field-emp-emerg-phone">
+              <input class="field__input" data-ref="input-emp-emerg-phone" type="tel" placeholder=" " maxlength="15" />
+              <span class="field__label">Teléfono de Emergencia</span>
+            </label>
+          </div>
+
+          <label class="field" data-ref="field-emp-notes">
+            <input class="field__input" data-ref="input-emp-notes" type="text" placeholder=" " maxlength="300" />
+            <span class="field__label">Observaciones / Notas RRHH</span>
+          </label>
+        </div>
+
+        <div class="giveaway-create__actions" data-ref="hr-bottom-actions">
+          <button type="button" class="component-button component-button--h45" data-ref="btn-cancel-hr">
+            Cancelar
+          </button>
+          <button type="submit" class="component-button component-button--h45 component-button--black" data-ref="btn-submit-hr">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+            <span data-ref="text-submit-hr">Guardar Cambios</span>
+          </button>
+        </div>
+
+        <div class="banner banner--danger is-hidden" data-ref="banner-error"></div>
+      </div>
+
+      <aside class="giveaway-create__preview-sidebar" data-ref="hr-preview-sidebar">
+        <div class="giveaway-create__preview-card-wrap">
+          <div class="giveaway-create__preview-header">
+            <span class="giveaway-create__preview-title">Ficha Previa</span>
+            <span class="giveaway-card__meta-badge giveaway-preview-live-indicator" data-ref="preview-live-indicator">En Vivo</span>
+          </div>
+
+          <div class="hr-preview-card" data-ref="hr-preview-card">
+            <div class="hr-preview-card__top">
+              <div class="hr-dossier-avatar" data-ref="preview-avatar">RH</div>
+              <div class="hr-preview-card__identity">
+                <h3 class="hr-preview-card__name" data-ref="preview-name">Colaborador</h3>
+                <span class="hr-preview-card__role" data-ref="preview-role">Puesto</span>
+              </div>
+            </div>
+            <div class="hr-preview-card__badges">
+              <span class="hr-employee-code" data-ref="preview-code">EMP-000</span>
+              <span class="hr-status-badge hr-status-badge--active" data-ref="preview-status">Activo</span>
+              <span class="component-badge component-badge--sm" data-ref="preview-dept">Operaciones y Sorteos</span>
+              <span class="component-badge component-badge--sm" data-ref="preview-modality">Tiempo Completo • Híbrido</span>
+            </div>
+          </div>
+
+          <div class="giveaway-create__stats-summary" data-ref="hr-preview-stats">
+            <div class="giveaway-create__stat-row">
+              <span>Salario Mensual</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-monthly-salary">$25,000.00 MXN</span>
+            </div>
+            <div class="giveaway-create__stat-row">
+              <span>Pago por Periodo</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-period-pay">$12,500.00 MXN (Quincenal)</span>
+            </div>
+            <div class="giveaway-create__stat-row">
+              <span>Vacaciones Anuales</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-vacation-days">12 días</span>
+            </div>
+            <div class="giveaway-create__stat-row">
+              <span>Fecha de Ingreso</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-hire-date">—</span>
+            </div>
+            <div class="giveaway-create__stat-row">
+              <span>Banco Nómina</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-bank-name">BBVA México</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </form>
+  </div>
+</div>

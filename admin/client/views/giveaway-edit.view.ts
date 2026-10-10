@@ -253,7 +253,7 @@ export class GiveawayEditController implements ViewController {
     if (this.inputTitle) this.inputTitle.value = g.title;
     if (this.inputSlug) this.inputSlug.value = g.slug;
     if (this.inputTypeDisplay) {
-      this.inputTypeDisplay.value = g.type === 'daily' ? 'Sorteo Diario 50/50' : 'Sorteo Estándar';
+      this.inputTypeDisplay.value = g.type === 'daily' ? 'Sorteo Diario' : 'Sorteo Estándar';
     }
     if (this.textareaDesc) this.textareaDesc.value = g.description || '';
     if (this.inputTicketPrice) this.inputTicketPrice.value = String(g.ticket_price);
@@ -575,7 +575,7 @@ export class GiveawayEditController implements ViewController {
     }
 
     if (this.previewBadgeType) {
-      this.previewBadgeType.textContent = typeVal === 'daily' ? 'Diario 50/50' : 'Estándar';
+      this.previewBadgeType.textContent = typeVal === 'daily' ? 'Diario' : 'Estándar';
     }
 
     if (this.previewBadgePrice) {

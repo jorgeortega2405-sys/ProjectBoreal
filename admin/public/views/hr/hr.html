@@ -1,0 +1,283 @@
+<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="admin-hr-view">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="hr-scrollable">
+    <div class="view-header" data-ref="hr-floating-top">
+      <div class="view-header__left" data-ref="hr-floating-left">
+        <h1 class="view-header__title" data-ref="hr-title" data-i18n="hr.title">Recursos Humanos y Capital Humano</h1>
+      </div>
+
+      <div class="view-header__right" data-ref="hr-floating-right">
+        <div class="view-header__actions" data-ref="hr-default-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar colaboradores o solicitudes" aria-label="Buscar colaboradores o solicitudes">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </button>
+
+          <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtrar por estado o departamento" aria-label="Filtrar por estado o departamento">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="filter-dropdown-menu">
+                <div class="avatar-menu__section-header" data-ref="filter-status-header">
+                  <span class="drawer-section__title" data-ref="filter-status-title">Estado Laboral</span>
+                </div>
+                <div class="menu-panel__list" data-ref="filter-statuses-list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-filter-status-all" data-status-filter="all">
+                    <span class="menu-item__text">Todos los estados</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-active" data-status-filter="active">
+                    <span class="menu-item__text">Activos</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-on_leave" data-status-filter="on_leave">
+                    <span class="menu-item__text">En Vacaciones / Ausencia</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-probation" data-status-filter="probation">
+                    <span class="menu-item__text">En Periodo de Prueba</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-suspended" data-status-filter="suspended">
+                    <span class="menu-item__text">Suspendidos</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-terminated" data-status-filter="terminated">
+                    <span class="menu-item__text">Bajas Laborales</span>
+                  </button>
+                </div>
+
+                <div class="menu-divider" data-ref="filter-dept-divider"></div>
+
+                <div class="avatar-menu__section-header" data-ref="filter-dept-header">
+                  <span class="drawer-section__title" data-ref="filter-dept-title">Departamento</span>
+                </div>
+                <div class="menu-panel__list" data-ref="filter-departments-list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-filter-dept-all" data-dept-filter="all">
+                    <span class="menu-item__text">Todos los departamentos</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-exec" data-dept-filter="executive">
+                    <span class="menu-item__text">Dirección Ejecutiva</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-ops" data-dept-filter="operations">
+                    <span class="menu-item__text">Operaciones y Sorteos</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-tech" data-dept-filter="engineering">
+                    <span class="menu-item__text">Ingeniería y Plataforma</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-fin" data-dept-filter="finance">
+                    <span class="menu-item__text">Finanzas y Conciliación SPEI</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-sup" data-dept-filter="support">
+                    <span class="menu-item__text">Atención a Clientes y Soporte</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-mkt" data-dept-filter="marketing">
+                    <span class="menu-item__text">Marketing y Crecimiento</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-hr" data-dept-filter="hr">
+                    <span class="menu-item__text">Recursos Humanos y Talento</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-leg" data-dept-filter="legal">
+                    <span class="menu-item__text">Legal y Cumplimiento</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-dept-data" data-dept-filter="data">
+                    <span class="menu-item__text">Datos y Analítica</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="component-inline-control component-inline-control--fixed component-inline-control--pagination" data-ref="pagination-inline-control">
+            <div class="component-inline-control__group" data-ref="inline-group-page-prev">
+              <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-prev" data-tooltip="Página anterior" aria-label="Página anterior" disabled>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+              </button>
+            </div>
+            <input class="component-inline-control__input" data-ref="input-pagination-page" type="number" min="1" max="1" value="1" autocomplete="off" />
+            <div class="component-inline-control__group" data-ref="inline-group-page-next">
+              <button type="button" class="component-inline-control__btn" data-ref="btn-pagination-next" data-tooltip="Página siguiente" aria-label="Página siguiente" disabled>
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-request-leave" data-tooltip="Registrar Vacaciones o Permiso" aria-label="Registrar Vacaciones o Permiso">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flight_takeoff"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-hire-employee" data-tooltip="Contratar Nuevo Colaborador" aria-label="Contratar Nuevo Colaborador">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
+          </button>
+        </div>
+
+        <div class="view-header__actions view-header__actions--selected is-hidden" data-ref="hr-selected-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-dossier" data-tooltip="Ver Expediente y Kárdex" aria-label="Ver Expediente y Kárdex">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-edit" data-tooltip="Editar Ficha Laboral" aria-label="Editar Ficha Laboral">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-vacation" data-tooltip="Asignar Vacaciones o Permiso" aria-label="Asignar Vacaciones o Permiso">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#flight_takeoff"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-event" data-tooltip="Registrar Evento / Ajuste en Kárdex" aria-label="Registrar Evento / Ajuste en Kárdex">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#event_note"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn btn-action-whatsapp-icon" data-ref="btn-action-whatsapp" data-tooltip="WhatsApp Directo" aria-label="WhatsApp Directo">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#smartphone"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-copy-phone" data-tooltip="Copiar Teléfono" aria-label="Copiar Teléfono">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-status" data-tooltip="Cambiar Estado / Baja Laboral" aria-label="Cambiar Estado / Baja Laboral">
+            <svg class="component-icon" data-ref="icon-action-status" aria-hidden="true"><use href="/icons.svg#person_off"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn view-header__btn--danger" data-ref="btn-action-delete" data-tooltip="Eliminar Registro" aria-label="Eliminar Registro">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+          </button>
+        </div>
+
+        <div class="view-header__actions view-header__actions--selected is-hidden" data-ref="hr-leave-selected-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-leave-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-leave-detail" data-tooltip="Ver Detalle de Solicitud" aria-label="Ver Detalle de Solicitud">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn hr-btn-approve" data-ref="btn-leave-approve" data-tooltip="Aprobar Solicitud" aria-label="Aprobar Solicitud">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn view-header__btn--danger" data-ref="btn-leave-reject" data-tooltip="Rechazar Solicitud" aria-label="Rechazar Solicitud">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cancel"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="input-search-hr" placeholder="Buscar por nombre, código (EMP-001), puesto, departamento, RFC o teléfono..." type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-body admin-view-body" data-ref="hr-content-container">
+      <div class="dashboard-stats-grid" data-ref="hr-kpi-grid">
+        <div class="dashboard-stat-card" data-ref="card-kpi-active-staff">
+          <span class="dashboard-stat-card__title" data-ref="kpi-active-staff-title">Plantilla Activa</span>
+          <div class="stat-card-value" data-ref="kpi-active-staff-value">0</div>
+          <span class="dashboard-stat-card__desc" data-ref="kpi-active-staff-desc">Colaboradores en operación activa</span>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-kpi-vacation">
+          <span class="dashboard-stat-card__title" data-ref="kpi-vacation-title">En Vacaciones / Ausencia</span>
+          <div class="stat-card-value" data-ref="kpi-vacation-value">0</div>
+          <span class="dashboard-stat-card__desc" data-ref="kpi-vacation-desc">Personal con descanso o permiso vigente</span>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-kpi-pending-leaves">
+          <span class="dashboard-stat-card__title" data-ref="kpi-pending-leaves-title">Solicitudes por Aprobar</span>
+          <div class="stat-card-value" data-ref="kpi-pending-leaves-value">0</div>
+          <span class="dashboard-stat-card__desc" data-ref="kpi-pending-leaves-desc">Vacaciones y permisos en revisión</span>
+        </div>
+
+        <div class="dashboard-stat-card" data-ref="card-kpi-payroll">
+          <span class="dashboard-stat-card__title" data-ref="kpi-payroll-title">Nómina Mensual Estimada</span>
+          <div class="stat-card-value" data-ref="kpi-payroll-value">$0.00 MXN</div>
+          <span class="dashboard-stat-card__desc" data-ref="kpi-payroll-desc">Proyección bruta de plantilla activa</span>
+        </div>
+      </div>
+
+      <div class="hr-tabs-toolbar" data-ref="hr-tabs-toolbar">
+        <div class="hr-tabs-group" data-ref="hr-tabs-group">
+          <button type="button" class="hr-tab-btn is-active" data-ref="btn-tab-employees" data-tab="employees">
+            <svg class="component-icon hr-tab-btn__icon" aria-hidden="true"><use href="/icons.svg#badge"></use></svg>
+            <span class="hr-tab-btn__label">Directorio de Personal</span>
+            <span class="hr-tab-btn__count" data-ref="badge-count-employees">0</span>
+          </button>
+
+          <button type="button" class="hr-tab-btn" data-ref="btn-tab-leaves" data-tab="leaves">
+            <svg class="component-icon hr-tab-btn__icon" aria-hidden="true"><use href="/icons.svg#flight_takeoff"></use></svg>
+            <span class="hr-tab-btn__label">Vacaciones y Permisos</span>
+            <span class="hr-tab-btn__count" data-ref="badge-count-leaves">0</span>
+          </button>
+        </div>
+
+        <div class="hr-tabs-toolbar__right" data-ref="hr-tabs-right">
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-quick-leave">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#calendar_month"></use></svg>
+            <span>Solicitar Vacaciones / Permiso</span>
+          </button>
+          <button type="button" class="component-button component-button--h36 component-button--black" data-ref="btn-quick-hire">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#person_add"></use></svg>
+            <span>Contratar Colaborador</span>
+          </button>
+        </div>
+      </div>
+
+      <section class="canvas-section canvas-section--full" data-ref="hr-employees-section">
+        <div class="winners-daily-wrapper" data-ref="hr-employees-table-wrapper">
+          <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="hr-employees-table-card">
+            <div class="winners-daily-table-scroll" data-ref="hr-employees-table-scroll">
+              <table class="winners-daily-table" data-ref="hr-employees-table">
+                <thead>
+                  <tr>
+                    <th class="winners-th" scope="col">Colaborador</th>
+                    <th class="winners-th" scope="col">Puesto y Departamento</th>
+                    <th class="winners-th" scope="col">Contrato y Modalidad</th>
+                    <th class="winners-th" scope="col">Salario Base</th>
+                    <th class="winners-th" scope="col">Vacaciones Disp.</th>
+                    <th class="winners-th" scope="col">Estado</th>
+                    <th class="winners-th" scope="col">Fecha de Ingreso</th>
+                  </tr>
+                </thead>
+                <tbody class="winners-tbody" data-ref="tbody-hr-employees"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="canvas-section canvas-section--full is-hidden" data-ref="hr-leaves-section">
+        <div class="winners-daily-wrapper" data-ref="hr-leaves-table-wrapper">
+          <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="hr-leaves-table-card">
+            <div class="winners-daily-table-scroll" data-ref="hr-leaves-table-scroll">
+              <table class="winners-daily-table" data-ref="hr-leaves-table">
+                <thead>
+                  <tr>
+                    <th class="winners-th" scope="col">Folio</th>
+                    <th class="winners-th" scope="col">Colaborador</th>
+                    <th class="winners-th" scope="col">Tipo de Ausencia</th>
+                    <th class="winners-th" scope="col">Periodo Solicitado</th>
+                    <th class="winners-th" scope="col">Días</th>
+                    <th class="winners-th" scope="col">Motivo / Justificación</th>
+                    <th class="winners-th" scope="col">Estado</th>
+                    <th class="winners-th" scope="col">Dictamen RRHH</th>
+                  </tr>
+                </thead>
+                <tbody class="winners-tbody" data-ref="tbody-hr-leaves"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

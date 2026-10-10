@@ -6,37 +6,17 @@ export type AdminRole =
   | 'BILLING_MANAGER'
   | 'COMPLIANCE_ADMIN'
   | 'CUSTOMER_SUCCESS'
-  | 'DATA_ADMIN'
   | 'DATA_ANALYST'
-  | 'DATA_AUDITOR'
-  | 'DATA_ENGINEER'
-  | 'DEVOPS'
-  | 'ENGINEER'
   | 'FINANCE_ADMIN'
   | 'HR_MANAGER'
   | 'HR_RECRUITER'
-  | 'IAM_ADMIN'
-  | 'INCIDENT_MANAGER'
   | 'OPERATIONS_AGENT'
   | 'OPERATIONS_MANAGER'
-  | 'PLATFORM_ADMIN'
-  | 'PRIVACY_ADMIN'
-  | 'READ_ONLY_ADMIN'
-  | 'REFUNDS_ADMIN'
-  | 'RELEASE_MANAGER'
   | 'SECURITY_ADMIN'
-  | 'SENIOR_ENGINEER'
-  | 'SRE'
   | 'SUPER_ADMIN'
-  | 'SUPPORT_L1'
-  | 'SUPPORT_L2'
-  | 'SUPPORT_L3'
-  | 'SUPPORT_MANAGER'
-  | 'SYSTEM_ACCOUNT'
-  | 'SYSTEM_OPERATOR'
-  | 'WORKFLOW_ADMIN';
+  | 'SUPPORT_MANAGER';
 
-export type RoleCategory = 'data' | 'engineering' | 'finance' | 'operations' | 'platform' | 'support';
+export type RoleCategory = 'data' | 'finance' | 'operations' | 'platform' | 'support';
 
 export interface PermissionDefinition {
   description: string;

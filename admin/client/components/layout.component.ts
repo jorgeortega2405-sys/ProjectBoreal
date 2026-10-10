@@ -59,7 +59,7 @@ export function updateSidebarUserInfo(sidebar: HTMLElement): void {
     { moduleId: 'bank-accounts', ref: 'rail-item-bank-accounts' },
     { moduleId: 'customers', ref: 'rail-item-customers' },
     { moduleId: 'winners', ref: 'rail-item-winners' },
-    { moduleId: 'roles', ref: 'rail-item-roles' },
+    { moduleId: 'hr', ref: 'rail-item-hr' },
   ];
 
   for (const item of moduleRailMap) {
@@ -100,11 +100,15 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     path.startsWith('/ganadores') ||
     path === '/premios' ||
     path.startsWith('/premios');
-  const isRoles =
-    path === '/roles' ||
-    path.startsWith('/roles') ||
-    path === '/permisos' ||
-    path.startsWith('/permisos');
+  const isHr =
+    path === '/hr' ||
+    path.startsWith('/hr') ||
+    path === '/recursos-humanos' ||
+    path.startsWith('/recursos-humanos') ||
+    path === '/empleados' ||
+    path.startsWith('/empleados') ||
+    path === '/personal' ||
+    path.startsWith('/personal');
   const isSettings =
     path === '/settings' ||
     path.startsWith('/settings') ||
@@ -118,7 +122,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     !isBankAccounts &&
     !isCustomers &&
     !isWinners &&
-    !isRoles &&
+    !isHr &&
     !isSettings &&
     (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
 
@@ -134,8 +138,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnCustomers = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-customers"]');
   const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
   const btnWinners = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-winners"]');
-  const itemRoles = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-roles"]');
-  const btnRoles = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-roles"]');
+  const itemHr = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-hr"]');
+  const btnHr = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-hr"]');
   const itemAvatar = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
   const btnAvatar = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
   const btnMenuSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
@@ -153,8 +157,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnCustomers?.classList.toggle('is-active', isCustomers);
   itemWinners?.classList.toggle('is-active', isWinners);
   btnWinners?.classList.toggle('is-active', isWinners);
-  itemRoles?.classList.toggle('is-active', isRoles);
-  btnRoles?.classList.toggle('is-active', isRoles);
+  itemHr?.classList.toggle('is-active', isHr);
+  btnHr?.classList.toggle('is-active', isHr);
   itemAvatar?.classList.toggle('is-active', isSettings);
   btnAvatar?.classList.toggle('is-active', isSettings);
   btnMenuSettings?.classList.toggle('is-active', isSettings);
@@ -193,7 +197,7 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const itemBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-bank-accounts"]');
   const itemCustomers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-customers"]');
   const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
-  const itemRoles = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-roles"]');
+  const itemHr = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-hr"]');
   const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
   const btnAvatar = avatarContainer?.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
   const avatarMenu = avatarContainer?.querySelector<HTMLElement>('[data-ref="avatar-menu"]');
@@ -235,9 +239,9 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     navigate('/winners');
   });
 
-  itemRoles?.addEventListener('click', (e) => {
+  itemHr?.addEventListener('click', (e) => {
     e.preventDefault();
-    navigate('/roles');
+    navigate('/hr');
   });
 
   if (avatarContainer && btnAvatar && avatarMenu) {

@@ -1,4 +1,5 @@
 import { pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
 import { RowDataPacket } from 'mysql2';
 
@@ -127,6 +128,7 @@ export class DashboardService {
     else if (period === '90d') days = 90;
     else if (period === 'year') days = 365;
 
+    const mysqlStart = Date.now();
     const [kpiRows] = await pool.query<RowDataPacket[]>(
       `SELECT
         COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`total_amount\` ELSE 0 END), 0) AS totalRevenue,
@@ -139,9 +141,22 @@ export class DashboardService {
        WHERE \`created_at\` >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
       [days]
     );
+    const mysqlLatencyMs = Math.max(1, Date.now() - mysqlStart);
+
+    const [prevKpiRows] = await pool.query<RowDataPacket[]>(
+      `SELECT
+        COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`total_amount\` ELSE 0 END), 0) AS totalRevenue,
+        COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`ticket_count\` ELSE 0 END), 0) AS ticketsSold,
+        COUNT(CASE WHEN \`status\` = 'completed' THEN 1 END) AS completedOrdersCount,
+        COUNT(*) AS totalOrdersCount
+       FROM \`orders\`
+       WHERE \`created_at\` >= DATE_SUB(NOW(), INTERVAL ? DAY)
+         AND \`created_at\` < DATE_SUB(NOW(), INTERVAL ? DAY)`,
+      [days * 2, days]
+    );
 
     const [giveawaysRows] = await pool.query<RowDataPacket[]>(
-      "SELECT COUNT(*) AS activeGiveaways FROM \`giveaways\` WHERE \`status\` = 'active'"
+      "SELECT COUNT(*) AS activeGiveaways FROM `giveaways` WHERE `status` = 'active'"
     );
 
     const [timelineRows] = await pool.query<RowDataPacket[]>(
@@ -195,6 +210,21 @@ export class DashboardService {
     const activeGw = Number(giveawaysRows[0]?.activeGiveaways || 0);
     const conversion = totalOrders > 0 ? Math.round((completed / totalOrders) * 1000) / 10 : 0;
 
+    const prevKpi = prevKpiRows[0] || {};
+    const prevRev = Number(prevKpi.totalRevenue || 0);
+    const prevTickets = Number(prevKpi.ticketsSold || 0);
+    const prevCompleted = Number(prevKpi.completedOrdersCount || 0);
+    const prevTotalOrders = Number(prevKpi.totalOrdersCount || 0);
+    const prevConversion = prevTotalOrders > 0 ? Math.round((prevCompleted / prevTotalOrders) * 1000) / 10 : 0;
+
+    const revenueChangePct = prevRev > 0
+      ? Math.round(((totalRev - prevRev) / prevRev) * 1000) / 10
+      : (totalRev > 0 ? 100 : 0);
+    const ticketsSoldChangePct = prevTickets > 0
+      ? Math.round(((tickets - prevTickets) / prevTickets) * 1000) / 10
+      : (tickets > 0 ? 100 : 0);
+    const conversionChangePct = Math.round((conversion - prevConversion) * 10) / 10;
+
     const statusCounts: Record<string, number> = {
       cancelled: 0,
       completed: 0,
@@ -240,27 +270,57 @@ export class DashboardService {
       totalAmount: Number(r.total_amount || 0),
     }));
 
-    const paymentLabels = paymentRows.length > 0 ? paymentRows.map((r) => r.method_name) : ['Mercado Pago', 'BBVA', 'Santander'];
-    const paymentAmounts = paymentLabels.map(() => 0);
+    const paymentLabels = paymentRows.length > 0 ? paymentRows.map((r) => r.method_name) : ['Transferencia SPEI'];
+    const paymentAmounts = paymentLabels.map(() => totalRev);
+
+    let redisLatencyMs = 1;
+    let redisOperational = false;
+    try {
+      const rStart = Date.now();
+      if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
+        const pong = await redis.ping();
+        redisLatencyMs = Math.max(1, Date.now() - rStart);
+        redisOperational = pong === 'PONG';
+      }
+    } catch (err) {
+      logger.db.warn('Advertencia al medir latencia de Redis en dashboard:', err);
+    }
+
+    let speiSuccessPct = 100;
+    try {
+      const [speiRows] = await pool.query<RowDataPacket[]>(
+        `SELECT
+          COUNT(*) AS total,
+          COUNT(CASE WHEN \`status\` IN ('failed', 'rejected') THEN 1 END) AS failed
+         FROM \`spei_validation_queue\`
+         WHERE \`created_at\` >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
+        [days]
+      );
+      const sTotal = Number(speiRows[0]?.total || 0);
+      const sFailed = Number(speiRows[0]?.failed || 0);
+      if (sTotal > 0) {
+        speiSuccessPct = Math.max(0, Math.min(100, Math.round(((sTotal - sFailed) / sTotal) * 1000) / 10));
+      }
+    } catch (_) {}
 
     const gatewayStatus: GatewayStatusItem[] = [
       {
-        latencyMs: 38,
-        name: 'SPEI Banxico Gateway',
+        latencyMs: Math.max(1, mysqlLatencyMs + redisLatencyMs),
+        name: 'Motor SPEI / Banxico CEP',
+        status: 'operational',
+        successRatePct: speiSuccessPct,
+      },
+      {
+        latencyMs: mysqlLatencyMs,
+        name: 'Base de Datos Transaccional (MySQL)',
         status: 'operational',
         successRatePct: 100,
       },
       {
-        latencyMs: 65,
-        name: 'Receptor BBVA Webhook',
-        status: 'operational',
-        successRatePct: 100,
-      },
-      {
-        latencyMs: 92,
-        name: 'Mercado Pago Checkout',
-        status: 'operational',
-        successRatePct: 100,
+        latencyMs: redisLatencyMs,
+        name: 'Cola & Caché en Tiempo Real (Redis)',
+        status: redisOperational ? 'operational' : 'degraded',
+        successRatePct: redisOperational ? 100 : 0,
       },
     ];
 
@@ -279,12 +339,12 @@ export class DashboardService {
         activeGiveaways: activeGw,
         averageOrderValue: aov,
         averageOrderValueFormatted: formatCurrency(aov),
-        conversionChangePct: 0,
+        conversionChangePct,
         conversionRatePct: conversion,
         pendingOrdersCount: pending,
-        revenueChangePct: 0,
+        revenueChangePct,
         ticketsSold: tickets,
-        ticketsSoldChangePct: 0,
+        ticketsSoldChangePct,
         totalRevenue: totalRev,
         totalRevenueFormatted: formatCurrency(totalRev),
       },

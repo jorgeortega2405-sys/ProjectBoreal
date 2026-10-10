@@ -1,9 +1,9 @@
-import { openModal } from './modal.component.js';
 import { t } from '../services/i18n.service.js';
 import { showToast } from '../services/toast.service.js';
 import { BankAccount, Order } from '../types/order.types.js';
 import { escapeHtml } from '../utils/dom.util.js';
 import { formatCurrency } from '../utils/number.util.js';
+import { openModal } from './modal.component.js';
 
 export interface BankInfoModalOptions {
   bankAccounts: BankAccount[];
@@ -14,6 +14,9 @@ export interface BankInfoModalOptions {
 export function openBankInfoModal(options: BankInfoModalOptions): void {
   const { bankAccounts, onUploadReceipt, order } = options;
   let timerInterval: number | null = null;
+  const expiresAtMs = new Date(order.expires_at).getTime();
+  const initialDiff = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
+  const initialTimerStr = `${Math.floor(initialDiff / 60)}:${(initialDiff % 60).toString().padStart(2, '0')}`;
 
   const modalBody = document.createElement('div');
   modalBody.innerHTML = `
@@ -29,7 +32,7 @@ export function openBankInfoModal(options: BankInfoModalOptions): void {
             <svg class="component-icon modal-timer-box__icon" data-ref="timer-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
             <span class="modal-timer-box__label" data-ref="timer-label">${t('orders.timer_label')}</span>
           </div>
-          <span class="modal-timer-digits" data-ref="spei-timer-countdown">29:59</span>
+          <span class="modal-timer-digits" data-ref="spei-timer-countdown">${initialTimerStr}</span>
         </div>
 
         <div class="modal-info-stat-card" data-ref="card-amount-to-pay">
@@ -47,7 +50,7 @@ export function openBankInfoModal(options: BankInfoModalOptions): void {
             <span class="modal-info-stat-card__label" data-ref="label-concept-reference">${t('orders.concept_label')}</span>
             <span class="modal-info-stat-card__val modal-info-stat-card__val--concept" data-ref="val-concept-reference">${escapeHtml(order.concept_reference)}</span>
           </div>
-          <button type="button" class="component-button component-button--ghost component-button--h32 component-button--icon-only modal-copy-btn" data-ref="btn-copy-concept" data-tooltip="Copiar concepto" data-copy-val="${escapeHtml(order.concept_reference)}">
+          <button type="button" class="component-button component-button--ghost component-button--h32 component-button--icon-only modal-copy-btn" data-ref="btn-copy-concept" data-tooltip="${t('orders.copy_concept')}" data-copy-val="${escapeHtml(order.concept_reference)}">
             <svg class="component-icon" data-ref="copy-concept-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
           </button>
         </div>
@@ -62,7 +65,7 @@ export function openBankInfoModal(options: BankInfoModalOptions): void {
             <span>${t('validate_payment.upload_receipt_btn')}</span>
           </button>
           <button type="button" class="component-button component-button--ghost component-button--h38 component-button--w-full" data-ref="btn-modal-close-split">
-            <span>Cerrar</span>
+            <span>${t('common.close')}</span>
           </button>
         </div>
 
@@ -71,8 +74,8 @@ export function openBankInfoModal(options: BankInfoModalOptions): void {
 
       <div class="payment-split__right" data-ref="payment-split-right">
         <div class="payment-split__section-header" data-ref="section-header-accounts">
-          <h3 class="payment-split__section-title" data-ref="section-title-accounts">Cuentas bancarias autorizadas</h3>
-          <p class="payment-split__section-desc" data-ref="section-desc-accounts">Transfiere el monto exacto a cualquiera de las siguientes cuentas:</p>
+          <h3 class="payment-split__section-title" data-ref="section-title-accounts">${t('orders.authorized_accounts_title')}</h3>
+          <p class="payment-split__section-desc" data-ref="section-desc-accounts">${t('orders.authorized_accounts_desc')}</p>
         </div>
 
         <div class="modal-bank-warning" data-ref="modal-bank-warning">
@@ -86,7 +89,7 @@ export function openBankInfoModal(options: BankInfoModalOptions): void {
         <div class="payment-split__accounts-list" data-ref="accounts-list">
           ${bankAccounts.length === 0 ? `
             <div class="empty-accounts-notice" data-ref="notice-empty-accounts">
-              No hay cuentas bancarias activas registradas en este sorteo. Por favor contacta al organizador.
+              ${t('orders.empty_accounts_notice')}
             </div>
           ` : bankAccounts.map((acc) => `
             <div class="modal-bank-card" data-ref="bank-card-${acc.id}">

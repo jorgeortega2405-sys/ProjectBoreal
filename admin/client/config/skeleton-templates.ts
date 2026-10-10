@@ -336,28 +336,15 @@ export const ADMIN_LOGIN_SKELETON_TEMPLATE = `
 </div>
 `;
 
-export const ADMIN_NOT_FOUND_SKELETON_TEMPLATE = `
-<div class="component-wrapper component-wrapper--full view-wrapper view-skeleton" data-ref="skeleton-admin-not-found">
-  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable">
-    <div class="view-body">
-      <div class="grouped-flow-layout">
-        <div class="grouped-header-card skeleton-not-found-card">
-          <div class="skeleton skeleton--title skeleton--w-120 skeleton--h-48"></div>
-          <div class="skeleton skeleton--subtitle skeleton--w-260-px"></div>
-          <div class="skeleton skeleton--button-sm skeleton--pill skeleton--w-140"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-export const ADMIN_ROLES_SKELETON_TEMPLATE = `
-<div class="component-wrapper component-wrapper--full view-wrapper view-skeleton" data-ref="skeleton-admin-roles">
+export const ADMIN_HR_SKELETON_TEMPLATE = `
+<div class="component-wrapper component-wrapper--full view-wrapper view-skeleton" data-ref="skeleton-admin-hr">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable">
     <div class="view-header">
       <div class="view-header__left">
         <div class="skeleton skeleton--title skeleton--w-200-px skeleton--h-28"></div>
+      </div>
+      <div class="view-header__right">
+        <div class="skeleton skeleton--button-sm skeleton--w-130-px skeleton--h-40"></div>
       </div>
     </div>
     <div class="view-body admin-view-body">
@@ -379,7 +366,7 @@ export const ADMIN_ROLES_SKELETON_TEMPLATE = `
         </div>
         <div class="dashboard-stat-card">
           <div class="skeleton skeleton--w-115-px skeleton--h-11"></div>
-          <div class="skeleton skeleton--w-40-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-90-px skeleton--h-16"></div>
           <div class="skeleton skeleton--w-110-px skeleton--h-11"></div>
         </div>
       </div>
@@ -389,17 +376,33 @@ export const ADMIN_ROLES_SKELETON_TEMPLATE = `
             <tr class="skeleton-table-row">
               <td><div class="skeleton-cell skeleton--w-75"></div></td>
               <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
               <td><div class="skeleton-cell skeleton--w-50"></div></td>
+              <td><div class="skeleton-cell skeleton--w-75"></div></td>
             </tr>
             <tr class="skeleton-table-row">
               <td><div class="skeleton-cell skeleton--w-75"></div></td>
               <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
               <td><div class="skeleton-cell skeleton--w-50"></div></td>
+              <td><div class="skeleton-cell skeleton--w-75"></div></td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+export const ADMIN_NOT_FOUND_SKELETON_TEMPLATE = `
+<div class="component-wrapper component-wrapper--full view-wrapper view-skeleton" data-ref="skeleton-admin-not-found">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable">
+    <div class="view-body">
+      <div class="grouped-flow-layout">
+        <div class="grouped-header-card skeleton-not-found-card">
+          <div class="skeleton skeleton--title skeleton--w-120 skeleton--h-48"></div>
+          <div class="skeleton skeleton--subtitle skeleton--w-260-px"></div>
+          <div class="skeleton skeleton--button-sm skeleton--pill skeleton--w-140"></div>
+        </div>
       </div>
     </div>
   </div>

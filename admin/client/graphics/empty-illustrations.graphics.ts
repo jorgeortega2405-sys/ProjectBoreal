@@ -3,6 +3,8 @@ export type EmptyIllustrationKey =
   | 'dashboard'
   | 'default'
   | 'giveaways'
+  | 'hr'
+  | 'leaves'
   | 'orders'
   | 'payments'
   | 'search'
@@ -176,6 +178,9 @@ EMPTY_ILLUSTRATIONS.payment = EMPTY_ILLUSTRATIONS.payments;
 EMPTY_ILLUSTRATIONS.receipt = EMPTY_ILLUSTRATIONS.payments;
 EMPTY_ILLUSTRATIONS.users = EMPTY_ILLUSTRATIONS.customers;
 EMPTY_ILLUSTRATIONS.participants = EMPTY_ILLUSTRATIONS.customers;
+EMPTY_ILLUSTRATIONS.hr = EMPTY_ILLUSTRATIONS.customers;
+EMPTY_ILLUSTRATIONS.employees = EMPTY_ILLUSTRATIONS.customers;
+EMPTY_ILLUSTRATIONS.leaves = EMPTY_ILLUSTRATIONS.dashboard;
 EMPTY_ILLUSTRATIONS.trophy = EMPTY_ILLUSTRATIONS.winners;
 EMPTY_ILLUSTRATIONS.giveaway = EMPTY_ILLUSTRATIONS.winners;
 EMPTY_ILLUSTRATIONS.giveaways = EMPTY_ILLUSTRATIONS.winners;

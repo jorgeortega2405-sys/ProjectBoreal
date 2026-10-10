@@ -130,16 +130,51 @@ export const APP_ROUTES: RouteDefinition[] = [
       path.startsWith('/premios'),
   },
   {
-    handler: async () => {
-      const { createRolesView } = await import('../views/roles.view.js');
-      return await createRolesView();
+    handler: async (ctx) => {
+      const { createHrCreateView } = await import('../views/hr-form.view.js');
+      return await createHrCreateView(ctx);
     },
-    id: 'roles',
+    id: 'hr-create',
     match: (path) =>
-      path === '/roles' ||
-      path.startsWith('/roles') ||
-      path === '/permisos' ||
-      path.startsWith('/permisos'),
+      path === '/hr/create' ||
+      path === '/hr/new' ||
+      path === '/recursos-humanos/crear' ||
+      path === '/recursos-humanos/contratar' ||
+      path === '/empleados/crear',
+  },
+  {
+    handler: async (ctx) => {
+      const { createHrEditView } = await import('../views/hr-form.view.js');
+      return await createHrEditView(ctx);
+    },
+    id: 'hr-edit',
+    match: (path) => {
+      const editMatch = path.match(/^\/(?:hr|recursos-humanos|empleados|personal)\/([a-zA-Z0-9_-]+)\/edit$/);
+      if (editMatch) {
+        return { uuid: editMatch[1] };
+      }
+      const altMatch = path.match(/^\/(?:hr|recursos-humanos|empleados|personal)\/edit\/([a-zA-Z0-9_-]+)$/);
+      if (altMatch) {
+        return { uuid: altMatch[1] };
+      }
+      return false;
+    },
+  },
+  {
+    handler: async () => {
+      const { createHrView } = await import('../views/hr.view.js');
+      return await createHrView();
+    },
+    id: 'hr',
+    match: (path) =>
+      path === '/hr' ||
+      path.startsWith('/hr') ||
+      path === '/recursos-humanos' ||
+      path.startsWith('/recursos-humanos') ||
+      path === '/empleados' ||
+      path.startsWith('/empleados') ||
+      path === '/personal' ||
+      path.startsWith('/personal'),
   },
   {
     handler: async () => {

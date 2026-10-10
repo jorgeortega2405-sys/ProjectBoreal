@@ -312,40 +312,20 @@ CREATE TABLE IF NOT EXISTS `admin_user_roles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT INTO `roles` (`name`, `display_name`, `description`, `category`) VALUES
-  ('SUPER_ADMIN', 'Super Admin', 'Acceso excepcional e irrestricto a toda la plataforma administrativa.', 'platform'),
-  ('PLATFORM_ADMIN', 'Platform Admin', 'Administración general de la plataforma y todos sus módulos.', 'platform'),
-  ('SECURITY_ADMIN', 'Security Admin', 'IAM, sesiones, políticas de seguridad, prevención de fraude y lista negra.', 'platform'),
-  ('IAM_ADMIN', 'IAM Admin', 'Administración de cuentas administrativas, roles, permisos y matriz PBAC.', 'platform'),
+  ('SUPER_ADMIN', 'Super Admin', 'Acceso total e irrestricto a toda la plataforma administrativa.', 'platform'),
+  ('SECURITY_ADMIN', 'Security Admin', 'Prevención de fraude, políticas de seguridad, bloqueo de participantes y lista negra.', 'platform'),
   ('COMPLIANCE_ADMIN', 'Compliance Admin', 'Cumplimiento regulatorio, auditoría de sorteos, ganadores y bloqueos.', 'platform'),
   ('AUDITOR', 'Auditor', 'Acceso global de solo lectura a todos los módulos del panel administrativo.', 'platform'),
-  ('READ_ONLY_ADMIN', 'Read-Only Admin', 'Administración y diagnóstico de solo lectura en módulos operativos.', 'platform'),
-  ('SYSTEM_ACCOUNT', 'System Account', 'Cuenta institucional o de sistema inmutable.', 'platform'),
-  ('SUPPORT_L1', 'Support L1', 'Soporte básico de nivel 1 y consulta de sorteos, órdenes, clientes y ganadores.', 'support'),
-  ('SUPPORT_L2', 'Support L2', 'Soporte técnico nivel 2 con facultad de prevención y bloqueo de clientes fraudulentos.', 'support'),
-  ('SUPPORT_L3', 'Support L3', 'Soporte técnico avanzado nivel 3 con gestión de rastreo SPEI y bloqueos.', 'support'),
-  ('SUPPORT_MANAGER', 'Support Manager', 'Supervisión del equipo de soporte, atención a clientes y entrega de premios.', 'support'),
+  ('SUPPORT_MANAGER', 'Support Manager', 'Supervisión de atención a participantes, gestión de rastreo SPEI, bloqueos y premios.', 'support'),
   ('CUSTOMER_SUCCESS', 'Customer Success', 'Atención a participantes y seguimiento integral de entrega de premios a ganadores.', 'support'),
-  ('INCIDENT_MANAGER', 'Incident Manager', 'Coordinación y contención de incidentes operativos y antifraude.', 'support'),
-  ('ENGINEER', 'Engineer', 'Herramientas técnicas y diagnóstico de ingeniería.', 'engineering'),
-  ('SENIOR_ENGINEER', 'Senior Engineer', 'Acceso técnico avanzado de ingeniería.', 'engineering'),
-  ('DEVOPS', 'DevOps', 'Infraestructura, despliegues y servicios.', 'engineering'),
-  ('SRE', 'SRE', 'Observabilidad, disponibilidad y operaciones de producción.', 'engineering'),
-  ('RELEASE_MANAGER', 'Release Manager', 'Gestión de versiones y despliegues controlados.', 'engineering'),
-  ('DATA_ANALYST', 'Data Analyst', 'Analítica de ventas, métricas de sorteos y reportes.', 'data'),
-  ('DATA_ENGINEER', 'Data Engineer', 'Pipelines e ingeniería de procesamiento de datos.', 'data'),
-  ('DATA_ADMIN', 'Data Admin', 'Administración y consulta integral de recursos de datos.', 'data'),
-  ('PRIVACY_ADMIN', 'Privacy Admin', 'Privacidad de datos de participantes y gestión de bloqueos.', 'data'),
-  ('DATA_AUDITOR', 'Data Auditor', 'Auditoría de integridad de datos de sorteos, órdenes y ganadores.', 'data'),
-  ('BILLING_AGENT', 'Billing Agent', 'Verificación de comprobantes SPEI, aprobación/rechazo de órdenes y rastreo.', 'finance'),
+  ('DATA_ANALYST', 'Data Analyst', 'Analítica de ventas, métricas de sorteos, órdenes y reportes de ganadores.', 'data'),
+  ('BILLING_AGENT', 'Billing Agent', 'Verificación de comprobantes SPEI, aprobación/rechazo de órdenes y rastreo Banxico.', 'finance'),
   ('BILLING_MANAGER', 'Billing Manager', 'Gestión financiera avanzada de pagos SPEI y cuentas bancarias receptoras.', 'finance'),
   ('FINANCE_ADMIN', 'Finance Admin', 'Configuración financiera total de cuentas bancarias, CLABEs, tarjetas y pagos.', 'finance'),
-  ('REFUNDS_ADMIN', 'Refunds Admin', 'Gestión especializada de rechazos, cancelaciones y liberación de boletos.', 'finance'),
   ('OPERATIONS_AGENT', 'Operations Agent', 'Operación diaria de sorteos, consulta de órdenes y seguimiento de ganadores.', 'operations'),
-  ('OPERATIONS_MANAGER', 'Operations Manager', 'Supervisión operacional completa de sorteos, tómbola, pagos, clientes y premios.', 'operations'),
-  ('WORKFLOW_ADMIN', 'Workflow Admin', 'Administración del ciclo automático del sorteo diario y parámetros de bolsa.', 'operations'),
-  ('SYSTEM_OPERATOR', 'System Operator', 'Operaciones técnicas sobre sistemas y procesos programados.', 'operations'),
-  ('HR_MANAGER', 'HR Manager', 'Gestión de recursos humanos, contrataciones y compensación.', 'operations'),
-  ('HR_RECRUITER', 'HR Recruiter', 'Reclutamiento y altas de talento.', 'operations')
+  ('OPERATIONS_MANAGER', 'Operations Manager', 'Supervisión operacional completa de sorteos, tómbola, pagos, clientes, premios y personal.', 'operations'),
+  ('HR_MANAGER', 'HR Manager', 'Gestión integral de recursos humanos, contrataciones, nómina y vacaciones.', 'operations'),
+  ('HR_RECRUITER', 'HR Recruiter', 'Reclutamiento, altas de talento y consulta de plantilla laboral.', 'operations')
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),
   `description` = VALUES(`description`),
@@ -369,8 +349,10 @@ INSERT INTO `permissions` (`name`, `display_name`, `description`, `module`) VALU
   ('customers:block', 'Sancionar Clientes', 'Agregar o retirar números telefónicos de la lista negra antifraude.', 'customers'),
   ('winners:read', 'Ver Ganadores', 'Consultar padrón de ganadores, KPIs de premios y evidencias de entrega.', 'winners'),
   ('winners:manage', 'Gestionar Entregas de Premios', 'Actualizar estado de entrega, notas de contacto, testimonio y evidencias.', 'winners'),
-  ('roles:read', 'Ver Roles y Permisos', 'Consultar catálogo de roles, permisos y matriz de control de acceso PBAC.', 'roles'),
-  ('roles:manage', 'Gestionar Roles y Permisos', 'Configurar permisos asignados a cada rol y administrar roles de cuentas admin.', 'roles')
+  ('hr:read', 'Ver Recursos Humanos', 'Consultar plantilla de empleados, expediente laboral, KPIs de talento, nómina y calendario de vacaciones.', 'hr'),
+  ('hr:create', 'Contratar Empleados', 'Registrar nuevas contrataciones, altas de personal y asignar condiciones laborales.', 'hr'),
+  ('hr:manage', 'Gestionar Personal y Vacaciones', 'Editar expedientes, aprobar o rechazar vacaciones y permisos, ajustar compensación, registrar promociones y bajas.', 'hr'),
+  ('hr:delete', 'Eliminar Registros de RRHH', 'Eliminar expedientes o solicitudes registradas por error en Recursos Humanos.', 'hr')
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),
   `description` = VALUES(`description`),
@@ -378,37 +360,27 @@ ON DUPLICATE KEY UPDATE
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` IN ('SUPER_ADMIN', 'PLATFORM_ADMIN');
+WHERE r.`name` = 'SUPER_ADMIN';
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'SECURITY_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'customers:read', 'customers:block', 'orders:read', 'roles:read', 'roles:manage');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'IAM_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'roles:read', 'roles:manage');
+  AND p.`name` IN ('dashboard:read', 'customers:read', 'customers:block', 'orders:read');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'COMPLIANCE_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'customers:block', 'winners:read', 'roles:read');
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'customers:block', 'winners:read', 'hr:read');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'AUDITOR'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read', 'roles:read');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'READ_ONLY_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read');
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read', 'hr:read');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'FINANCE_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'bank_accounts:manage', 'bank_accounts:delete', 'giveaways:read', 'winners:read');
+  AND p.`name` IN ('dashboard:read', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'bank_accounts:manage', 'bank_accounts:delete', 'giveaways:read', 'winners:read', 'hr:read');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
@@ -422,23 +394,13 @@ WHERE r.`name` = 'BILLING_AGENT'
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'REFUNDS_ADMIN'
-  AND p.`name` IN ('orders:read', 'orders:reject', 'customers:read');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'OPERATIONS_MANAGER'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw', 'giveaways:delete', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'customers:read', 'customers:block', 'winners:read', 'winners:manage');
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw', 'giveaways:delete', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'customers:read', 'customers:block', 'winners:read', 'winners:manage', 'hr:read', 'hr:manage');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'OPERATIONS_AGENT'
   AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'orders:read', 'customers:read', 'winners:read', 'winners:manage');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'WORKFLOW_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:manage');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
@@ -452,46 +414,234 @@ WHERE r.`name` = 'CUSTOMER_SUCCESS'
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'SUPPORT_L3'
-  AND p.`name` IN ('giveaways:read', 'orders:read', 'orders:manage', 'customers:read', 'customers:block', 'winners:read');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'SUPPORT_L2'
-  AND p.`name` IN ('giveaways:read', 'orders:read', 'customers:read', 'customers:block', 'winners:read');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'SUPPORT_L1'
-  AND p.`name` IN ('giveaways:read', 'orders:read', 'customers:read', 'winners:read');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'INCIDENT_MANAGER'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'customers:block');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'DATA_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read');
-
-INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
-SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'DATA_ANALYST'
   AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'winners:read');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'DATA_AUDITOR'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'winners:read');
+WHERE r.`name` = 'HR_MANAGER'
+  AND p.`name` IN ('dashboard:read', 'hr:read', 'hr:create', 'hr:manage', 'hr:delete');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
-WHERE r.`name` = 'PRIVACY_ADMIN'
-  AND p.`name` IN ('customers:read', 'customers:block');
+WHERE r.`name` = 'HR_RECRUITER'
+  AND p.`name` IN ('dashboard:read', 'hr:read', 'hr:create');
 
 INSERT IGNORE INTO `admin_user_roles` (`admin_user_id`, `role_id`)
-SELECT 1, `id` FROM `roles` WHERE `name` IN ('SUPER_ADMIN', 'PLATFORM_ADMIN');
+SELECT 1, `id` FROM `roles` WHERE `name` = 'SUPER_ADMIN';
+
+CREATE TABLE IF NOT EXISTS `hr_employees` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `uuid` CHAR(36) NOT NULL UNIQUE,
+  `employee_code` VARCHAR(20) NOT NULL UNIQUE,
+  `admin_user_id` INT UNSIGNED NULL,
+  `full_name` VARCHAR(150) NOT NULL,
+  `email` VARCHAR(191) NOT NULL UNIQUE,
+  `phone` VARCHAR(30) NOT NULL,
+  `department` ENUM('operations', 'finance', 'engineering', 'support', 'data', 'hr', 'executive', 'marketing', 'legal') NOT NULL DEFAULT 'operations',
+  `position_title` VARCHAR(120) NOT NULL,
+  `employment_type` ENUM('full_time', 'part_time', 'contractor', 'intern') NOT NULL DEFAULT 'full_time',
+  `work_modality` ENUM('remote', 'hybrid', 'onsite') NOT NULL DEFAULT 'hybrid',
+  `location_state` VARCHAR(80) NULL,
+  `hire_date` DATE NOT NULL,
+  `termination_date` DATE NULL,
+  `termination_reason` VARCHAR(255) NULL,
+  `monthly_salary` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  `currency` VARCHAR(10) NOT NULL DEFAULT 'MXN',
+  `payment_frequency` ENUM('biweekly', 'monthly', 'weekly') NOT NULL DEFAULT 'biweekly',
+  `bank_name` VARCHAR(80) NULL,
+  `clabe` VARCHAR(18) NULL,
+  `rfc` VARCHAR(13) NULL,
+  `curp` VARCHAR(18) NULL,
+  `nss` VARCHAR(15) NULL,
+  `vacation_days_total` INT UNSIGNED NOT NULL DEFAULT 12,
+  `vacation_days_used` INT UNSIGNED NOT NULL DEFAULT 0,
+  `emergency_contact_name` VARCHAR(150) NULL,
+  `emergency_contact_phone` VARCHAR(30) NULL,
+  `status` ENUM('active', 'on_leave', 'probation', 'suspended', 'terminated') NOT NULL DEFAULT 'active',
+  `notes` TEXT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_hr_emp_department` (`department`),
+  INDEX `idx_hr_emp_status` (`status`),
+  INDEX `idx_hr_emp_hire_date` (`hire_date`),
+  CONSTRAINT `fk_hr_emp_admin_user` FOREIGN KEY (`admin_user_id`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `hr_leave_requests` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `uuid` CHAR(36) NOT NULL UNIQUE,
+  `employee_id` INT UNSIGNED NOT NULL,
+  `leave_type` ENUM('vacation', 'sick_leave', 'personal', 'maternity_paternity', 'unpaid', 'bereavement') NOT NULL DEFAULT 'vacation',
+  `start_date` DATE NOT NULL,
+  `end_date` DATE NOT NULL,
+  `days_count` INT UNSIGNED NOT NULL DEFAULT 1,
+  `reason` VARCHAR(500) NULL,
+  `status` ENUM('pending', 'approved', 'rejected', 'cancelled') NOT NULL DEFAULT 'pending',
+  `reviewed_by_name` VARCHAR(150) NULL,
+  `review_notes` VARCHAR(500) NULL,
+  `reviewed_at` DATETIME NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_hr_leave_emp` (`employee_id`),
+  INDEX `idx_hr_leave_status` (`status`),
+  INDEX `idx_hr_leave_dates` (`start_date`, `end_date`),
+  CONSTRAINT `fk_hr_leave_employee` FOREIGN KEY (`employee_id`) REFERENCES `hr_employees` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `hr_employee_events` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `uuid` CHAR(36) NOT NULL UNIQUE,
+  `employee_id` INT UNSIGNED NOT NULL,
+  `event_type` ENUM('hired', 'promotion', 'salary_adjustment', 'department_transfer', 'leave_approved', 'performance_review', 'warning', 'status_change', 'terminated') NOT NULL,
+  `title` VARCHAR(180) NOT NULL,
+  `description` TEXT NULL,
+  `previous_value` VARCHAR(180) NULL,
+  `new_value` VARCHAR(180) NULL,
+  `recorded_by_name` VARCHAR(150) NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_hr_event_emp` (`employee_id`),
+  INDEX `idx_hr_event_type` (`event_type`),
+  CONSTRAINT `fk_hr_event_employee` FOREIGN KEY (`employee_id`) REFERENCES `hr_employees` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `hr_employees` (
+  `id`, `uuid`, `employee_code`, `admin_user_id`, `full_name`, `email`, `phone`,
+  `department`, `position_title`, `employment_type`, `work_modality`, `location_state`,
+  `hire_date`, `monthly_salary`, `currency`, `payment_frequency`, `bank_name`, `clabe`,
+  `rfc`, `curp`, `nss`, `vacation_days_total`, `vacation_days_used`,
+  `emergency_contact_name`, `emergency_contact_phone`, `status`, `notes`
+) VALUES
+  (
+    1, 'a1100001-b220-4c30-8d40-e55000000001', 'EMP-0001', 1,
+    'Alejandro Garza Elizondo', 'agarza@projectboreal.com', '8112345678',
+    'executive', 'Director de Operaciones (COO)', 'full_time', 'hybrid', 'Nuevo León',
+    '2023-03-15', 85000.00, 'MXN', 'biweekly', 'BBVA México', '012580001234567891',
+    'GAEA880512HNL', 'GAEA880512HNLRLA01', '43128809123', 16, 4,
+    'Valeria Elizondo', '8187654321', 'active',
+    'Responsable general de operaciones de sorteos, tesorería y cumplimiento.'
+  ),
+  (
+    2, 'a1100002-b220-4c30-8d40-e55000000002', 'EMP-0002', NULL,
+    'Sofía Mendoza Villaseñor', 'smendoza@projectboreal.com', '5543219876',
+    'hr', 'HR Manager & People Partner', 'full_time', 'hybrid', 'Ciudad de México',
+    '2023-08-01', 54000.00, 'MXN', 'biweekly', 'Santander', '014180009876543210',
+    'MEVS911024MDF', 'MEVS911024MDFNNS04', '11919123456', 14, 2,
+    'Roberto Mendoza', '5511223344', 'active',
+    'Líder de atracción de talento, clima organizacional, nómina y administración de vacaciones.'
+  ),
+  (
+    3, 'a1100003-b220-4c30-8d40-e55000000003', 'EMP-0003', NULL,
+    'Diego Emiliano Reyes Treviño', 'dreyes@projectboreal.com', '3398765432',
+    'engineering', 'Lead Full-Stack & Architecture Engineer', 'full_time', 'remote', 'Jalisco',
+    '2023-06-10', 72000.00, 'MXN', 'biweekly', 'Nu México', '698180005544332211',
+    'RETD930218HJC', 'RETD930218HJCRYD08', '54149308765', 14, 6,
+    'Lucía Treviño', '3312340987', 'active',
+    'Arquitecto principal de la plataforma de sorteos en tiempo real y motores antifraude.'
+  ),
+  (
+    4, 'a1100004-b220-4c30-8d40-e55000000004', 'EMP-0004', NULL,
+    'Mariana Fernanda Ortiz Cano', 'mortiz@projectboreal.com', '5587651234',
+    'finance', 'Coordinadora de Conciliación SPEI y Tesorería', 'full_time', 'onsite', 'Ciudad de México',
+    '2024-01-15', 46000.00, 'MXN', 'biweekly', 'Banorte', '072180001122334455',
+    'OICM940709MDF', 'OICM940709MDFRTC02', '12169455432', 14, 5,
+    'Carlos Ortiz', '5599887766', 'on_leave',
+    'Supervisión de dispersión de premios, liquidación Banxico CEP y cuentas receptoras.'
+  ),
+  (
+    5, 'a1100005-b220-4c30-8d40-e55000000005', 'EMP-0005', NULL,
+    'Rodrigo Sebastián Navarro Paz', 'rnavarro@projectboreal.com', '8123459876',
+    'support', 'Customer Success & Winner Delivery Lead', 'full_time', 'hybrid', 'Nuevo León',
+    '2024-05-20', 38500.00, 'MXN', 'biweekly', 'BBVA México', '012580006677889900',
+    'NAPR951130HNL', 'NAPR951130HNLVRD05', '43189567890', 12, 0,
+    'Elena Paz', '8133445566', 'active',
+    'Coordinación de atención VIP a participantes y entrega certificada de premios a ganadores.'
+  ),
+  (
+    6, 'a1100006-b220-4c30-8d40-e55000000006', 'EMP-0006', NULL,
+    'Camila Valentina Herrera Solís', 'cherrera@projectboreal.com', '4423456789',
+    'data', 'Analista de Datos y Riesgo Transaccional', 'full_time', 'remote', 'Querétaro',
+    '2026-08-18', 42000.00, 'MXN', 'biweekly', 'Citibanamex', '002680004455667788',
+    'HESC970414MQT', 'HESC970414MQTRRC09', '66199712345', 12, 0,
+    'Jorge Herrera', '4429876543', 'probation',
+    'Monitoreo estadístico de conversión de boletos, modelos antifraude y auditoría Cassandra.'
+  )
+ON DUPLICATE KEY UPDATE
+  `full_name` = VALUES(`full_name`),
+  `position_title` = VALUES(`position_title`),
+  `department` = VALUES(`department`),
+  `monthly_salary` = VALUES(`monthly_salary`),
+  `status` = VALUES(`status`);
+
+INSERT INTO `hr_leave_requests` (
+  `id`, `uuid`, `employee_id`, `leave_type`, `start_date`, `end_date`, `days_count`,
+  `reason`, `status`, `reviewed_by_name`, `review_notes`, `reviewed_at`
+) VALUES
+  (
+    1, 'b2200001-c330-4d40-9e50-f66000000001', 4,
+    'vacation', '2026-10-05', '2026-10-11', 5,
+    'Periodo vacacional anual programado con cobertura de turno en tesorería SPEI.',
+    'approved', 'Sofía Mendoza Villaseñor', 'Aprobado. Guardia cubierta por el equipo de finanzas.', '2026-09-25 11:30:00'
+  ),
+  (
+    2, 'b2200002-c330-4d40-9e50-f66000000002', 3,
+    'vacation', '2026-11-16', '2026-11-20', 5,
+    'Vacaciones de mitad de noviembre tras cierre de despliegue trimestral.',
+    'pending', NULL, NULL, NULL
+  ),
+  (
+    3, 'b2200003-c330-4d40-9e50-f66000000003', 5,
+    'personal', '2026-10-22', '2026-10-23', 2,
+    'Trámites notariales y personales en Monterrey.',
+    'pending', NULL, NULL, NULL
+  ),
+  (
+    4, 'b2200004-c330-4d40-9e50-f66000000004', 1,
+    'vacation', '2026-07-13', '2026-07-16', 4,
+    'Descanso familiar de verano.',
+    'approved', 'Sofía Mendoza Villaseñor', 'Autorizado conforme a calendario anual ejecutivo.', '2026-07-01 09:15:00'
+  )
+ON DUPLICATE KEY UPDATE
+  `status` = VALUES(`status`),
+  `days_count` = VALUES(`days_count`);
+
+INSERT INTO `hr_employee_events` (
+  `id`, `uuid`, `employee_id`, `event_type`, `title`, `description`,
+  `previous_value`, `new_value`, `recorded_by_name`, `created_at`
+) VALUES
+  (
+    1, 'c3300001-d440-4e50-8f60-a77000000001', 1,
+    'hired', 'Contratación e Ingreso Ejecutivo',
+    'Alta oficial como Director de Operaciones (COO) liderando la estrategia operativa de sorteos.',
+    NULL, 'Director de Operaciones (COO)', 'Administrador General', '2023-03-15 09:00:00'
+  ),
+  (
+    2, 'c3300002-d440-4e50-8f60-a77000000002', 2,
+    'hired', 'Ingreso como HR Manager',
+    'Incorporación para encabezar el departamento de Recursos Humanos y Capital Humano.',
+    NULL, 'HR Manager & People Partner', 'Alejandro Garza Elizondo', '2023-08-01 09:00:00'
+  ),
+  (
+    3, 'c3300003-d440-4e50-8f60-a77000000003', 3,
+    'promotion', 'Promoción a Lead Full-Stack Engineer',
+    'Ascenso por mérito técnico tras liderar la arquitectura de conciliación SPEI y alta concurrencia.',
+    'Senior Software Engineer ($62,000 MXN)', 'Lead Full-Stack & Architecture Engineer ($72,000 MXN)', 'Alejandro Garza Elizondo', '2025-06-01 12:00:00'
+  ),
+  (
+    4, 'c3300004-d440-4e50-8f60-a77000000004', 4,
+    'leave_approved', 'Vacaciones Autorizadas (5 días)',
+    'Periodo vacacional autorizado del 05/10/2026 al 11/10/2026.',
+    '0 días tomados', '5 días tomados', 'Sofía Mendoza Villaseñor', '2026-09-25 11:30:00'
+  ),
+  (
+    5, 'c3300005-d440-4e50-8f60-a77000000005', 6,
+    'hired', 'Contratación e Inicio de Periodo de Prueba',
+    'Ingreso al equipo de Datos y Riesgo Transaccional bajo esquema remoto.',
+    NULL, 'Analista de Datos y Riesgo Transaccional', 'Sofía Mendoza Villaseñor', '2026-08-18 10:00:00'
+  )
+ON DUPLICATE KEY UPDATE
+  `title` = VALUES(`title`),
+  `description` = VALUES(`description`);
 
 GRANT SELECT, INSERT, UPDATE, DELETE, INDEX, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;

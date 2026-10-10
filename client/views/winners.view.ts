@@ -98,14 +98,14 @@ export class WinnersView {
         const dateStr = item.draw_date || item.winner_announced_at || '';
         winnersMap.set(item.uuid, {
           date: formatDate(dateStr),
-          giveawayTitle: item.title || 'Sorteo Diario',
-          location: item.customer_state || item.customer_city || 'México',
+          giveawayTitle: item.title || t('giveaway.daily_badge'),
+          location: item.customer_state || item.customer_city || t('winners.default_country'),
           phone: item.customer_phone_masked || '•• •• •• --',
           prize: formatCurrency(item.prize_amount || 0, 'MXN'),
           sortTimestamp: dateStr ? new Date(dateStr).getTime() : 0,
           ticketNumber: ticketNum,
           uuid: item.uuid,
-          winnerName: item.winner_name || 'Participante',
+          winnerName: item.winner_name || t('winners.default_participant'),
         });
       }
 
@@ -117,13 +117,13 @@ export class WinnersView {
           winnersMap.set(item.uuid, {
             date: formatDate(dateStr),
             giveawayTitle: item.title,
-            location: item.customer_state || 'México',
+            location: item.customer_state || t('winners.default_country'),
             phone: '•• •• •• --',
             prize: item.title,
             sortTimestamp: dateStr ? new Date(dateStr).getTime() : 0,
             ticketNumber: ticketNum,
             uuid: item.uuid,
-            winnerName: item.winner_name || 'Participante',
+            winnerName: item.winner_name || t('winners.default_participant'),
           });
         }
       }

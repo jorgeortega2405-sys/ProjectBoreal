@@ -159,7 +159,7 @@ export class DashboardController implements ViewController {
     if (elRevenue) elRevenue.textContent = kpis.totalRevenueFormatted;
     if (elRevenueTrend) {
       const sign = kpis.revenueChangePct >= 0 ? '+' : '';
-      elRevenueTrend.textContent = `${sign}${kpis.revenueChangePct}% vs mes`;
+      elRevenueTrend.textContent = `${sign}${kpis.revenueChangePct}% vs ant.`;
     }
 
     const elTickets = this.container.querySelector<HTMLElement>('[data-ref="stat-tickets-value"]');
@@ -168,7 +168,7 @@ export class DashboardController implements ViewController {
     if (elTickets) elTickets.textContent = formatNumber(kpis.ticketsSold);
     if (elTicketsTrend) {
       const sign = kpis.ticketsSoldChangePct >= 0 ? '+' : '';
-      elTicketsTrend.textContent = `${sign}${kpis.ticketsSoldChangePct}% vs ayer`;
+      elTicketsTrend.textContent = `${sign}${kpis.ticketsSoldChangePct}% vs ant.`;
     }
 
     const elGiveaways = this.container.querySelector<HTMLElement>('[data-ref="stat-giveaways-value"]');

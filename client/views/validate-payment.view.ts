@@ -53,7 +53,7 @@ export class ValidatePaymentController {
   private async loadOrderByUuid(uuid: string): Promise<void> {
     const order = await fetchOrderDetailApi(uuid);
     if (!order) {
-      showToast('La orden especificada no fue encontrada.', 'warning');
+      showToast(t('validate_payment.err_order_not_found'), 'warning');
       return;
     }
 
@@ -101,7 +101,7 @@ export class ValidatePaymentController {
       }
     }
     if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 15) {
-      showToast('Ingresa un número celular válido para buscar tus boletos.', 'warning');
+      showToast(t('validate_payment.err_phone_invalid'), 'warning');
       return;
     }
 
@@ -261,8 +261,8 @@ export class ValidatePaymentController {
             ${winnerBannerHtml}
             <div class="validate-order-card__header">
               <div class="validate-order-card__meta">
-                <span class="validate-order-card__folio">Participante: ${escapeHtml(order.customer_name)}${order.customer_state ? ` (${escapeHtml(order.customer_state)})` : ''}</span>
-                <h3 class="validate-order-card__title">${escapeHtml(order.giveaway_title || 'Sorteo')}</h3>
+                <span class="validate-order-card__folio">${t('validate_payment.participant_label', { name: escapeHtml(order.customer_name) })}${order.customer_state ? ` (${escapeHtml(order.customer_state)})` : ''}</span>
+                <h3 class="validate-order-card__title">${escapeHtml(order.giveaway_title || t('validate_payment.order_card_giveaway'))}</h3>
               </div>
               <div class="validate-order-card__actions">
                 ${badgeHtml}
@@ -271,14 +271,14 @@ export class ValidatePaymentController {
             </div>
             ${reviewNoteHtml}
             <div class="validate-order-card__tickets-box">
-              <span class="validate-order-card__tickets-label">Boletos apartados (${formatNumber(order.ticket_count)}):</span>
+              <span class="validate-order-card__tickets-label">${t('validate_payment.reserved_tickets_label', { count: formatNumber(order.ticket_count) })}</span>
               <div class="validate-order-card__tickets-chips">
                 ${ticketChips}
               </div>
             </div>
 
             <div class="validate-order-card__footer">
-              <span class="validate-order-card__total-label">Total:</span>
+              <span class="validate-order-card__total-label">${t('validate_payment.total_label')}</span>
               <span class="validate-order-card__total-val">${formatCurrency(order.total_amount, order.currency)}</span>
             </div>
           </div>
@@ -407,7 +407,7 @@ export class ValidatePaymentController {
         </label>
 
         <div class="receipt-preview-box is-hidden" data-ref="receipt-preview-box">
-          <img class="receipt-preview-img" data-ref="receipt-preview-img" src="" alt="Comprobante" />
+          <img class="receipt-preview-img" data-ref="receipt-preview-img" src="" alt="${t('validate_payment.receipt_alt')}" />
         </div>
 
         <label class="field" data-ref="field-tracking-key">
@@ -442,10 +442,10 @@ export class ValidatePaymentController {
       cancelText: t('common.cancel'),
       confirmClass: 'component-button--black',
       confirmText: t('validate_payment.submit_receipt_btn'),
-      description: `Participante: ${order.customer_name} • Monto: ${formatCurrency(order.total_amount, order.currency)}`,
+      description: t('validate_payment.modal_upload_summary', { amount: formatCurrency(order.total_amount, order.currency), name: order.customer_name }),
       onConfirm: async () => {
         if (!selectedBase64) {
-          modal.setError('Por favor selecciona una imagen del comprobante bancario.');
+          modal.setError(t('validate_payment.err_select_receipt'));
           return false;
         }
 
@@ -459,7 +459,7 @@ export class ValidatePaymentController {
         });
 
         if (!res.success) {
-          modal.setError(res.error || 'Error al enviar comprobante.');
+          modal.setError(res.error || t('validate_payment.err_upload_failed'));
           return false;
         }
 

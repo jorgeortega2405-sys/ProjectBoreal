@@ -183,21 +183,21 @@
       "standard": "Sorteo Estándar"
     }
   },
+  "hr": {
+    "description": "Directorio de colaboradores, altas y contrataciones, nómina, vacaciones, permisos y kárdex laboral",
+    "title": "Recursos Humanos y Capital Humano"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "giveaways": "Sorteos",
+    "hr": "Recursos Humanos",
     "logout": "Cerrar sesión",
     "more": "Más",
     "profile": "Perfil",
-    "roles": "Roles y Permisos",
     "settings": "Configuración",
     "theme": "Tema",
     "toggle_drawer": "Expandir navegación",
     "toggle_theme": "Cambiar tema"
-  },
-  "roles": {
-    "description": "Control de acceso basado en permisos (PBAC), catálogo de roles corporativos y asignación de cuentas",
-    "title": "Matriz de Roles y Permisos"
   },
   "settings": {
     "accessibility_group": "Accesibilidad y Rendimiento",

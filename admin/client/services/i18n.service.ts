@@ -18,12 +18,17 @@ const FALLBACK_TRANSLATIONS: Record<string, any> = {
     refresh: 'Actualizar',
     save: 'Guardar',
   },
+  hr: {
+    description: 'Directorio de colaboradores, altas y contrataciones, nómina, vacaciones, permisos y kárdex laboral',
+    title: 'Recursos Humanos y Capital Humano',
+  },
   languages: {
     es_MX: 'Español (México)',
   },
   nav: {
     dashboard: 'Dashboard',
     giveaways: 'Sorteos',
+    hr: 'Recursos Humanos',
     logout: 'Cerrar sesión',
     more: 'Más',
     profile: 'Perfil',

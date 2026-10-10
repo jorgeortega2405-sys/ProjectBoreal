@@ -136,7 +136,7 @@ export async function reserveTickets(data: {
     const packageOpts = giveaway.package_options
       ? (typeof giveaway.package_options === 'string' ? JSON.parse(giveaway.package_options) : giveaway.package_options)
       : [];
-    const maxByTotal = Math.min(100, Math.max(5, Math.floor(giveaway.total_tickets * 0.10)));
+    const maxByTotal = Math.min(100, Math.max(10, Math.floor(giveaway.total_tickets * 0.20)));
     const maxAllowed = Math.max(1, maxByTotal);
 
     if (cleanNumbers.length > maxAllowed) {
@@ -201,7 +201,7 @@ export async function reserveTickets(data: {
     const conceptReference = data.customerName.trim().replace(/\s+/g, ' ').toUpperCase();
     const ticketCount = cleanNumbers.length;
     const totalAmount = ticketCount * Number(giveaway.ticket_price);
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
     const [orderResult] = await conn.query<ResultSetHeader>(
       `INSERT INTO orders (
