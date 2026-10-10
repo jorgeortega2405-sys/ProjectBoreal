@@ -543,12 +543,93 @@ html.dark-theme .bank-card-item.is-selected:hover .canvas-card__thumbnail {
   transform: translateX(20px);
 }
 
+.modal-card:has(.bank-modal-form) {
+  width: 480px;
+  max-width: calc(100vw - 32px);
+}
+
 .bank-modal-form {
   display: flex;
   flex-direction: column;
   gap: 14px;
   width: 100%;
   box-sizing: border-box;
+}
+
+.bank-modal-form .field--dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.bank-modal-form .field--dropdown .settings-dropdown-wrapper,
+.bank-modal-form .field--dropdown .dropdown-wrapper {
+  width: 100%;
+  max-width: 100%;
+}
+
+.bank-modal-form .field--dropdown .dropdown-trigger {
+  width: 100%;
+  max-width: 100%;
+  height: 55px;
+  border-radius: 16px;
+  padding: 22px 16px 6px 16px;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.bank-modal-form .field--dropdown .dropdown-trigger:hover {
+  border-color: var(--border-color-focus);
+}
+
+.bank-modal-form .field--dropdown .dropdown-trigger.is-open {
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 1px var(--border-color-focus);
+}
+
+.bank-modal-form .field--dropdown .dropdown-trigger__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.bank-modal-form .field--dropdown .dropdown-trigger__text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bank-modal-form .dropdown-trigger__text--placeholder {
+  color: var(--text-secondary) !important;
+  font-weight: 400 !important;
+}
+
+.bank-modal-form .field--dropdown .field__label {
+  position: absolute;
+  left: 16px;
+  top: 15px;
+  transform: translateY(-50%) scale(0.78);
+  font-family: var(--sl-font-sans);
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  pointer-events: none;
+  transform-origin: left top;
+  z-index: 2;
+}
+
+.bank-modal-form .field--dropdown .dropdown-backdrop {
+  z-index: 2100;
+}
+
+.bank-modal-form .field--dropdown .menu-panel--dropdown {
+  z-index: 2101;
 }
 
 .bank-checkbox-label {

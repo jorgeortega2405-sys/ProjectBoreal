@@ -2,7 +2,7 @@ import { pool } from '../config/database.config.js';
 import { deleteCache, getCache, publishGiveawayEvent, setCache } from '../config/redis.config.js';
 import { Giveaway, WinnerGiveawayItem } from '../types/giveaway.types.js';
 import { recordAudit } from './audit.service.js';
-import { ensureCurrentDailyGiveaway } from './daily-giveaway.service.js';
+import { ensureCurrentDailyGiveaway, getDailyGiveawayPotPercentage } from './daily-giveaway.service.js';
 import { logger } from './logger.service.js';
 import crypto from 'crypto';
 import { Pool, PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
@@ -49,6 +49,7 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
           end_date ASC`
     );
 
+    const potPercentage = await getDailyGiveawayPotPercentage();
     const list = await Promise.all(
       rows.map(async (row) => {
         let currentPot: number | undefined;
@@ -58,7 +59,7 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
             [row.id]
           );
           const paidCount = Number(countRows[0]?.paid_count || 0);
-          currentPot = Math.round(paidCount * (Number(row.ticket_price) * 0.50));
+          currentPot = Math.round(paidCount * (Number(row.ticket_price) * (potPercentage / 100)));
         }
 
         return {
@@ -68,6 +69,7 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
           package_options: row.package_options
             ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
             : (row.type === 'daily' ? [5, 10, 25, 50, 100] : [1, 3, 5, 10, 20]),
+          pot_percentage: row.type === 'daily' ? potPercentage : undefined,
         };
       })
     );
@@ -162,13 +164,15 @@ export async function getGiveawayByUuid(uuid: string): Promise<Giveaway | null> 
     const row = rows[0];
 
     let currentPot: number | undefined;
+    let potPercentage: number | undefined;
     if (row.type === 'daily') {
       const [countRows] = await pool.query<RowDataPacket[]>(
         `SELECT COUNT(*) AS paid_count FROM giveaway_tickets WHERE giveaway_id = ? AND status = 'paid'`,
         [row.id]
       );
       const paidCount = Number(countRows[0]?.paid_count || 0);
-      currentPot = Math.round(paidCount * (Number(row.ticket_price) * 0.50));
+      potPercentage = await getDailyGiveawayPotPercentage();
+      currentPot = Math.round(paidCount * (Number(row.ticket_price) * (potPercentage / 100)));
     }
 
     const result: Giveaway = {
@@ -178,6 +182,7 @@ export async function getGiveawayByUuid(uuid: string): Promise<Giveaway | null> 
       package_options: row.package_options
         ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
         : (row.type === 'daily' ? [5, 10, 25, 50, 100] : [1, 3, 5, 10, 20]),
+      pot_percentage: potPercentage,
     };
 
     const ttl = row.type === 'daily' ? 10 : 60;
@@ -441,8 +446,9 @@ export async function drawGiveawayWinners(): Promise<void> {
         }
 
         const ticketPrice = Number(lockedGiveaways[0]?.ticket_price ?? giveaway.ticket_price ?? 0);
+        const potPercentage = giveaway.type === 'daily' ? await getDailyGiveawayPotPercentage() : 50;
         const prizeAmount = giveaway.type === 'daily'
-          ? Math.round(totalPaid * (ticketPrice * 0.50))
+          ? Math.round(totalPaid * (ticketPrice * (potPercentage / 100)))
           : (lockedGiveaways[0]?.prize_amount !== null && lockedGiveaways[0]?.prize_amount !== undefined
               ? Number(lockedGiveaways[0].prize_amount)
               : (giveaway.prize_amount !== null && giveaway.prize_amount !== undefined ? Number(giveaway.prize_amount) : null));

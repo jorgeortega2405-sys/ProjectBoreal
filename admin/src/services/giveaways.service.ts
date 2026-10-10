@@ -162,6 +162,58 @@ export async function setDailyGiveawayPauseScheduled(paused: boolean): Promise<b
   }
 }
 
+export async function getDailyGiveawayPotPercentage(): Promise<number> {
+  try {
+    if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
+      const cached = await redis.get('boreal:settings:daily_giveaway_pot_percentage');
+      if (cached !== null) {
+        const parsed = Number(cached);
+        if (!Number.isNaN(parsed) && parsed > 0 && parsed <= 100) {
+          return parsed;
+        }
+      }
+    }
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'daily_giveaway_pot_percentage' LIMIT 1`
+    );
+    if (rows.length > 0) {
+      const val = Number(rows[0].setting_value);
+      const pct = !Number.isNaN(val) && val > 0 && val <= 100 ? val : 50;
+      if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
+        await redis.set('boreal:settings:daily_giveaway_pot_percentage', String(pct), 'EX', 300);
+      }
+      return pct;
+    }
+    return 50;
+  } catch (error) {
+    logger.db.warn('Error al consultar setting daily_giveaway_pot_percentage en admin:', error);
+    return 50;
+  }
+}
+
+export async function setDailyGiveawayPotPercentage(percentage: number): Promise<boolean> {
+  try {
+    const safePct = Math.min(100, Math.max(1, Math.round(percentage)));
+    const val = String(safePct);
+    await pool.query(
+      `INSERT INTO system_settings (setting_key, setting_value, description)
+       VALUES ('daily_giveaway_pot_percentage', ?, 'Porcentaje de la recaudación destinado a la bolsa acumulada del ganador')
+       ON DUPLICATE KEY UPDATE setting_value = ?`,
+      [val, val]
+    );
+    if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
+      await redis.set('boreal:settings:daily_giveaway_pot_percentage', val, 'EX', 86400);
+      await redis.del('giveaway:daily:current');
+      await redis.del('giveaways:active');
+    }
+    logger.app.info(`Porcentaje de acumulado para sorteo diario actualizado a: ${safePct}%`);
+    return true;
+  } catch (error) {
+    logger.db.error('Error al actualizar setting daily_giveaway_pot_percentage en admin:', error);
+    throw new Error('Error al actualizar el porcentaje del sorteo diario');
+  }
+}
+
 export async function getActiveBankAccounts(): Promise<BankAccountItem[]> {
   try {
     const [rows] = await pool.query<RowDataPacket[]>(

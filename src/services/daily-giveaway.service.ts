@@ -9,33 +9,83 @@ interface GiveawayRow extends RowDataPacket, Giveaway {}
 
 export function calculateDailyCycleDates(now: Date = new Date()): { endDate: Date; hours: number; startDate: Date } {
   const current = new Date(now);
-  const dayOfWeek = current.getDay();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    day: 'numeric',
+    hour: 'numeric',
+    hour12: false,
+    minute: 'numeric',
+    month: 'numeric',
+    second: 'numeric',
+    timeZone: 'America/Mexico_City',
+    weekday: 'short',
+    year: 'numeric',
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(current).map((p) => [p.type, p.value]));
+  const mxNow = {
+    day: Number(parts.day),
+    hour: Number(parts.hour === '24' ? 0 : parts.hour),
+    minute: Number(parts.minute),
+    month: Number(parts.month),
+    second: Number(parts.second),
+    weekday: parts.weekday,
+    year: Number(parts.year),
+  };
 
-  const targetEnd = new Date(current);
-  targetEnd.setHours(23, 59, 59, 999);
+  const targetHour = 20;
+  const weekdayMap: Record<string, number> = { Fri: 5, Mon: 1, Sat: 6, Sun: 0, Thu: 4, Tue: 2, Wed: 3 };
+  const dayOfWeek = weekdayMap[mxNow.weekday] ?? 1;
+
+  let addDays = 0;
+  const isPastTargetToday = mxNow.hour > targetHour || (mxNow.hour === targetHour && (mxNow.minute > 0 || mxNow.second > 0));
 
   if (dayOfWeek === 5) {
-    if (current.getTime() >= targetEnd.getTime()) {
-      targetEnd.setDate(targetEnd.getDate() + 3);
-    }
+    addDays = isPastTargetToday ? 3 : 0;
   } else if (dayOfWeek === 6) {
-    targetEnd.setDate(targetEnd.getDate() + 2);
+    addDays = 2;
   } else if (dayOfWeek === 0) {
-    targetEnd.setDate(targetEnd.getDate() + 1);
+    addDays = 1;
   } else {
-    if (current.getTime() >= targetEnd.getTime()) {
-      targetEnd.setDate(targetEnd.getDate() + 1);
-    }
+    addDays = isPastTargetToday ? 1 : 0;
   }
 
-  const startDate = new Date(current);
-  const diffHours = Math.max(1, Math.round((targetEnd.getTime() - startDate.getTime()) / (3600 * 1000)));
+  const targetUtcDate = new Date(Date.UTC(mxNow.year, mxNow.month - 1, mxNow.day + addDays));
+  const tYear = targetUtcDate.getUTCFullYear();
+  const tMonth = String(targetUtcDate.getUTCMonth() + 1).padStart(2, '0');
+  const tDay = String(targetUtcDate.getUTCDate()).padStart(2, '0');
+  const targetEnd = new Date(`${tYear}-${tMonth}-${tDay}T20:00:00-06:00`);
+
+  const diffHours = Math.max(1, Math.round((targetEnd.getTime() - current.getTime()) / (3600 * 1000)));
 
   return {
     endDate: targetEnd,
     hours: diffHours,
-    startDate,
+    startDate: current,
   };
+}
+
+export async function getDailyGiveawayPotPercentage(): Promise<number> {
+  try {
+    const cached = await getCache<string>('boreal:settings:daily_giveaway_pot_percentage');
+    if (cached !== null && cached !== undefined) {
+      const parsed = Number(cached);
+      if (!Number.isNaN(parsed) && parsed > 0 && parsed <= 100) {
+        return parsed;
+      }
+    }
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'daily_giveaway_pot_percentage' LIMIT 1`
+    );
+    if (rows.length > 0) {
+      const val = Number(rows[0].setting_value);
+      const pct = !Number.isNaN(val) && val > 0 && val <= 100 ? val : 50;
+      await setCache('boreal:settings:daily_giveaway_pot_percentage', String(pct), 300);
+      return pct;
+    }
+    return 50;
+  } catch (error) {
+    logger.db.warn('Error al consultar setting daily_giveaway_pot_percentage en MySQL/Redis', error);
+    return 50;
+  }
 }
 
 export async function getCurrentDailyGiveaway(): Promise<Giveaway | null> {
@@ -66,7 +116,8 @@ export async function getCurrentDailyGiveaway(): Promise<Giveaway | null> {
         [row.id]
       );
       const paidCount = Number(countRows[0]?.paid_count || 0);
-      const currentPot = Math.round(paidCount * (Number(row.ticket_price) * 0.50));
+      const potPercentage = await getDailyGiveawayPotPercentage();
+      const currentPot = Math.round(paidCount * (Number(row.ticket_price) * (potPercentage / 100)));
 
       const giveaway: Giveaway = {
         ...row,
@@ -75,6 +126,7 @@ export async function getCurrentDailyGiveaway(): Promise<Giveaway | null> {
         package_options: row.package_options
           ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
           : [5, 10, 25, 50, 100],
+        pot_percentage: potPercentage,
       };
       await setCache(cacheKey, giveaway, 10);
       return giveaway;
@@ -136,7 +188,8 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
         [row.id]
       );
       const paidCount = Number(countRows[0]?.paid_count || 0);
-      const currentPot = Math.round(paidCount * (Number(row.ticket_price) * 0.50));
+      const potPercentage = await getDailyGiveawayPotPercentage();
+      const currentPot = Math.round(paidCount * (Number(row.ticket_price) * (potPercentage / 100)));
 
       const result: Giveaway = {
         ...row,
@@ -145,6 +198,7 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
         package_options: row.package_options
           ? (typeof row.package_options === 'string' ? JSON.parse(row.package_options) : row.package_options)
           : [5, 10, 25, 50, 100],
+        pot_percentage: potPercentage,
       };
       await setCache('giveaway:daily:current', result, 10);
       return result;
@@ -156,10 +210,17 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
     }
 
     const { endDate, hours, startDate } = calculateDailyCycleDates();
-    const endIso = endDate.toISOString().slice(0, 10);
-    const dayStr = String(endDate.getDate()).padStart(2, '0');
-    const monthStr = String(endDate.getMonth() + 1).padStart(2, '0');
-    const yearStr = endDate.getFullYear();
+    const datePartsFormatter = new Intl.DateTimeFormat('en-US', {
+      day: 'numeric',
+      month: 'numeric',
+      timeZone: 'America/Mexico_City',
+      year: 'numeric',
+    });
+    const parts = Object.fromEntries(datePartsFormatter.formatToParts(endDate).map((p) => [p.type, p.value]));
+    const dayStr = String(parts.day).padStart(2, '0');
+    const monthStr = String(parts.month).padStart(2, '0');
+    const yearStr = parts.year;
+    const endIso = `${yearStr}-${monthStr}-${dayStr}`;
 
     const baseSlug = `sorteo-diario-${endIso}`;
     let finalSlug = baseSlug;
@@ -175,7 +236,7 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
     const uuid = crypto.randomUUID();
     const title = `Sorteo Diario (${dayStr}/${monthStr}/${yearStr})`;
     const description =
-      '¡Sorteo diario de lunes a viernes! 20,000 boletos disponibles a solo $2 MXN cada uno. El ganador se lleva una parte del acumulado en efectivo al finalizar el día.';
+      '¡Sorteo diario de lunes a viernes a las 8:00 PM! 20,000 boletos disponibles a solo $2 MXN cada uno. El ganador se lleva la bolsa acumulada en efectivo al finalizar el día.';
     const primaryImageUrl = '/images/giveaways/daily/daily-cash-1000-main.jpg';
     const imageUrls = JSON.stringify([
       '/images/giveaways/daily/daily-cash-1000-main.jpg',
@@ -241,11 +302,13 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
       );
     }
 
+    const potPercentage = await getDailyGiveawayPotPercentage();
     const newGiveaway: Giveaway = {
       ...row,
       current_pot: 0,
       image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
       package_options: [5, 10, 25, 50, 100],
+      pot_percentage: potPercentage,
     };
 
     await deleteCache('giveaway:daily:current');

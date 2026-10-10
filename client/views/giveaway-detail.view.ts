@@ -216,7 +216,8 @@ export class GiveawayDetailController {
         if (typeof data.ticket_count === 'number' && this.giveaway.available_tickets !== undefined) {
           this.giveaway.available_tickets = Math.max(0, this.giveaway.available_tickets - data.ticket_count);
           if (this.giveaway.type === 'daily') {
-            const addedPot = Number((data.ticket_count * (this.giveaway.ticket_price * 0.5)).toFixed(2));
+            const potRatio = (this.giveaway.pot_percentage ?? 50) / 100;
+            const addedPot = Number((data.ticket_count * (this.giveaway.ticket_price * potRatio)).toFixed(2));
             this.giveaway.current_pot = Number(((this.giveaway.current_pot || 0) + addedPot).toFixed(2));
           }
         }

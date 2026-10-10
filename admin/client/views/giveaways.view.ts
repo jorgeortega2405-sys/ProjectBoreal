@@ -117,6 +117,7 @@ export class GiveawaysController implements ViewController {
   private defaultActions: HTMLElement | null = null;
   private filterDropdownController: DropdownController | null = null;
   private inputSearch: HTMLInputElement | null = null;
+  private dailyPotPercentage = 50;
   private isDailyPausedNext = false;
   private isSearchActive = false;
   private searchToolbar: HTMLElement | null = null;
@@ -421,7 +422,7 @@ export class GiveawaysController implements ViewController {
     try {
       const [giveawaysRes, dailyConfigRes, banksRes] = await Promise.all([
         getApi<AdminGiveawayItem[]>('/api/giveaways'),
-        getApi<{ isPaused: boolean }>('/api/giveaways/config/daily'),
+        getApi<{ isPaused: boolean; potPercentage?: number }>('/api/giveaways/config/daily'),
         getApi<BankAccountItem[]>('/api/giveaways/bank-accounts'),
       ]);
 
@@ -433,6 +434,9 @@ export class GiveawaysController implements ViewController {
 
       if (dailyConfigRes?.success && dailyConfigRes?.data) {
         this.isDailyPausedNext = Boolean(dailyConfigRes.data.isPaused);
+        if (typeof dailyConfigRes.data.potPercentage === 'number') {
+          this.dailyPotPercentage = dailyConfigRes.data.potPercentage;
+        }
       }
 
       if (banksRes?.success && Array.isArray(banksRes?.data)) {
@@ -463,7 +467,7 @@ export class GiveawaysController implements ViewController {
     const active = this.currentGiveaways.filter((g) => g.status === 'active').length;
 
     const dailyActive = this.currentGiveaways.find((g) => g.type === 'daily' && g.status === 'active');
-    const dailyPot = dailyActive ? Math.round(dailyActive.paid_tickets * (dailyActive.ticket_price * 0.50)) : 0;
+    const dailyPot = dailyActive ? Math.round(dailyActive.paid_tickets * (dailyActive.ticket_price * (this.dailyPotPercentage / 100))) : 0;
 
     const totalRevenue = this.currentGiveaways
       .filter((g) => g.status === 'active' || g.status === 'completed')
@@ -529,7 +533,7 @@ export class GiveawaysController implements ViewController {
     const isDraft = g.status === 'draft';
     const isCancelled = g.status === 'cancelled';
 
-    const typeBadgeText = isDaily ? 'Diario 50/50' : 'Estándar';
+    const typeBadgeText = isDaily ? `Diario ${this.dailyPotPercentage}%/${100 - this.dailyPotPercentage}` : 'Estándar';
     let statusBadgeText = 'Activo';
     let statusBadgeClass = 'giveaway-card__timer-badge--active';
 
@@ -684,6 +688,7 @@ export class GiveawaysController implements ViewController {
 
   private openDailyConfigModal(): void {
     const isPaused = this.isDailyPausedNext;
+    const currentPct = this.dailyPotPercentage;
 
     const bodyHtml = `
       <div class="daily-modal-content">
@@ -696,26 +701,67 @@ export class GiveawaysController implements ViewController {
           </div>
           <p class="daily-modal-status-desc">
             ${isPaused
-              ? 'Cuando concluya el sorteo diario de hoy y se extraiga al ganador, el sistema NO creará un nuevo sorteo diario de forma automática hasta que se vuelva a activar.'
-              : 'El sistema aprovisiona diariamente un nuevo ciclo 50/50 de lunes a viernes al momento de concluir el sorteo en curso.'}
+              ? 'Cuando concluya el sorteo diario de hoy a las 8:00 PM y se extraiga al ganador, el sistema NO creará un nuevo sorteo diario de forma automática.'
+              : 'El sistema aprovisiona diariamente un nuevo ciclo de lunes a viernes a las 8:00 PM al momento de concluir el sorteo en curso.'}
           </p>
         </div>
 
-        <p class="daily-modal-prompt">
-          ${isPaused
-            ? '¿Deseas reactivar la continuidad automática para que mañana sí haya sorteo diario programado?'
-            : 'Si activas la suspensión, el sorteo diario de hoy continuará con normalidad para sus compradores actuales, pero mañana el sorteo no se abrirá.'}
-        </p>
+        <div style="margin-top: 16px; margin-bottom: 16px;">
+          <label class="field" data-ref="field-daily-pot-pct">
+            <input class="field__input" data-ref="input-daily-pot-pct" type="number" min="1" max="100" value="${currentPct}" placeholder=" " />
+            <span class="field__label">Porcentaje de la Bolsa del Ganador (%)</span>
+          </label>
+        </div>
+
+        <label class="choice" data-ref="choice-daily-pause-toggle">
+          <input class="choice__input" data-ref="input-daily-pause-toggle" type="checkbox" ${isPaused ? 'checked' : ''} />
+          <span class="choice__label">Pausar la regeneración automática para el siguiente ciclo</span>
+        </label>
       </div>
     `;
 
     openModal({
       bodyHtml,
-      confirmClass: isPaused ? 'component-button--black' : 'component-button--danger',
-      confirmText: isPaused ? 'Reactivar Continuidad Diaria' : 'Suspender Siguiente Sorteo',
-      description: 'Gestión del ciclo continuo de sorteos diarios 50/50.',
+      confirmClass: 'component-button--black',
+      confirmText: 'Guardar Configuración',
+      description: 'Gestión del ciclo continuo y porcentaje de la bolsa para sorteos diarios.',
       onConfirm: async () => {
-        await this.toggleDailyPause(!isPaused);
+        const inputEl = document.querySelector<HTMLInputElement>('[data-ref="input-daily-pot-pct"]');
+        const pauseCheckbox = document.querySelector<HTMLInputElement>('[data-ref="input-daily-pause-toggle"]');
+
+        let hasError = false;
+        if (inputEl) {
+          const newPct = Number(inputEl.value);
+          if (!Number.isNaN(newPct) && newPct >= 1 && newPct <= 100 && newPct !== this.dailyPotPercentage) {
+            const potRes = await postApi<{ potPercentage: number }>('/api/giveaways/config/daily/pot-percentage', { potPercentage: newPct });
+            if (potRes.success) {
+              this.dailyPotPercentage = newPct;
+            } else {
+              showToast(potRes.error || 'No se pudo actualizar el porcentaje.', 'danger');
+              hasError = true;
+            }
+          }
+        }
+
+        if (pauseCheckbox) {
+          const shouldPause = pauseCheckbox.checked;
+          if (shouldPause !== this.isDailyPausedNext) {
+            const pauseRes = await postApi<{ isPaused: boolean }>('/api/giveaways/config/daily/schedule-pause', { pause: shouldPause });
+            if (pauseRes.success) {
+              this.isDailyPausedNext = shouldPause;
+            } else {
+              showToast(pauseRes.error || 'No se pudo actualizar el estado de pausa.', 'danger');
+              hasError = true;
+            }
+          }
+        }
+
+        if (!hasError) {
+          showToast('Configuración del sorteo diario actualizada.', 'success');
+        }
+        this.updateDailyBanner();
+        this.updateKpis();
+        this.applyFiltersAndRender();
         return true;
       },
       size: 'sm',

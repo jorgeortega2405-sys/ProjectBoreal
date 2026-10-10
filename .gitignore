@@ -73,3 +73,4 @@ public/uploads/*
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+/admin/public/uploads

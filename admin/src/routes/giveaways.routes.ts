@@ -1,4 +1,4 @@
-import { createGiveaway, deleteDraftGiveaway, executeManualDraw, getActiveBankAccounts, getAllGiveaways, getGiveawayByUuid, isDailyGiveawayPauseScheduled, saveUploadedGiveawayImage, setDailyGiveawayPauseScheduled, updateGiveaway, updateGiveawayStatus } from '../services/giveaways.service.js';
+import { createGiveaway, deleteDraftGiveaway, executeManualDraw, getActiveBankAccounts, getAllGiveaways, getDailyGiveawayPotPercentage, getGiveawayByUuid, isDailyGiveawayPauseScheduled, saveUploadedGiveawayImage, setDailyGiveawayPauseScheduled, setDailyGiveawayPotPercentage, updateGiveaway, updateGiveawayStatus } from '../services/giveaways.service.js';
 import { logger } from '../services/logger.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
@@ -28,12 +28,39 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 router.get('/config/daily', async (_req: Request, res: Response): Promise<void> => {
   try {
     const isPaused = await isDailyGiveawayPauseScheduled();
+    const potPercentage = await getDailyGiveawayPotPercentage();
     res.status(200).json({
-      data: { isPaused },
+      data: { isPaused, potPercentage },
       success: true,
     });
   } catch (err) {
     logger.app.error('Error al consultar configuración de sorteo diario en admin:', err);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+});
+
+router.post('/config/daily/pot-percentage', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { potPercentage } = req.body;
+    const num = Number(potPercentage);
+    if (Number.isNaN(num) || num < 1 || num > 100) {
+      res.status(400).json({
+        error: 'El porcentaje debe ser un número entero entre 1 y 100.',
+        success: false,
+      });
+      return;
+    }
+    await setDailyGiveawayPotPercentage(num);
+    res.status(200).json({
+      data: { potPercentage: num },
+      message: `El porcentaje de la bolsa acumulada se actualizó a ${num}%.`,
+      success: true,
+    });
+  } catch (err) {
+    logger.app.error('Error al actualizar porcentaje de sorteo diario en admin:', err);
     res.status(500).json({
       error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
       success: false,

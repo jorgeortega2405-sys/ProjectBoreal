@@ -4,7 +4,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml } from '../utils/dom.util.js';
+import { DropdownController, escapeHtml, setupDropdown } from '../utils/dom.util.js';
 
 interface BankAccountDetail {
   account_holder: string;
@@ -40,6 +40,54 @@ interface BankAccountsKpis {
   totalAccounts: number;
   uniqueBanksCount: number;
 }
+
+interface AccountTypeOption {
+  icon: string;
+  label: string;
+  value: 'clabe' | 'card' | 'both';
+}
+
+interface BankCatalogOption {
+  id: string;
+  name: string;
+}
+
+const ACCOUNT_TYPE_OPTIONS: AccountTypeOption[] = [
+  { icon: 'sync_alt', label: 'CLABE Interbancaria (SPEI)', value: 'clabe' },
+  { icon: 'credit_card', label: 'Tarjeta de Débito / Depósito', value: 'card' },
+  { icon: 'payments', label: 'Ambas (CLABE + Tarjeta)', value: 'both' },
+];
+
+const BANK_OPTIONS: BankCatalogOption[] = [
+  { id: 'bbva', name: 'BBVA México' },
+  { id: 'santander', name: 'Santander' },
+  { id: 'citibanamex', name: 'Citibanamex' },
+  { id: 'banorte', name: 'Banorte' },
+  { id: 'mercadopago', name: 'Mercado Pago' },
+  { id: 'nu', name: 'Nu México' },
+  { id: 'azteca', name: 'Banco Azteca' },
+  { id: 'spin', name: 'Spin by OXXO' },
+  { id: 'heybanco', name: 'Hey Banco' },
+  { id: 'banregio', name: 'Banregio' },
+  { id: 'hsbc', name: 'HSBC México' },
+  { id: 'scotiabank', name: 'Scotiabank' },
+  { id: 'inbursa', name: 'Inbursa' },
+  { id: 'bancoppel', name: 'BanCoppel' },
+  { id: 'stp', name: 'STP (Sistema de Transferencias y Pagos)' },
+  { id: 'afirme', name: 'Afirme' },
+  { id: 'banbajio', name: 'BanBajío' },
+  { id: 'bienestar', name: 'Banco del Bienestar' },
+  { id: 'klar', name: 'Klar' },
+  { id: 'uala', name: 'Ualá' },
+  { id: 'albo', name: 'Albo' },
+  { id: 'dolarapp', name: 'DolarApp' },
+  { id: 'intercam', name: 'Intercam Banco' },
+  { id: 'compartamos', name: 'Compartamos Banco' },
+  { id: 'mifel', name: 'Mifel' },
+  { id: 'actinver', name: 'Actinver' },
+  { id: 'multiva', name: 'Banco Multiva' },
+  { id: 'cacao', name: 'Cacao Paycard' },
+];
 
 function getBankSkinClass(bankName: string, clabe: string | null): string {
   const normName = (bankName || '').toLowerCase();
@@ -587,27 +635,89 @@ export class BankAccountsController implements ViewController {
   }
 
   private openCreateAccountModal(): void {
+    let selectedBank = '';
+    let selectedAccountType: 'clabe' | 'card' | 'both' = 'clabe';
+
+    const defaultTypeOption = ACCOUNT_TYPE_OPTIONS[0];
+
+    const bankOptionsHtml = BANK_OPTIONS.map(
+      (b) => `
+        <button type="button" class="menu-item" data-ref="option-bank-${b.id}" data-bank-value="${escapeHtml(b.name)}">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
+          <span class="menu-item__text">${escapeHtml(b.name)}</span>
+        </button>
+      `
+    ).join('');
+
+    const accountTypeOptionsHtml = ACCOUNT_TYPE_OPTIONS.map(
+      (opt) => `
+        <button type="button" class="menu-item ${opt.value === selectedAccountType ? 'is-active' : ''}" data-ref="option-account-type-${opt.value}" data-account-type-value="${opt.value}">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${opt.icon}"></use></svg>
+          <span class="menu-item__text">${escapeHtml(opt.label)}</span>
+        </button>
+      `
+    ).join('');
+
     const bodyContainer = document.createElement('div');
     bodyContainer.innerHTML = `
-      <div class="bank-modal-form">
-        <label class="field" data-ref="field-bank-name">
-          <input class="field__input" data-ref="input-bank-name" type="text" placeholder=" " maxlength="100" />
-          <span class="field__label">Nombre del Banco o Institución (ej. BBVA, Mercado Pago, Santander)</span>
-        </label>
+      <div class="bank-modal-form" data-ref="create-bank-modal-form">
+        <div class="field field--dropdown" data-ref="field-bank-name">
+          <span class="field__label">Nombre del Banco o Institución</span>
+          <div class="settings-dropdown-wrapper dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-bank-name">
+            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-bank-name" aria-label="Nombre del Banco o Institución">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="bank-selected-icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
+                <span class="dropdown-trigger__text dropdown-trigger__text--placeholder" data-ref="bank-selected-text">Selecciona un banco o institución</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-bank-name">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-bank-name">
+                <div class="menu-panel__drag-zone" data-ref="drag-zone-bank-name" aria-hidden="true">
+                  <div class="menu-panel__drag-handle"></div>
+                </div>
+                <div class="menu-panel__search" data-ref="bank-search-box">
+                  <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                  <input class="menu-panel__search-input" data-ref="input-search-bank" type="text" placeholder="Buscar banco o institución..." autocomplete="off" />
+                </div>
+                <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-bank-options">
+                  ${bankOptionsHtml}
+                </div>
+                <div class="menu-panel__empty is-hidden" data-ref="bank-empty-message">No se encontraron instituciones</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <label class="field" data-ref="field-account-holder">
           <input class="field__input" data-ref="input-account-holder" type="text" placeholder=" " maxlength="150" />
           <span class="field__label">Nombre del Titular o Razón Social</span>
         </label>
 
-        <label class="field" data-ref="field-account-type">
-          <select class="field__input" data-ref="select-account-type">
-            <option value="clabe" selected>CLABE Interbancaria (SPEI)</option>
-            <option value="card">Tarjeta de Débito / Depósito</option>
-            <option value="both">Ambas (CLABE + Tarjeta)</option>
-          </select>
+        <div class="field field--dropdown" data-ref="field-account-type">
           <span class="field__label">Modalidad de Recepción</span>
-        </label>
+          <div class="settings-dropdown-wrapper dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-account-type">
+            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-account-type" aria-label="Modalidad de Recepción">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="account-type-selected-icon" aria-hidden="true"><use href="/icons.svg#${defaultTypeOption.icon}"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="account-type-selected-text">${escapeHtml(defaultTypeOption.label)}</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-account-type">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-account-type">
+                <div class="menu-panel__drag-zone" data-ref="drag-zone-account-type" aria-hidden="true">
+                  <div class="menu-panel__drag-handle"></div>
+                </div>
+                <div class="menu-panel__list" data-ref="list-account-type-options">
+                  ${accountTypeOptionsHtml}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <label class="field" data-ref="field-clabe">
           <input class="field__input" data-ref="input-clabe" type="text" placeholder=" " maxlength="18" />
@@ -619,35 +729,124 @@ export class BankAccountsController implements ViewController {
           <span class="field__label">Número de Tarjeta (16 dígitos, opcional)</span>
         </label>
 
-        <label class="bank-checkbox-label">
+        <label class="bank-checkbox-label" data-ref="label-apply-all-giveaways">
           <input class="bank-checkbox-input" data-ref="check-apply-all-giveaways" type="checkbox" checked />
           <span>Habilitar inmediatamente en todos los sorteos activos y vigentes</span>
         </label>
       </div>
     `;
 
+    renderIcons(bodyContainer);
+
+    const bankWrapper = bodyContainer.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-bank-name"]');
+    const bankTriggerText = bodyContainer.querySelector<HTMLElement>('[data-ref="bank-selected-text"]');
+    const bankSearchInput = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-search-bank"]');
+    const bankEmptyMessage = bodyContainer.querySelector<HTMLElement>('[data-ref="bank-empty-message"]');
+    const bankOptionBtns = bodyContainer.querySelectorAll<HTMLButtonElement>('[data-bank-value]');
+
+    let bankDropdownController: DropdownController | null = null;
+    if (bankWrapper) {
+      bankDropdownController = setupDropdown(bankWrapper, {
+        isSelect: true,
+        matchWidth: true,
+        placement: 'bottom-start',
+      });
+    }
+
+    bankOptionBtns.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedBank = btn.getAttribute('data-bank-value') || '';
+        if (bankTriggerText) {
+          bankTriggerText.textContent = selectedBank;
+          bankTriggerText.classList.remove('dropdown-trigger__text--placeholder');
+        }
+        bankOptionBtns.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        bankDropdownController?.close();
+      });
+    });
+
+    bankSearchInput?.addEventListener('input', () => {
+      const q = (bankSearchInput.value || '').trim().toLowerCase();
+      let matchesCount = 0;
+      bankOptionBtns.forEach((btn) => {
+        const val = (btn.getAttribute('data-bank-value') || '').toLowerCase();
+        const matches = val.includes(q);
+        btn.classList.toggle('is-hidden', !matches);
+        if (matches) matchesCount++;
+      });
+      if (bankEmptyMessage) {
+        bankEmptyMessage.classList.toggle('is-hidden', matchesCount > 0);
+      }
+      bankDropdownController?.update();
+    });
+
+    const typeWrapper = bodyContainer.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-account-type"]');
+    const typeTriggerText = bodyContainer.querySelector<HTMLElement>('[data-ref="account-type-selected-text"]');
+    const typeIconUse = bodyContainer.querySelector<SVGUseElement>('[data-ref="account-type-selected-icon"] use');
+    const typeOptionBtns = bodyContainer.querySelectorAll<HTMLButtonElement>('[data-account-type-value]');
+
+    let typeDropdownController: DropdownController | null = null;
+    if (typeWrapper) {
+      typeDropdownController = setupDropdown(typeWrapper, {
+        isSelect: true,
+        matchWidth: true,
+        placement: 'bottom-start',
+      });
+    }
+
+    typeOptionBtns.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedAccountType = (btn.getAttribute('data-account-type-value') || 'clabe') as 'clabe' | 'card' | 'both';
+        const found = ACCOUNT_TYPE_OPTIONS.find((opt) => opt.value === selectedAccountType);
+        if (found) {
+          if (typeTriggerText) typeTriggerText.textContent = found.label;
+          if (typeIconUse) typeIconUse.setAttribute('href', `/icons.svg#${found.icon}`);
+        }
+        typeOptionBtns.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        typeDropdownController?.close();
+      });
+    });
+
+    const inputHolder = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-account-holder"]');
+    const inputClabe = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-clabe"]');
+    const inputCard = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-card-number"]');
+    const checkApplyAll = bodyContainer.querySelector<HTMLInputElement>('[data-ref="check-apply-all-giveaways"]');
+
+    inputClabe?.addEventListener('input', () => {
+      if (inputClabe) {
+        inputClabe.value = inputClabe.value.replace(/\D/g, '').slice(0, 18);
+      }
+    });
+
+    inputCard?.addEventListener('input', () => {
+      if (inputCard) {
+        inputCard.value = inputCard.value.replace(/\D/g, '').slice(0, 16);
+      }
+    });
+
     openModal({
       bodyHtml: bodyContainer,
       confirmClass: 'component-button--black',
       confirmText: 'Guardar Cuenta',
       description: 'Registra una nueva cuenta bancaria para recibir transferencias SPEI.',
+      onClose: () => {
+        bankDropdownController?.destroy();
+        typeDropdownController?.destroy();
+      },
       onConfirm: async () => {
-        const inputBank = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-bank-name"]');
-        const inputHolder = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-account-holder"]');
-        const selectType = bodyContainer.querySelector<HTMLSelectElement>('[data-ref="select-account-type"]');
-        const inputClabe = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-clabe"]');
-        const inputCard = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-card-number"]');
-        const checkApplyAll = bodyContainer.querySelector<HTMLInputElement>('[data-ref="check-apply-all-giveaways"]');
-
-        const bankName = (inputBank?.value || '').trim();
+        const bankName = selectedBank.trim();
         const accountHolder = (inputHolder?.value || '').trim();
-        const accountType = (selectType?.value || 'clabe') as 'clabe' | 'card' | 'both';
+        const accountType = selectedAccountType;
         const clabe = (inputClabe?.value || '').trim();
         const cardNumber = (inputCard?.value || '').trim();
         const applyToAll = Boolean(checkApplyAll?.checked);
 
         if (!bankName) {
-          showToast('Ingresa el nombre del banco.', 'warning');
+          showToast('Selecciona el nombre del banco o institución.', 'warning');
           return false;
         }
         if (!accountHolder) {
@@ -684,27 +883,98 @@ export class BankAccountsController implements ViewController {
   }
 
   private openEditAccountModal(account: BankAccountDetail): void {
+    let selectedBank = account.bank_name || '';
+    let selectedAccountType: 'clabe' | 'card' | 'both' = account.account_type || 'clabe';
+
+    const currentTypeOption = ACCOUNT_TYPE_OPTIONS.find((opt) => opt.value === selectedAccountType) || ACCOUNT_TYPE_OPTIONS[0];
+
+    const bankListOptions = [...BANK_OPTIONS];
+    const isCustomBank = selectedBank && !bankListOptions.some((b) => b.name.toLowerCase() === selectedBank.toLowerCase());
+    if (isCustomBank) {
+      bankListOptions.unshift({ id: 'custom', name: selectedBank });
+    }
+
+    const bankOptionsHtml = bankListOptions.map(
+      (b) => {
+        const isActive = b.name.toLowerCase() === selectedBank.toLowerCase();
+        return `
+          <button type="button" class="menu-item ${isActive ? 'is-active' : ''}" data-ref="option-bank-${b.id}" data-bank-value="${escapeHtml(b.name)}">
+            <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
+            <span class="menu-item__text">${escapeHtml(b.name)}</span>
+          </button>
+        `;
+      }
+    ).join('');
+
+    const accountTypeOptionsHtml = ACCOUNT_TYPE_OPTIONS.map(
+      (opt) => `
+        <button type="button" class="menu-item ${opt.value === selectedAccountType ? 'is-active' : ''}" data-ref="option-account-type-${opt.value}" data-account-type-value="${opt.value}">
+          <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#${opt.icon}"></use></svg>
+          <span class="menu-item__text">${escapeHtml(opt.label)}</span>
+        </button>
+      `
+    ).join('');
+
     const bodyContainer = document.createElement('div');
     bodyContainer.innerHTML = `
-      <div class="bank-modal-form">
-        <label class="field" data-ref="field-bank-name">
-          <input class="field__input" data-ref="input-bank-name" type="text" placeholder=" " value="${escapeHtml(account.bank_name)}" maxlength="100" />
+      <div class="bank-modal-form" data-ref="edit-bank-modal-form">
+        <div class="field field--dropdown" data-ref="field-bank-name">
           <span class="field__label">Nombre del Banco o Institución</span>
-        </label>
+          <div class="settings-dropdown-wrapper dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-bank-name">
+            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-bank-name" aria-label="Nombre del Banco o Institución">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="bank-selected-icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
+                <span class="dropdown-trigger__text ${selectedBank ? '' : 'dropdown-trigger__text--placeholder'}" data-ref="bank-selected-text">${selectedBank ? escapeHtml(selectedBank) : 'Selecciona un banco o institución'}</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-bank-name">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-bank-name">
+                <div class="menu-panel__drag-zone" data-ref="drag-zone-bank-name" aria-hidden="true">
+                  <div class="menu-panel__drag-handle"></div>
+                </div>
+                <div class="menu-panel__search" data-ref="bank-search-box">
+                  <svg class="component-icon menu-panel__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+                  <input class="menu-panel__search-input" data-ref="input-search-bank" type="text" placeholder="Buscar banco o institución..." autocomplete="off" />
+                </div>
+                <div class="menu-panel__list menu-panel__list--scrollable" data-ref="list-bank-options">
+                  ${bankOptionsHtml}
+                </div>
+                <div class="menu-panel__empty is-hidden" data-ref="bank-empty-message">No se encontraron instituciones</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <label class="field" data-ref="field-account-holder">
           <input class="field__input" data-ref="input-account-holder" type="text" placeholder=" " value="${escapeHtml(account.account_holder)}" maxlength="150" />
           <span class="field__label">Nombre del Titular</span>
         </label>
 
-        <label class="field" data-ref="field-account-type">
-          <select class="field__input" data-ref="select-account-type">
-            <option value="clabe" ${account.account_type === 'clabe' ? 'selected' : ''}>CLABE Interbancaria (SPEI)</option>
-            <option value="card" ${account.account_type === 'card' ? 'selected' : ''}>Tarjeta de Débito / Depósito</option>
-            <option value="both" ${account.account_type === 'both' ? 'selected' : ''}>Ambas (CLABE + Tarjeta)</option>
-          </select>
+        <div class="field field--dropdown" data-ref="field-account-type">
           <span class="field__label">Modalidad de Recepción</span>
-        </label>
+          <div class="settings-dropdown-wrapper dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-account-type">
+            <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-account-type" aria-label="Modalidad de Recepción">
+              <div class="dropdown-trigger__left">
+                <svg class="component-icon dropdown-trigger__icon" data-ref="account-type-selected-icon" aria-hidden="true"><use href="/icons.svg#${currentTypeOption.icon}"></use></svg>
+                <span class="dropdown-trigger__text" data-ref="account-type-selected-text">${escapeHtml(currentTypeOption.label)}</span>
+              </div>
+              <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+            </button>
+
+            <div class="dropdown-backdrop" data-ref="dropdown-backdrop-account-type">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-account-type">
+                <div class="menu-panel__drag-zone" data-ref="drag-zone-account-type" aria-hidden="true">
+                  <div class="menu-panel__drag-handle"></div>
+                </div>
+                <div class="menu-panel__list" data-ref="list-account-type-options">
+                  ${accountTypeOptionsHtml}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <label class="field" data-ref="field-clabe">
           <input class="field__input" data-ref="input-clabe" type="text" placeholder=" " value="${escapeHtml(account.clabe || '')}" maxlength="18" />
@@ -718,26 +988,115 @@ export class BankAccountsController implements ViewController {
       </div>
     `;
 
+    renderIcons(bodyContainer);
+
+    const bankWrapper = bodyContainer.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-bank-name"]');
+    const bankTriggerText = bodyContainer.querySelector<HTMLElement>('[data-ref="bank-selected-text"]');
+    const bankSearchInput = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-search-bank"]');
+    const bankEmptyMessage = bodyContainer.querySelector<HTMLElement>('[data-ref="bank-empty-message"]');
+    const bankOptionBtns = bodyContainer.querySelectorAll<HTMLButtonElement>('[data-bank-value]');
+
+    let bankDropdownController: DropdownController | null = null;
+    if (bankWrapper) {
+      bankDropdownController = setupDropdown(bankWrapper, {
+        isSelect: true,
+        matchWidth: true,
+        placement: 'bottom-start',
+      });
+    }
+
+    bankOptionBtns.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedBank = btn.getAttribute('data-bank-value') || '';
+        if (bankTriggerText) {
+          bankTriggerText.textContent = selectedBank;
+          bankTriggerText.classList.remove('dropdown-trigger__text--placeholder');
+        }
+        bankOptionBtns.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        bankDropdownController?.close();
+      });
+    });
+
+    bankSearchInput?.addEventListener('input', () => {
+      const q = (bankSearchInput.value || '').trim().toLowerCase();
+      let matchesCount = 0;
+      bankOptionBtns.forEach((btn) => {
+        const val = (btn.getAttribute('data-bank-value') || '').toLowerCase();
+        const matches = val.includes(q);
+        btn.classList.toggle('is-hidden', !matches);
+        if (matches) matchesCount++;
+      });
+      if (bankEmptyMessage) {
+        bankEmptyMessage.classList.toggle('is-hidden', matchesCount > 0);
+      }
+      bankDropdownController?.update();
+    });
+
+    const typeWrapper = bodyContainer.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-account-type"]');
+    const typeTriggerText = bodyContainer.querySelector<HTMLElement>('[data-ref="account-type-selected-text"]');
+    const typeIconUse = bodyContainer.querySelector<SVGUseElement>('[data-ref="account-type-selected-icon"] use');
+    const typeOptionBtns = bodyContainer.querySelectorAll<HTMLButtonElement>('[data-account-type-value]');
+
+    let typeDropdownController: DropdownController | null = null;
+    if (typeWrapper) {
+      typeDropdownController = setupDropdown(typeWrapper, {
+        isSelect: true,
+        matchWidth: true,
+        placement: 'bottom-start',
+      });
+    }
+
+    typeOptionBtns.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        selectedAccountType = (btn.getAttribute('data-account-type-value') || 'clabe') as 'clabe' | 'card' | 'both';
+        const found = ACCOUNT_TYPE_OPTIONS.find((opt) => opt.value === selectedAccountType);
+        if (found) {
+          if (typeTriggerText) typeTriggerText.textContent = found.label;
+          if (typeIconUse) typeIconUse.setAttribute('href', `/icons.svg#${found.icon}`);
+        }
+        typeOptionBtns.forEach((b) => b.classList.remove('is-active'));
+        btn.classList.add('is-active');
+        typeDropdownController?.close();
+      });
+    });
+
+    const inputHolder = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-account-holder"]');
+    const inputClabe = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-clabe"]');
+    const inputCard = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-card-number"]');
+
+    inputClabe?.addEventListener('input', () => {
+      if (inputClabe) {
+        inputClabe.value = inputClabe.value.replace(/\D/g, '').slice(0, 18);
+      }
+    });
+
+    inputCard?.addEventListener('input', () => {
+      if (inputCard) {
+        inputCard.value = inputCard.value.replace(/\D/g, '').slice(0, 16);
+      }
+    });
+
     openModal({
       bodyHtml: bodyContainer,
       confirmClass: 'component-button--black',
       confirmText: 'Actualizar Datos',
       description: `Editando cuenta: ${account.bank_name} • ${account.account_holder}`,
+      onClose: () => {
+        bankDropdownController?.destroy();
+        typeDropdownController?.destroy();
+      },
       onConfirm: async () => {
-        const inputBank = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-bank-name"]');
-        const inputHolder = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-account-holder"]');
-        const selectType = bodyContainer.querySelector<HTMLSelectElement>('[data-ref="select-account-type"]');
-        const inputClabe = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-clabe"]');
-        const inputCard = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-card-number"]');
-
-        const bankName = (inputBank?.value || '').trim();
+        const bankName = selectedBank.trim();
         const accountHolder = (inputHolder?.value || '').trim();
-        const accountType = (selectType?.value || 'clabe') as 'clabe' | 'card' | 'both';
+        const accountType = selectedAccountType;
         const clabe = (inputClabe?.value || '').trim();
         const cardNumber = (inputCard?.value || '').trim();
 
         if (!bankName) {
-          showToast('Ingresa el nombre del banco.', 'warning');
+          showToast('Selecciona el nombre del banco o institución.', 'warning');
           return false;
         }
         if (!accountHolder) {
