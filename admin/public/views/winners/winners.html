@@ -64,37 +64,11 @@
       </div>
     </div>
 
-    <div class="view-body admin-view-body" data-ref="winners-content-container">
-      <div class="dashboard-stats-grid" data-ref="winners-stats-grid">
-        <div class="dashboard-stat-card" data-ref="card-stat-total-winners">
-          <span class="dashboard-stat-card__title">Ganadores Emitidos</span>
-          <div class="stat-card-value" data-ref="kpi-total-winners">0</div>
-          <span class="dashboard-stat-card__desc">Sorteos concluidos con éxito</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-prizes-amount">
-          <span class="dashboard-stat-card__title">Premios Totales</span>
-          <div class="stat-card-value" data-ref="kpi-prizes-amount">$0.00 MXN</div>
-          <span class="dashboard-stat-card__desc">Bolsas y premios otorgados</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-delivered">
-          <span class="dashboard-stat-card__title">Premios Entregados</span>
-          <div class="stat-card-value" data-ref="kpi-delivered-count">0</div>
-          <span class="dashboard-stat-card__desc">Con entrega y SPEI completado</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-pending-delivery">
-          <span class="dashboard-stat-card__title">Por Entregar / Contactar</span>
-          <div class="stat-card-value" data-ref="kpi-pending-delivery-count">0</div>
-          <span class="dashboard-stat-card__desc">En proceso de entrega</span>
-        </div>
-      </div>
-
+    <div class="view-body admin-view-body admin-view-body--flush" data-ref="winners-content-container">
       <div class="winners-content-area" data-ref="winners-content-area">
         <section class="canvas-section canvas-section--full" data-ref="winners-section">
           <div class="winners-daily-wrapper" data-ref="winners-table-wrapper">
-            <div class="winners-daily-table-card" data-ref="winners-table-card">
+            <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="winners-table-card">
               <div class="winners-daily-table-scroll">
                 <table class="winners-daily-table" data-ref="winners-table">
                   <thead>
@@ -114,17 +88,6 @@
             </div>
           </div>
         </section>
-
-        <div class="component-empty-state is-hidden" data-ref="winners-empty-state">
-          <div class="component-empty-state__badge">
-            <svg class="component-icon component-empty-state__icon" aria-hidden="true"><use href="/icons.svg#emoji_events"></use></svg>
-          </div>
-          <h3 class="component-empty-state__title">Sin ganadores registrados</h3>
-          <p class="component-empty-state__desc">Aún no se han ejecutado sorteos concluidos o no coinciden con la búsqueda.</p>
-          <div class="component-empty-state__actions">
-            <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-search">Restablecer Búsqueda</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>

@@ -1,10 +1,11 @@
+import { requirePermission } from '../middlewares/auth.middleware.js';
 import { dashboardService } from '../services/dashboard.service.js';
 import { logger } from '../services/logger.service.js';
 import { Request, Response, Router } from 'express';
 
 const router = Router();
 
-router.get('/stats', async (req: Request, res: Response): Promise<void> => {
+router.get('/stats', requirePermission('dashboard:read'), async (req: Request, res: Response): Promise<void> => {
   try {
     const rawPeriod = typeof req.query.period === 'string' ? req.query.period : '30d';
     const allowedPeriods = ['7d', '30d', '90d', 'year'];

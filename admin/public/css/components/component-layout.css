@@ -1983,6 +1983,60 @@ html.dark-theme .component-top--gradient .design-share-btn:hover {
   box-shadow: var(--shadow-sm);
 }
 
+.winners-daily-table-card--flush {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: var(--bg-surface) !important;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.winners-daily-table-card--flush .winners-daily-table-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.admin-view-body--flush {
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.admin-view-body--flush .payments-content-area,
+.admin-view-body--flush .customers-content-area,
+.admin-view-body--flush .winners-content-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  gap: 0 !important;
+}
+
+.admin-view-body--flush .canvas-section {
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.admin-view-body--flush .winners-daily-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
 .winners-daily-table-scroll {
   width: 100%;
   overflow-x: auto;
@@ -2007,7 +2061,10 @@ html.dark-theme .component-top--gradient .design-share-btn:hover {
   letter-spacing: 0.05em;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-color);
-  background: transparent !important;
+  background: var(--bg-surface) !important;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .winners-tbody {
@@ -2052,6 +2109,24 @@ html.dark-theme .component-top--gradient .design-share-btn:hover {
   max-width: 100%;
   text-overflow: ellipsis;
   overflow: hidden;
+}
+
+.winners-table__tr-empty {
+  border-bottom: none;
+  background: transparent !important;
+  cursor: default;
+  user-select: auto;
+}
+
+.winners-table__tr-empty:hover {
+  background: transparent !important;
+}
+
+.winners-table__td-empty {
+  padding: 0 !important;
+  border: none !important;
+  text-align: center;
+  vertical-align: middle;
 }
 
 

@@ -4,7 +4,8 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml } from '../utils/dom.util.js';
+import { escapeHtml, getEmptyIllustration } from '../utils/dom.util.js';
+import { hasPermission } from '../utils/permission.util.js';
 
 interface CustomerSummary {
   block_reason: string | null;
@@ -44,13 +45,6 @@ interface CustomerOrderSummary {
 interface CustomerDetail {
   customer: CustomerSummary;
   orders: CustomerOrderSummary[];
-}
-
-interface CustomersKpis {
-  activeBuyersCount: number;
-  blockedCustomersCount: number;
-  totalCustomers: number;
-  totalTicketsSold: number;
 }
 
 function formatCurrency(amount: number): string {
@@ -206,13 +200,7 @@ export class CustomersController implements ViewController {
       'click',
       (e) => {
         e.preventDefault();
-        if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
-        this.searchQuery = '';
-        this.selectedCustomer = null;
-        this.currentPage = 1;
-        this.updateSelectionUi();
-        void this.loadCustomers();
+        this.resetSearch();
       },
       { signal }
     );
@@ -340,25 +328,7 @@ export class CustomersController implements ViewController {
   }
 
   private async loadInitialData(): Promise<void> {
-    await Promise.all([this.loadKpis(), this.loadCustomers()]);
-  }
-
-  private async loadKpis(): Promise<void> {
-    try {
-      const res = await getApi<CustomersKpis>('/api/customers/kpis');
-      if (res.success && res.data) {
-        const kpi = res.data;
-        const elTotal = this.container.querySelector('[data-ref="kpi-total-customers"]');
-        const elActive = this.container.querySelector('[data-ref="kpi-active-buyers"]');
-        const elTickets = this.container.querySelector('[data-ref="kpi-total-tickets"]');
-        const elBlocked = this.container.querySelector('[data-ref="kpi-blocked-count"]');
-
-        if (elTotal) elTotal.textContent = String(kpi.totalCustomers);
-        if (elActive) elActive.textContent = String(kpi.activeBuyersCount);
-        if (elTickets) elTickets.textContent = String(kpi.totalTicketsSold);
-        if (elBlocked) elBlocked.textContent = String(kpi.blockedCustomersCount);
-      }
-    } catch (_) {}
+    await this.loadCustomers();
   }
 
   private async loadCustomers(): Promise<void> {
@@ -395,10 +365,12 @@ export class CustomersController implements ViewController {
 
   private updateSelectionUi(): void {
     const isSelected = this.selectedCustomer !== null;
+    const canBlock = hasPermission('customers:block');
     if (this.defaultActions) this.defaultActions.classList.toggle('is-hidden', isSelected);
     if (this.selectedActions) this.selectedActions.classList.toggle('is-hidden', !isSelected);
 
     if (isSelected && this.selectedCustomer && this.btnActionToggleBlock) {
+      this.btnActionToggleBlock.classList.toggle('is-hidden', !canBlock);
       const isBlocked = this.selectedCustomer.is_blocked;
       this.btnActionToggleBlock.setAttribute('data-tooltip', isBlocked ? 'Desbloquear Participante' : 'Bloquear / Lista Negra');
       this.btnActionToggleBlock.setAttribute('aria-label', isBlocked ? 'Desbloquear Participante' : 'Bloquear / Lista Negra');
@@ -439,23 +411,57 @@ export class CustomersController implements ViewController {
     }
   }
 
+  private resetSearch(): void {
+    if (this.inputSearch) this.inputSearch.value = '';
+    if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
+    this.searchQuery = '';
+    this.selectedCustomer = null;
+    this.currentPage = 1;
+    this.updateSelectionUi();
+    void this.loadCustomers();
+  }
+
   private renderCustomers(): void {
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-customers"]');
-    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="customers-table-card"]');
-    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="customers-empty-state"]');
-
     if (!tbody) return;
 
     if (this.customers.length === 0) {
-      tbody.innerHTML = '';
-      if (tableCard) tableCard.classList.add('is-hidden');
-      if (emptyState) emptyState.classList.remove('is-hidden');
+      const isFiltered = Boolean(this.searchQuery);
+      tbody.innerHTML = `
+        <tr class="winners-table__tr-empty">
+          <td class="winners-table__td-empty" colspan="8">
+            <div class="component-empty-state component-empty-state--table" data-ref="customers-empty-state">
+              <div class="component-empty-state-graphic">
+                ${getEmptyIllustration(isFiltered ? 'search' : 'customers')}
+              </div>
+              <h2 class="component-empty-state-title">Sin participantes encontrados</h2>
+              <p class="component-empty-state-desc">${
+                isFiltered
+                  ? 'No se encontraron registros que coincidan con los criterios de búsqueda.'
+                  : 'Aún no hay clientes ni participantes registrados en la plataforma.'
+              }</p>
+              ${
+                isFiltered
+                  ? `<div class="component-empty-state-actions">
+                      <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-empty-reset-search">Restablecer Búsqueda</button>
+                    </div>`
+                  : ''
+              }
+            </div>
+          </td>
+        </tr>
+      `;
+      renderIcons(tbody);
+
+      const btnReset = tbody.querySelector<HTMLButtonElement>('[data-ref="btn-empty-reset-search"]');
+      btnReset?.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.resetSearch();
+      });
+
       this.updatePaginationUi();
       return;
     }
-
-    if (tableCard) tableCard.classList.remove('is-hidden');
-    if (emptyState) emptyState.classList.add('is-hidden');
 
     this.updatePaginationUi();
     const startIndex = (this.currentPage - 1) * this.pageSize;
@@ -525,7 +531,6 @@ export class CustomersController implements ViewController {
     if (res.success) {
       showToast('Cliente retirado de la lista negra.', 'success');
       void this.loadCustomers();
-      void this.loadKpis();
     } else {
       showToast(res.error || 'Error al desbloquear cliente.', 'danger');
     }
@@ -651,7 +656,6 @@ export class CustomersController implements ViewController {
         if (res.success) {
           showToast('Cliente añadido a la lista negra.', 'warning');
           void this.loadCustomers();
-          void this.loadKpis();
           return true;
         } else {
           showToast(res.error || 'Error al bloquear cliente.', 'danger');

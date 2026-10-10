@@ -109,49 +109,11 @@
       </div>
     </div>
 
-    <div class="view-body admin-view-body" data-ref="payments-content-container">
-      <div class="dashboard-stats-grid" data-ref="payments-stats-grid">
-        <div class="dashboard-stat-card" data-ref="card-stat-review">
-          <div class="dashboard-stat-card__header">
-            <span class="dashboard-stat-card__title">En Revisión</span>
-            <span class="stat-trend-badge">Comprobantes</span>
-          </div>
-          <div class="stat-card-value" data-ref="kpi-review-count">0</div>
-          <span class="dashboard-stat-card__desc" data-ref="kpi-review-amount">$0.00 MXN</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-pending">
-          <div class="dashboard-stat-card__header">
-            <span class="dashboard-stat-card__title">Pendientes</span>
-            <span class="stat-trend-badge">Apartados</span>
-          </div>
-          <div class="stat-card-value" data-ref="kpi-pending-count">0</div>
-          <span class="dashboard-stat-card__desc" data-ref="kpi-pending-amount">$0.00 MXN</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-completed">
-          <div class="dashboard-stat-card__header">
-            <span class="dashboard-stat-card__title">Pagos Liquidados</span>
-            <span class="stat-trend-badge">Confirmados</span>
-          </div>
-          <div class="stat-card-value" data-ref="kpi-completed-count">0</div>
-          <span class="dashboard-stat-card__desc" data-ref="kpi-completed-amount">$0.00 MXN</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-cancelled">
-          <div class="dashboard-stat-card__header">
-            <span class="dashboard-stat-card__title">Canceladas / Expiradas</span>
-            <span class="stat-trend-badge">Disponibles</span>
-          </div>
-          <div class="stat-card-value" data-ref="kpi-cancelled-count">0</div>
-          <span class="dashboard-stat-card__desc">Boletos liberados</span>
-        </div>
-      </div>
-
+    <div class="view-body admin-view-body admin-view-body--flush" data-ref="payments-content-container">
       <div class="payments-content-area" data-ref="payments-content-area">
         <section class="canvas-section canvas-section--full" data-ref="payments-section">
           <div class="winners-daily-wrapper" data-ref="payments-table-wrapper">
-            <div class="winners-daily-table-card" data-ref="payments-table-card">
+            <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="payments-table-card">
               <div class="winners-daily-table-scroll">
                 <table class="winners-daily-table" data-ref="payments-table">
                   <thead>
@@ -172,17 +134,6 @@
             </div>
           </div>
         </section>
-
-        <div class="component-empty-state is-hidden" data-ref="payments-empty-state">
-          <div class="component-empty-state__badge">
-            <svg class="component-icon component-empty-state__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-          </div>
-          <h3 class="component-empty-state__title">Sin órdenes ni comprobantes</h3>
-          <p class="component-empty-state__desc">No se encontraron órdenes registradas con los filtros seleccionados.</p>
-          <div class="component-empty-state__actions">
-            <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-filters">Restablecer Filtros</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>

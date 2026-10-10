@@ -5,6 +5,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { DropdownController, escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { hasPermission } from '../utils/permission.util.js';
 
 interface BankAccountDetail {
   account_holder: string;
@@ -576,6 +577,10 @@ export class BankAccountsController implements ViewController {
 
   private updateSelectionUi(): void {
     const isSelected = this.selectedAccount !== null;
+    const canManage = hasPermission('bank_accounts:manage');
+    const canDelete = hasPermission('bank_accounts:delete');
+
+    this.btnCreateAccount?.classList.toggle('is-hidden', !canManage);
 
     if (!isSelected) {
       if (this.defaultActions) this.defaultActions.classList.remove('is-hidden');
@@ -587,7 +592,12 @@ export class BankAccountsController implements ViewController {
       const acc = this.selectedAccount!;
       const isActive = Boolean(acc.is_active);
 
-      if (this.btnActionToggleStatus) {
+      this.btnActionEdit?.classList.toggle('is-hidden', !canManage);
+      this.btnActionToggleStatus?.classList.toggle('is-hidden', !canManage);
+      this.btnActionManageGiveaways?.classList.toggle('is-hidden', !canManage);
+      this.btnActionDelete?.classList.toggle('is-hidden', !canDelete);
+
+      if (this.btnActionToggleStatus && canManage) {
         const iconEl = this.btnActionToggleStatus.querySelector('[data-ref="icon-action-toggle-status"]');
         if (isActive) {
           this.btnActionToggleStatus.setAttribute('data-tooltip', 'Pausar cuenta');

@@ -5,6 +5,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { getEffectiveTheme, getTheme, toggleTheme } from '../services/theme.service.js';
 import { generateAvatarDataUri, getAvatarUrl } from '../utils/avatar.util.js';
+import { canAccessModule } from '../utils/permission.util.js';
 
 export let isDrawerOpen = false;
 let sidebarInstance: HTMLElement | null = null;
@@ -19,6 +20,7 @@ export function updateSidebarUserInfo(sidebar: HTMLElement): void {
   const user = getCurrentUser();
   const userName = user?.name || 'Administrador';
   const userEmail = user?.email || 'admin@projectboreal.com';
+  const userRoles = user?.roles && user.roles.length > 0 ? user.roles.join(' • ') : 'SIN ROL';
   const avatarSrc = generateAvatarDataUri(userName);
 
   const railAvatarImg = sidebar.querySelector<HTMLImageElement>('[data-ref="rail-avatar-img"]');
@@ -43,6 +45,28 @@ export function updateSidebarUserInfo(sidebar: HTMLElement): void {
   const activeAccountEmail = sidebar.querySelector<HTMLElement>('[data-ref="active-account-email"]');
   if (activeAccountEmail) {
     activeAccountEmail.textContent = userEmail;
+  }
+
+  const activeAccountRole = sidebar.querySelector<HTMLElement>('[data-ref="active-account-role"]');
+  if (activeAccountRole) {
+    activeAccountRole.textContent = userRoles;
+  }
+
+  const moduleRailMap: Array<{ moduleId: string; ref: string }> = [
+    { moduleId: 'dashboard', ref: 'rail-item-dashboard' },
+    { moduleId: 'giveaways', ref: 'rail-item-giveaways' },
+    { moduleId: 'payments', ref: 'rail-item-payments' },
+    { moduleId: 'bank-accounts', ref: 'rail-item-bank-accounts' },
+    { moduleId: 'customers', ref: 'rail-item-customers' },
+    { moduleId: 'winners', ref: 'rail-item-winners' },
+    { moduleId: 'roles', ref: 'rail-item-roles' },
+  ];
+
+  for (const item of moduleRailMap) {
+    const el = sidebar.querySelector<HTMLElement>(`[data-ref="${item.ref}"]`);
+    if (el) {
+      el.classList.toggle('is-hidden', !canAccessModule(item.moduleId));
+    }
   }
 }
 
@@ -76,6 +100,11 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     path.startsWith('/ganadores') ||
     path === '/premios' ||
     path.startsWith('/premios');
+  const isRoles =
+    path === '/roles' ||
+    path.startsWith('/roles') ||
+    path === '/permisos' ||
+    path.startsWith('/permisos');
   const isSettings =
     path === '/settings' ||
     path.startsWith('/settings') ||
@@ -89,6 +118,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     !isBankAccounts &&
     !isCustomers &&
     !isWinners &&
+    !isRoles &&
     !isSettings &&
     (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
 
@@ -104,6 +134,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnCustomers = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-customers"]');
   const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
   const btnWinners = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-winners"]');
+  const itemRoles = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-roles"]');
+  const btnRoles = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-roles"]');
   const itemAvatar = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
   const btnAvatar = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
   const btnMenuSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
@@ -121,6 +153,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnCustomers?.classList.toggle('is-active', isCustomers);
   itemWinners?.classList.toggle('is-active', isWinners);
   btnWinners?.classList.toggle('is-active', isWinners);
+  itemRoles?.classList.toggle('is-active', isRoles);
+  btnRoles?.classList.toggle('is-active', isRoles);
   itemAvatar?.classList.toggle('is-active', isSettings);
   btnAvatar?.classList.toggle('is-active', isSettings);
   btnMenuSettings?.classList.toggle('is-active', isSettings);
@@ -159,6 +193,7 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   const itemBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-bank-accounts"]');
   const itemCustomers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-customers"]');
   const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
+  const itemRoles = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-roles"]');
   const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
   const btnAvatar = avatarContainer?.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
   const avatarMenu = avatarContainer?.querySelector<HTMLElement>('[data-ref="avatar-menu"]');
@@ -198,6 +233,11 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   itemWinners?.addEventListener('click', (e) => {
     e.preventDefault();
     navigate('/winners');
+  });
+
+  itemRoles?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/roles');
   });
 
   if (avatarContainer && btnAvatar && avatarMenu) {

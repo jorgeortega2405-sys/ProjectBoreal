@@ -258,6 +258,242 @@ ON DUPLICATE KEY UPDATE
   `name` = VALUES(`name`),
   `is_active` = VALUES(`is_active`);
 
+-- ============================================================================
+-- Tablas de Control de Acceso Basado en Permisos (PBAC / RBAC Administrativo)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `roles` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(50) NOT NULL UNIQUE,
+  `display_name` VARCHAR(100) NOT NULL,
+  `description` VARCHAR(255) NULL,
+  `category` VARCHAR(50) NOT NULL DEFAULT 'operations',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_roles_name` (`name`),
+  INDEX `idx_roles_category` (`category`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `permissions` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(100) NOT NULL UNIQUE,
+  `display_name` VARCHAR(150) NOT NULL,
+  `description` VARCHAR(255) NULL,
+  `module` VARCHAR(50) NOT NULL DEFAULT 'general',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_permissions_name` (`name`),
+  INDEX `idx_permissions_module` (`module`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `role_permissions` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `role_id` INT UNSIGNED NOT NULL,
+  `permission_id` INT UNSIGNED NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE INDEX `uq_role_permission` (`role_id`, `permission_id`),
+  INDEX `idx_rp_role` (`role_id`),
+  INDEX `idx_rp_permission` (`permission_id`),
+  CONSTRAINT `fk_rp_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_rp_permission` FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `admin_user_roles` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `admin_user_id` INT UNSIGNED NOT NULL,
+  `role_id` INT UNSIGNED NOT NULL,
+  `assigned_by` INT UNSIGNED NULL,
+  `assigned_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE INDEX `uq_admin_user_role` (`admin_user_id`, `role_id`),
+  INDEX `idx_aur_admin_user` (`admin_user_id`),
+  INDEX `idx_aur_role` (`role_id`),
+  CONSTRAINT `fk_aur_admin_user` FOREIGN KEY (`admin_user_id`) REFERENCES `admin_users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_aur_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_aur_assigned_by` FOREIGN KEY (`assigned_by`) REFERENCES `admin_users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `roles` (`name`, `display_name`, `description`, `category`) VALUES
+  ('SUPER_ADMIN', 'Super Admin', 'Acceso excepcional e irrestricto a toda la plataforma administrativa.', 'platform'),
+  ('PLATFORM_ADMIN', 'Platform Admin', 'Administración general de la plataforma y todos sus módulos.', 'platform'),
+  ('SECURITY_ADMIN', 'Security Admin', 'IAM, sesiones, políticas de seguridad, prevención de fraude y lista negra.', 'platform'),
+  ('IAM_ADMIN', 'IAM Admin', 'Administración de cuentas administrativas, roles, permisos y matriz PBAC.', 'platform'),
+  ('COMPLIANCE_ADMIN', 'Compliance Admin', 'Cumplimiento regulatorio, auditoría de sorteos, ganadores y bloqueos.', 'platform'),
+  ('AUDITOR', 'Auditor', 'Acceso global de solo lectura a todos los módulos del panel administrativo.', 'platform'),
+  ('READ_ONLY_ADMIN', 'Read-Only Admin', 'Administración y diagnóstico de solo lectura en módulos operativos.', 'platform'),
+  ('SYSTEM_ACCOUNT', 'System Account', 'Cuenta institucional o de sistema inmutable.', 'platform'),
+  ('SUPPORT_L1', 'Support L1', 'Soporte básico de nivel 1 y consulta de sorteos, órdenes, clientes y ganadores.', 'support'),
+  ('SUPPORT_L2', 'Support L2', 'Soporte técnico nivel 2 con facultad de prevención y bloqueo de clientes fraudulentos.', 'support'),
+  ('SUPPORT_L3', 'Support L3', 'Soporte técnico avanzado nivel 3 con gestión de rastreo SPEI y bloqueos.', 'support'),
+  ('SUPPORT_MANAGER', 'Support Manager', 'Supervisión del equipo de soporte, atención a clientes y entrega de premios.', 'support'),
+  ('CUSTOMER_SUCCESS', 'Customer Success', 'Atención a participantes y seguimiento integral de entrega de premios a ganadores.', 'support'),
+  ('INCIDENT_MANAGER', 'Incident Manager', 'Coordinación y contención de incidentes operativos y antifraude.', 'support'),
+  ('ENGINEER', 'Engineer', 'Herramientas técnicas y diagnóstico de ingeniería.', 'engineering'),
+  ('SENIOR_ENGINEER', 'Senior Engineer', 'Acceso técnico avanzado de ingeniería.', 'engineering'),
+  ('DEVOPS', 'DevOps', 'Infraestructura, despliegues y servicios.', 'engineering'),
+  ('SRE', 'SRE', 'Observabilidad, disponibilidad y operaciones de producción.', 'engineering'),
+  ('RELEASE_MANAGER', 'Release Manager', 'Gestión de versiones y despliegues controlados.', 'engineering'),
+  ('DATA_ANALYST', 'Data Analyst', 'Analítica de ventas, métricas de sorteos y reportes.', 'data'),
+  ('DATA_ENGINEER', 'Data Engineer', 'Pipelines e ingeniería de procesamiento de datos.', 'data'),
+  ('DATA_ADMIN', 'Data Admin', 'Administración y consulta integral de recursos de datos.', 'data'),
+  ('PRIVACY_ADMIN', 'Privacy Admin', 'Privacidad de datos de participantes y gestión de bloqueos.', 'data'),
+  ('DATA_AUDITOR', 'Data Auditor', 'Auditoría de integridad de datos de sorteos, órdenes y ganadores.', 'data'),
+  ('BILLING_AGENT', 'Billing Agent', 'Verificación de comprobantes SPEI, aprobación/rechazo de órdenes y rastreo.', 'finance'),
+  ('BILLING_MANAGER', 'Billing Manager', 'Gestión financiera avanzada de pagos SPEI y cuentas bancarias receptoras.', 'finance'),
+  ('FINANCE_ADMIN', 'Finance Admin', 'Configuración financiera total de cuentas bancarias, CLABEs, tarjetas y pagos.', 'finance'),
+  ('REFUNDS_ADMIN', 'Refunds Admin', 'Gestión especializada de rechazos, cancelaciones y liberación de boletos.', 'finance'),
+  ('OPERATIONS_AGENT', 'Operations Agent', 'Operación diaria de sorteos, consulta de órdenes y seguimiento de ganadores.', 'operations'),
+  ('OPERATIONS_MANAGER', 'Operations Manager', 'Supervisión operacional completa de sorteos, tómbola, pagos, clientes y premios.', 'operations'),
+  ('WORKFLOW_ADMIN', 'Workflow Admin', 'Administración del ciclo automático del sorteo diario y parámetros de bolsa.', 'operations'),
+  ('SYSTEM_OPERATOR', 'System Operator', 'Operaciones técnicas sobre sistemas y procesos programados.', 'operations'),
+  ('HR_MANAGER', 'HR Manager', 'Gestión de recursos humanos, contrataciones y compensación.', 'operations'),
+  ('HR_RECRUITER', 'HR Recruiter', 'Reclutamiento y altas de talento.', 'operations')
+ON DUPLICATE KEY UPDATE
+  `display_name` = VALUES(`display_name`),
+  `description` = VALUES(`description`),
+  `category` = VALUES(`category`);
+
+INSERT INTO `permissions` (`name`, `display_name`, `description`, `module`) VALUES
+  ('dashboard:read', 'Ver Dashboard', 'Acceso al panel principal, KPIs financieros, gráficos y estado de pasarelas SPEI.', 'dashboard'),
+  ('giveaways:read', 'Ver Sorteos', 'Consultar catálogo de sorteos, progreso de boletos y configuración del ciclo diario.', 'giveaways'),
+  ('giveaways:create', 'Crear Sorteos', 'Crear nuevos sorteos, duplicar sorteos existentes y subir imágenes de premios.', 'giveaways'),
+  ('giveaways:manage', 'Gestionar Sorteos', 'Editar sorteos, pausar/reanudar/cancelar ventas y configurar el ciclo diario.', 'giveaways'),
+  ('giveaways:draw', 'Ejecutar Sorteos', 'Ejecutar manualmente la selección de boleto ganador de un sorteo.', 'giveaways'),
+  ('giveaways:delete', 'Eliminar Sorteos', 'Eliminar borradores de sorteos sin ventas activas.', 'giveaways'),
+  ('orders:read', 'Ver Pagos y Órdenes', 'Consultar órdenes, KPIs de pagos, expediente SPEI/Banxico y comprobantes.', 'orders'),
+  ('orders:approve', 'Aprobar Pagos', 'Aprobar manualmente comprobantes de pago y liquidar boletos.', 'orders'),
+  ('orders:reject', 'Rechazar Pagos', 'Rechazar comprobantes inválidos y liberar boletos apartados.', 'orders'),
+  ('orders:manage', 'Gestionar Rastreo SPEI', 'Modificar clave de rastreo SPEI y reprogramar validación automática en Banxico.', 'orders'),
+  ('bank_accounts:read', 'Ver Cuentas Bancarias', 'Consultar cuentas CLABE y tarjetas receptoras y su cobertura en sorteos.', 'bank_accounts'),
+  ('bank_accounts:manage', 'Gestionar Cuentas Bancarias', 'Registrar, editar, activar/pausar cuentas bancarias y asignarlas a sorteos.', 'bank_accounts'),
+  ('bank_accounts:delete', 'Eliminar Cuentas Bancarias', 'Eliminar cuentas bancarias del catálogo.', 'bank_accounts'),
+  ('customers:read', 'Ver Clientes', 'Consultar directorio de participantes, KPIs e historial de órdenes por teléfono.', 'customers'),
+  ('customers:block', 'Sancionar Clientes', 'Agregar o retirar números telefónicos de la lista negra antifraude.', 'customers'),
+  ('winners:read', 'Ver Ganadores', 'Consultar padrón de ganadores, KPIs de premios y evidencias de entrega.', 'winners'),
+  ('winners:manage', 'Gestionar Entregas de Premios', 'Actualizar estado de entrega, notas de contacto, testimonio y evidencias.', 'winners'),
+  ('roles:read', 'Ver Roles y Permisos', 'Consultar catálogo de roles, permisos y matriz de control de acceso PBAC.', 'roles'),
+  ('roles:manage', 'Gestionar Roles y Permisos', 'Configurar permisos asignados a cada rol y administrar roles de cuentas admin.', 'roles')
+ON DUPLICATE KEY UPDATE
+  `display_name` = VALUES(`display_name`),
+  `description` = VALUES(`description`),
+  `module` = VALUES(`module`);
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` IN ('SUPER_ADMIN', 'PLATFORM_ADMIN');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'SECURITY_ADMIN'
+  AND p.`name` IN ('dashboard:read', 'customers:read', 'customers:block', 'orders:read', 'roles:read', 'roles:manage');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'IAM_ADMIN'
+  AND p.`name` IN ('dashboard:read', 'roles:read', 'roles:manage');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'COMPLIANCE_ADMIN'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'customers:block', 'winners:read', 'roles:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'AUDITOR'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read', 'roles:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'READ_ONLY_ADMIN'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'FINANCE_ADMIN'
+  AND p.`name` IN ('dashboard:read', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'bank_accounts:manage', 'bank_accounts:delete', 'giveaways:read', 'winners:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'BILLING_MANAGER'
+  AND p.`name` IN ('dashboard:read', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'bank_accounts:manage', 'customers:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'BILLING_AGENT'
+  AND p.`name` IN ('orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'customers:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'REFUNDS_ADMIN'
+  AND p.`name` IN ('orders:read', 'orders:reject', 'customers:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'OPERATIONS_MANAGER'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw', 'giveaways:delete', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'customers:read', 'customers:block', 'winners:read', 'winners:manage');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'OPERATIONS_AGENT'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'orders:read', 'customers:read', 'winners:read', 'winners:manage');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'WORKFLOW_ADMIN'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:manage');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'SUPPORT_MANAGER'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'orders:manage', 'customers:read', 'customers:block', 'winners:read', 'winners:manage');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'CUSTOMER_SUCCESS'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'winners:read', 'winners:manage');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'SUPPORT_L3'
+  AND p.`name` IN ('giveaways:read', 'orders:read', 'orders:manage', 'customers:read', 'customers:block', 'winners:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'SUPPORT_L2'
+  AND p.`name` IN ('giveaways:read', 'orders:read', 'customers:read', 'customers:block', 'winners:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'SUPPORT_L1'
+  AND p.`name` IN ('giveaways:read', 'orders:read', 'customers:read', 'winners:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'INCIDENT_MANAGER'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'customers:block');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'DATA_ADMIN'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'DATA_ANALYST'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'winners:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'DATA_AUDITOR'
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'winners:read');
+
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
+WHERE r.`name` = 'PRIVACY_ADMIN'
+  AND p.`name` IN ('customers:read', 'customers:block');
+
+INSERT IGNORE INTO `admin_user_roles` (`admin_user_id`, `role_id`)
+SELECT 1, `id` FROM `roles` WHERE `name` IN ('SUPER_ADMIN', 'PLATFORM_ADMIN');
+
 GRANT SELECT, INSERT, UPDATE, DELETE, INDEX, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
+
 

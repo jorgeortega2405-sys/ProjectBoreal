@@ -3,6 +3,7 @@ import { redis } from '../config/redis.config.js';
 import { AdminSession, AdminUserRow, SafeAdminUser } from '../types/auth.types.js';
 import { generateSessionToken, verifyPassword } from '../utils/crypto.util.js';
 import { logger } from './logger.service.js';
+import { getAdminEffectivePermissions, getAdminRoles } from './roles.service.js';
 
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const RATE_LIMIT_MAX_ATTEMPTS = 5;
@@ -122,6 +123,11 @@ export class AuthService {
 
     await this.clearRateLimit(ip, normalizedEmail);
 
+    const [roles, permissions] = await Promise.all([
+      getAdminRoles(admin.id),
+      getAdminEffectivePermissions(admin.id),
+    ]);
+
     const sessionToken = generateSessionToken();
     const sessionData: AdminSession = {
       createdAt: Date.now(),
@@ -129,6 +135,8 @@ export class AuthService {
       id: admin.id,
       ip,
       name: admin.name,
+      permissions,
+      roles,
       userAgent,
       uuid: admin.uuid,
     };
@@ -153,7 +161,10 @@ export class AuthService {
         logger.db.warn('No se pudo actualizar last_login_at para admin', err);
       });
 
-    logger.security.info(`Login exitoso de administrador: [${admin.email}] ID [${admin.id}] desde IP [${ip}]`);
+    logger.security.info(`Login exitoso de administrador: [${admin.email}] ID [${admin.id}] desde IP [${ip}]`, {
+      permissionsCount: permissions.length,
+      roles,
+    });
 
     return {
       sessionToken,
@@ -161,6 +172,8 @@ export class AuthService {
         email: admin.email,
         id: admin.id,
         name: admin.name,
+        permissions,
+        roles,
         uuid: admin.uuid,
       },
     };
@@ -171,37 +184,46 @@ export class AuthService {
       return null;
     }
 
+    let baseSession: AdminSession | null = null;
     const redisKey = this.getSessionKey(sessionToken);
+
     try {
       if (redis.status === 'ready') {
         const raw = await redis.get(redisKey);
         if (raw) {
-          const session = JSON.parse(raw) as AdminSession;
-          return {
-            email: session.email,
-            id: session.id,
-            name: session.name,
-            uuid: session.uuid,
-          };
+          baseSession = JSON.parse(raw) as AdminSession;
         }
       }
     } catch {}
 
-    const mem = memorySessions.get(sessionToken);
-    if (mem) {
-      if (Date.now() > mem.expiresAt) {
-        memorySessions.delete(sessionToken);
-        return null;
+    if (!baseSession) {
+      const mem = memorySessions.get(sessionToken);
+      if (mem) {
+        if (Date.now() > mem.expiresAt) {
+          memorySessions.delete(sessionToken);
+          return null;
+        }
+        baseSession = mem.session;
       }
-      return {
-        email: mem.session.email,
-        id: mem.session.id,
-        name: mem.session.name,
-        uuid: mem.session.uuid,
-      };
     }
 
-    return null;
+    if (!baseSession) {
+      return null;
+    }
+
+    const [roles, permissions] = await Promise.all([
+      getAdminRoles(baseSession.id),
+      getAdminEffectivePermissions(baseSession.id),
+    ]);
+
+    return {
+      email: baseSession.email,
+      id: baseSession.id,
+      name: baseSession.name,
+      permissions,
+      roles,
+      uuid: baseSession.uuid,
+    };
   }
 
   async logout(sessionToken: string): Promise<void> {

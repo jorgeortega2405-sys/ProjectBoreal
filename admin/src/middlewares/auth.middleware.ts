@@ -1,4 +1,5 @@
 import { authService } from '../services/auth.service.js';
+import { logger } from '../services/logger.service.js';
 import { SafeAdminUser } from '../types/auth.types.js';
 import { NextFunction, Request, Response } from 'express';
 
@@ -64,12 +65,23 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 }
 
 export function hasPermission(user: SafeAdminUser | undefined, permission: string): boolean {
-  if (!user) return false;
-  if (!user.permissions || user.permissions.length === 0) return true;
+  if (!user || !Array.isArray(user.permissions) || user.permissions.length === 0) return false;
   return user.permissions.includes(permission) || user.permissions.includes('*');
 }
 
-export function requirePermission(permission: string) {
+export function hasAnyPermission(user: SafeAdminUser | undefined, permissions: string[]): boolean {
+  if (!user || !Array.isArray(user.permissions) || user.permissions.length === 0) return false;
+  if (user.permissions.includes('*')) return true;
+  return permissions.some((p) => user.permissions.includes(p));
+}
+
+export function hasAllPermissions(user: SafeAdminUser | undefined, permissions: string[]): boolean {
+  if (!user || !Array.isArray(user.permissions) || user.permissions.length === 0) return false;
+  if (user.permissions.includes('*')) return true;
+  return permissions.every((p) => user.permissions.includes(p));
+}
+
+export function requirePermission(...neededPerms: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const user = req.adminUser;
     if (!user) {
@@ -80,7 +92,44 @@ export function requirePermission(permission: string) {
       return;
     }
 
-    if (!hasPermission(user, permission)) {
+    if (!hasAnyPermission(user, neededPerms)) {
+      logger.security.warn('Acceso denegado por falta de permiso PBAC en Admin', {
+        adminId: user.id,
+        email: user.email,
+        method: req.method,
+        neededPerms,
+        path: req.originalUrl,
+      });
+      res.status(403).json({
+        error: 'Acceso denegado: permisos insuficientes para realizar esta operación.',
+        success: false,
+      });
+      return;
+    }
+
+    next();
+  };
+}
+
+export function requireAllPermissions(...neededPerms: string[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const user = req.adminUser;
+    if (!user) {
+      res.status(401).json({
+        error: 'No autorizado. Se requiere iniciar sesión.',
+        success: false,
+      });
+      return;
+    }
+
+    if (!hasAllPermissions(user, neededPerms)) {
+      logger.security.warn('Acceso denegado por falta de permisos compuestos PBAC en Admin', {
+        adminId: user.id,
+        email: user.email,
+        method: req.method,
+        neededPerms,
+        path: req.originalUrl,
+      });
       res.status(403).json({
         error: 'Acceso denegado: permisos insuficientes para realizar esta operación.',
         success: false,

@@ -30,7 +30,7 @@ Puedes generar el hash scrypt para una nueva contraseña ejecutando en la termin
 npx tsx -e "import('./admin/src/utils/crypto.util.ts').then(async m => { console.log(await m.hashPassword('TuContraseñaSegura')); });"
 ```
 
-### Sentencia SQL para insertar un nuevo administrador:
+### Sentencia SQL para insertar un nuevo administrador y asignarle un rol:
 ```sql
 USE `db_lottery`;
 
@@ -42,7 +42,20 @@ VALUES (
   'HASH_GENERADO_AQUI',
   1
 );
+
+-- Asignar un rol (ej. BILLING_AGENT, OPERATIONS_MANAGER, SUPPORT_L1, AUDITOR, SUPER_ADMIN, etc.)
+INSERT INTO `admin_user_roles` (`admin_user_id`, `role_id`)
+SELECT u.`id`, r.`id`
+FROM `admin_users` u
+INNER JOIN `roles` r ON r.`name` = 'BILLING_AGENT'
+WHERE u.`email` = 'nuevo_admin@projectboreal.com';
 ```
+
+### Gestión de Roles y Permisos desde el Panel (`/roles`)
+Las cuentas con el permiso `roles:manage` (como `SUPER_ADMIN`, `PLATFORM_ADMIN`, `IAM_ADMIN` o `SECURITY_ADMIN`) pueden acceder a la sección **Roles y Permisos** (`/roles`) dentro del panel administrativo para:
+- Inspeccionar los **34 roles** organizacionales agrupados por categoría (`platform`, `finance`, `operations`, `support`, `data`, `engineering`).
+- Activar o desactivar cualquiera de los **19 permisos granulares** (`role_permissions`) de un rol en tiempo real.
+- Asignar o revocar roles a cuentas registradas en `admin_users` (`admin_user_roles`).
 
 ### Desactivar o reactivar un administrador:
 ```sql
@@ -52,3 +65,4 @@ UPDATE `admin_users` SET `is_active` = 0 WHERE `email` = 'nuevo_admin@projectbor
 -- Reactivar cuenta
 UPDATE `admin_users` SET `is_active` = 1 WHERE `email` = 'nuevo_admin@projectboreal.com';
 ```
+

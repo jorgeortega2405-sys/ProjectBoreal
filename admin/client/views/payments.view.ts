@@ -4,7 +4,8 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { DropdownController, escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { DropdownController, escapeHtml, getEmptyIllustration, setupDropdown } from '../utils/dom.util.js';
+import { hasPermission } from '../utils/permission.util.js';
 
 interface AdminOrderSummary {
   bank_reference: string | null;
@@ -40,19 +41,6 @@ interface AdminOrderDetail extends AdminOrderSummary {
   giveaway_status: string;
   giveaway_total_tickets: number;
   raw_receipt_url?: string;
-}
-
-interface PaymentKpis {
-  cancelledCount: number;
-  completedAmount: number;
-  completedCount: number;
-  expiredCount: number;
-  inReviewAmount: number;
-  inReviewCount: number;
-  manualReviewCount: number;
-  pendingPaymentAmount: number;
-  pendingPaymentCount: number;
-  totalOrdersCount: number;
 }
 
 interface GiveawayOption {
@@ -300,18 +288,7 @@ export class PaymentsController implements ViewController {
       'click',
       (e) => {
         e.preventDefault();
-        this.selectedStatus = 'all';
-        this.selectedGiveawayUuid = 'all';
-        this.searchQuery = '';
-        this.selectedOrder = null;
-        this.currentPage = 1;
-
-        if (this.inputSearch) this.inputSearch.value = '';
-        this.btnClearSearch?.classList.add('is-hidden');
-
-        this.syncStatusUi();
-        this.syncGiveawayDropdownUi();
-        void this.loadOrders();
+        this.resetFilters();
       },
       { signal }
     );
@@ -403,7 +380,7 @@ export class PaymentsController implements ViewController {
   }
 
   private async loadInitialData(): Promise<void> {
-    await Promise.all([this.loadGiveawaysOptions(), this.loadKpis(), this.loadOrders()]);
+    await Promise.all([this.loadGiveawaysOptions(), this.loadOrders()]);
   }
 
   private async loadGiveawaysOptions(): Promise<void> {
@@ -436,41 +413,6 @@ export class PaymentsController implements ViewController {
               }
             });
           });
-        }
-      }
-    } catch (_) {}
-  }
-
-  private async loadKpis(): Promise<void> {
-    try {
-      const res = await getApi<PaymentKpis>('/api/orders/kpis');
-      if (res.success && res.data) {
-        const kpi = res.data;
-
-        const elRevCount = this.container.querySelector('[data-ref="kpi-review-count"]');
-        const elRevAmount = this.container.querySelector('[data-ref="kpi-review-amount"]');
-        const elPendCount = this.container.querySelector('[data-ref="kpi-pending-count"]');
-        const elPendAmount = this.container.querySelector('[data-ref="kpi-pending-amount"]');
-        const elCompCount = this.container.querySelector('[data-ref="kpi-completed-count"]');
-        const elCompAmount = this.container.querySelector('[data-ref="kpi-completed-amount"]');
-        const elCancCount = this.container.querySelector('[data-ref="kpi-cancelled-count"]');
-        const elBadgeRev = this.container.querySelector<HTMLElement>('[data-ref="badge-count-review"]');
-
-        if (elRevCount) elRevCount.textContent = formatNumber(kpi.inReviewCount);
-        if (elRevAmount) elRevAmount.textContent = formatCurrency(kpi.inReviewAmount);
-        if (elPendCount) elPendCount.textContent = formatNumber(kpi.pendingPaymentCount);
-        if (elPendAmount) elPendAmount.textContent = formatCurrency(kpi.pendingPaymentAmount);
-        if (elCompCount) elCompCount.textContent = formatNumber(kpi.completedCount);
-        if (elCompAmount) elCompAmount.textContent = formatCurrency(kpi.completedAmount);
-        if (elCancCount) elCancCount.textContent = formatNumber(kpi.cancelledCount + kpi.expiredCount);
-
-        if (elBadgeRev) {
-          if (kpi.inReviewCount > 0) {
-            elBadgeRev.textContent = String(kpi.inReviewCount);
-            elBadgeRev.classList.remove('is-hidden');
-          } else {
-            elBadgeRev.classList.add('is-hidden');
-          }
         }
       }
     } catch (_) {}
@@ -534,6 +476,11 @@ export class PaymentsController implements ViewController {
     this.defaultActions?.classList.toggle('is-hidden', isSelected);
     this.selectedActions?.classList.toggle('is-hidden', !isSelected);
 
+    if (isSelected) {
+      this.btnActionApprove?.classList.toggle('is-hidden', !hasPermission('orders:approve'));
+      this.btnActionReject?.classList.toggle('is-hidden', !hasPermission('orders:reject'));
+    }
+
     const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr');
     rows.forEach((row) => {
       const isThisSelected = row.getAttribute('data-uuid') === this.selectedOrder?.uuid;
@@ -541,22 +488,60 @@ export class PaymentsController implements ViewController {
     });
   }
 
+  private resetFilters(): void {
+    this.selectedStatus = 'all';
+    this.selectedGiveawayUuid = 'all';
+    this.searchQuery = '';
+    this.selectedOrder = null;
+    this.currentPage = 1;
+
+    if (this.inputSearch) this.inputSearch.value = '';
+    this.btnClearSearch?.classList.add('is-hidden');
+
+    this.syncStatusUi();
+    this.syncGiveawayDropdownUi();
+    void this.loadOrders();
+  }
+
   private renderOrders(): void {
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-payments"]');
-    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="payments-table-card"]');
-    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="payments-empty-state"]');
-
     if (!tbody) return;
 
     if (this.orders.length === 0) {
-      tbody.innerHTML = '';
-      tableCard?.classList.add('is-hidden');
-      emptyState?.classList.remove('is-hidden');
+      const isFiltered = this.selectedStatus !== 'all' || this.selectedGiveawayUuid !== 'all' || Boolean(this.searchQuery);
+      tbody.innerHTML = `
+        <tr class="winners-table__tr-empty">
+          <td class="winners-table__td-empty" colspan="8">
+            <div class="component-empty-state component-empty-state--table" data-ref="payments-empty-state">
+              <div class="component-empty-state-graphic">
+                ${getEmptyIllustration(isFiltered ? 'search' : 'payments')}
+              </div>
+              <h2 class="component-empty-state-title">Sin órdenes ni comprobantes</h2>
+              <p class="component-empty-state-desc">${
+                isFiltered
+                  ? 'No se encontraron órdenes registradas con los filtros seleccionados.'
+                  : 'Aún no se han registrado órdenes ni comprobantes de pago en la plataforma.'
+              }</p>
+              ${
+                isFiltered
+                  ? `<div class="component-empty-state-actions">
+                      <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-empty-reset-filters">Restablecer Filtros</button>
+                    </div>`
+                  : ''
+              }
+            </div>
+          </td>
+        </tr>
+      `;
+      renderIcons(tbody);
+
+      const btnReset = tbody.querySelector<HTMLButtonElement>('[data-ref="btn-empty-reset-filters"]');
+      btnReset?.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.resetFilters();
+      });
       return;
     }
-
-    tableCard?.classList.remove('is-hidden');
-    emptyState?.classList.add('is-hidden');
 
     tbody.innerHTML = this.orders.map((o) => this.buildOrderRowHtml(o)).join('');
     renderIcons(tbody);
@@ -869,7 +854,6 @@ export class PaymentsController implements ViewController {
         if (res.success) {
           showToast('Pago aprobado y boletos liquidados con éxito.', 'success');
           void this.loadOrders();
-          void this.loadKpis();
           return true;
         } else {
           showToast(res.error || 'Error al aprobar el pago.', 'danger');
@@ -915,7 +899,6 @@ export class PaymentsController implements ViewController {
         if (res.success) {
           showToast('Comprobante rechazado y boletos liberados exitosamente.', 'info');
           void this.loadOrders();
-          void this.loadKpis();
           return true;
         } else {
           showToast(res.error || 'Error al rechazar el comprobante.', 'danger');

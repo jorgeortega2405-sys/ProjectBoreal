@@ -2,10 +2,12 @@ import { ensureSidebarMounted, setupLayoutScrollSync, unmountSidebar, updateSide
 import { closeAllModals } from './components/modal.component.js';
 import { findRoute } from './config/routes.config.js';
 import { createAdminSkeletonElement } from './config/skeleton-routes.js';
-import { checkAuth, clearAuthState, getCurrentUser } from './services/auth.service.js';
+import { checkAuth, clearAuthState } from './services/auth.service.js';
 import { translateElement } from './services/i18n.service.js';
+import { showToast } from './services/toast.service.js';
 import { hideTooltip } from './services/tooltip.service.js';
 import { ViewController } from './types/common.types.js';
+import { canAccessRoute, getDefaultLandingRoute } from './utils/permission.util.js';
 
 let activeViewElement: HTMLElement | null = null;
 let currentNavigation = 0;
@@ -141,10 +143,22 @@ export async function render(rawPath = window.location.pathname): Promise<void> 
   }
 
   if (path === '/login' || path === '/iniciar-sesion') {
-    const destination = targetRedirectPath || '/';
+    const fallbackRoute = getDefaultLandingRoute();
+    const destination = targetRedirectPath && canAccessRoute(targetRedirectPath) ? targetRedirectPath : fallbackRoute;
     targetRedirectPath = '';
     navigate(destination, true);
     return;
+  }
+
+  if (!canAccessRoute(path)) {
+    const fallbackRoute = getDefaultLandingRoute();
+    if (path !== '/' && path !== '/dashboard') {
+      showToast('No cuentas con permisos para acceder a esa sección.', 'warning');
+    }
+    if (fallbackRoute !== path) {
+      navigate(fallbackRoute, true);
+      return;
+    }
   }
 
   let layoutContent = appRoot.querySelector<HTMLElement>('.layout-content');

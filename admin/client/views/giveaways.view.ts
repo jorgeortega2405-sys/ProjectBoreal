@@ -6,6 +6,7 @@ import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
 import { DropdownController, setupDropdown } from '../utils/dom.util.js';
+import { hasPermission } from '../utils/permission.util.js';
 
 interface AdminGiveawayItem {
   available_tickets: number;
@@ -618,6 +619,15 @@ export class GiveawaysController implements ViewController {
 
   private updateSelectionUi(): void {
     const isSelected = this.selectedGiveaway !== null;
+    const canManage = hasPermission('giveaways:manage');
+    const canCreate = hasPermission('giveaways:create');
+    const canDraw = hasPermission('giveaways:draw');
+    const canDelete = hasPermission('giveaways:delete');
+
+    const btnCreate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-create-giveaway"]');
+    const btnDailyToggle = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-daily-cycle-toggle"]');
+    btnCreate?.classList.toggle('is-hidden', !canCreate);
+    btnDailyToggle?.classList.toggle('is-hidden', !canManage);
 
     this.defaultActions?.classList.toggle('is-hidden', isSelected);
     this.selectedActions?.classList.toggle('is-hidden', !isSelected);
@@ -632,7 +642,7 @@ export class GiveawaysController implements ViewController {
 
       if (this.btnActionTogglePause) {
         const iconEl = this.btnActionTogglePause.querySelector('[data-ref="icon-action-pause"]');
-        const canToggle = isActive || isPaused || isDraft;
+        const canToggle = canManage && (isActive || isPaused || isDraft);
         this.btnActionTogglePause.classList.toggle('is-hidden', !canToggle);
 
         if (isActive) {
@@ -658,7 +668,7 @@ export class GiveawaysController implements ViewController {
 
       if (this.btnActionEdit) {
         const iconEl = this.btnActionEdit.querySelector('[data-ref="icon-action-edit"]');
-        if (isCompleted) {
+        if (isCompleted || !canManage) {
           this.btnActionEdit.setAttribute('data-tooltip', 'Ver detalles');
           this.btnActionEdit.setAttribute('aria-label', 'Ver detalles');
           if (iconEl) iconEl.innerHTML = '<use href="/icons.svg#visibility"></use>';
@@ -669,9 +679,10 @@ export class GiveawaysController implements ViewController {
         }
       }
 
-      this.btnActionDrawNow?.classList.toggle('is-hidden', !(isActive && !isCompleted));
-      this.btnActionCancel?.classList.toggle('is-hidden', !(isActive || isPaused));
-      this.btnActionDelete?.classList.toggle('is-hidden', !(isDraft || (isCancelled && g.orders_count === 0)));
+      this.btnActionDuplicate?.classList.toggle('is-hidden', !canCreate);
+      this.btnActionDrawNow?.classList.toggle('is-hidden', !(canDraw && isActive && !isCompleted));
+      this.btnActionCancel?.classList.toggle('is-hidden', !(canManage && (isActive || isPaused)));
+      this.btnActionDelete?.classList.toggle('is-hidden', !(canDelete && (isDraft || (isCancelled && g.orders_count === 0))));
     }
 
     const grid = this.container.querySelector<HTMLElement>('[data-ref="giveaways-grid"]');

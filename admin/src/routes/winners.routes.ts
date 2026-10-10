@@ -1,11 +1,12 @@
-import { getAllWinners, getWinnerDetail, getWinnersKpis, updateWinnerDelivery } from '../services/winners.service.js';
+import { requirePermission } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
+import { getAllWinners, getWinnerDetail, getWinnersKpis, updateWinnerDelivery } from '../services/winners.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
 
 const router = Router();
 
-router.get('/kpis', async (_req: Request, res: Response): Promise<void> => {
+router.get('/kpis', requirePermission('winners:read', 'winners:manage'), async (_req: Request, res: Response): Promise<void> => {
   try {
     const kpis = await getWinnersKpis();
     res.status(200).json({
@@ -21,7 +22,7 @@ router.get('/kpis', async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+router.get('/', requirePermission('winners:read', 'winners:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search : undefined;
     const deliveryStatus = typeof req.query.deliveryStatus === 'string' ? req.query.deliveryStatus : undefined;
@@ -40,7 +41,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/:uuid', async (req: Request, res: Response): Promise<void> => {
+router.get('/:uuid', requirePermission('winners:read', 'winners:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const data = await getWinnerDetail(uuid);
@@ -64,7 +65,7 @@ router.get('/:uuid', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.put('/:uuid/delivery', async (req: Request, res: Response): Promise<void> => {
+router.put('/:uuid/delivery', requirePermission('winners:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const updated = await updateWinnerDelivery(uuid, req.body);

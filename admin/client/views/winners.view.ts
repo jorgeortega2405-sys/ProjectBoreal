@@ -4,7 +4,8 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml } from '../utils/dom.util.js';
+import { escapeHtml, getEmptyIllustration } from '../utils/dom.util.js';
+import { hasPermission } from '../utils/permission.util.js';
 
 interface WinnerItem {
   contact_notes: string | null;
@@ -27,13 +28,6 @@ interface WinnerItem {
   winner_phone: string | null;
   winner_state: string | null;
   winner_ticket_number: number;
-}
-
-interface WinnersKpis {
-  deliveredCount: number;
-  pendingDeliveryCount: number;
-  totalPrizesDistributedAmount: number;
-  totalWinnersCount: number;
 }
 
 function formatCurrency(amount: number): string {
@@ -189,13 +183,7 @@ export class WinnersController implements ViewController {
       'click',
       (e) => {
         e.preventDefault();
-        if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
-        this.searchQuery = '';
-        this.selectedWinner = null;
-        this.currentPage = 1;
-        this.updateSelectionUi();
-        void this.loadWinners();
+        this.resetSearch();
       },
       { signal }
     );
@@ -320,25 +308,7 @@ export class WinnersController implements ViewController {
   }
 
   private async loadInitialData(): Promise<void> {
-    await Promise.all([this.loadKpis(), this.loadWinners()]);
-  }
-
-  private async loadKpis(): Promise<void> {
-    try {
-      const res = await getApi<WinnersKpis>('/api/winners/kpis');
-      if (res.success && res.data) {
-        const kpi = res.data;
-        const elTotal = this.container.querySelector('[data-ref="kpi-total-winners"]');
-        const elPrizes = this.container.querySelector('[data-ref="kpi-prizes-amount"]');
-        const elDelivered = this.container.querySelector('[data-ref="kpi-delivered-count"]');
-        const elPending = this.container.querySelector('[data-ref="kpi-pending-delivery-count"]');
-
-        if (elTotal) elTotal.textContent = String(kpi.totalWinnersCount);
-        if (elPrizes) elPrizes.textContent = formatCurrency(kpi.totalPrizesDistributedAmount);
-        if (elDelivered) elDelivered.textContent = String(kpi.deliveredCount);
-        if (elPending) elPending.textContent = String(kpi.pendingDeliveryCount);
-      }
-    } catch (_) {}
+    await this.loadWinners();
   }
 
   private async loadWinners(): Promise<void> {
@@ -378,6 +348,10 @@ export class WinnersController implements ViewController {
     if (this.defaultActions) this.defaultActions.classList.toggle('is-hidden', isSelected);
     if (this.selectedActions) this.selectedActions.classList.toggle('is-hidden', !isSelected);
 
+    if (isSelected) {
+      this.btnActionManageDelivery?.classList.toggle('is-hidden', !hasPermission('winners:manage'));
+    }
+
     const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr');
     rows.forEach((row) => {
       const isThisSelected = row.getAttribute('data-uuid') === this.selectedWinner?.giveaway_uuid;
@@ -407,23 +381,57 @@ export class WinnersController implements ViewController {
     }
   }
 
+  private resetSearch(): void {
+    if (this.inputSearch) this.inputSearch.value = '';
+    if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
+    this.searchQuery = '';
+    this.selectedWinner = null;
+    this.currentPage = 1;
+    this.updateSelectionUi();
+    void this.loadWinners();
+  }
+
   private renderWinners(): void {
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-winners"]');
-    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="winners-table-card"]');
-    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="winners-empty-state"]');
-
     if (!tbody) return;
 
     if (this.winners.length === 0) {
-      tbody.innerHTML = '';
-      if (tableCard) tableCard.classList.add('is-hidden');
-      if (emptyState) emptyState.classList.remove('is-hidden');
+      const isFiltered = Boolean(this.searchQuery);
+      tbody.innerHTML = `
+        <tr class="winners-table__tr-empty">
+          <td class="winners-table__td-empty" colspan="7">
+            <div class="component-empty-state component-empty-state--table" data-ref="winners-empty-state">
+              <div class="component-empty-state-graphic">
+                ${getEmptyIllustration(isFiltered ? 'search' : 'winners')}
+              </div>
+              <h2 class="component-empty-state-title">Sin ganadores registrados</h2>
+              <p class="component-empty-state-desc">${
+                isFiltered
+                  ? 'No se encontraron registros que coincidan con la búsqueda.'
+                  : 'Aún no se han ejecutado sorteos concluidos ni asignado ganadores.'
+              }</p>
+              ${
+                isFiltered
+                  ? `<div class="component-empty-state-actions">
+                      <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-empty-reset-search">Restablecer Búsqueda</button>
+                    </div>`
+                  : ''
+              }
+            </div>
+          </td>
+        </tr>
+      `;
+      renderIcons(tbody);
+
+      const btnReset = tbody.querySelector<HTMLButtonElement>('[data-ref="btn-empty-reset-search"]');
+      btnReset?.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.resetSearch();
+      });
+
       this.updatePaginationUi();
       return;
     }
-
-    if (tableCard) tableCard.classList.remove('is-hidden');
-    if (emptyState) emptyState.classList.add('is-hidden');
 
     this.updatePaginationUi();
     const startIndex = (this.currentPage - 1) * this.pageSize;
@@ -587,7 +595,6 @@ export class WinnersController implements ViewController {
         if (res.success) {
           showToast('Bitácora y estado de entrega guardados exitosamente.', 'success');
           void this.loadWinners();
-          void this.loadKpis();
           return true;
         } else {
           showToast(res.error || 'Error al guardar entrega.', 'danger');

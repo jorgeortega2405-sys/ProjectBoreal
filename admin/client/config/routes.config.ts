@@ -131,6 +131,18 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
+      const { createRolesView } = await import('../views/roles.view.js');
+      return await createRolesView();
+    },
+    id: 'roles',
+    match: (path) =>
+      path === '/roles' ||
+      path.startsWith('/roles') ||
+      path === '/permisos' ||
+      path.startsWith('/permisos'),
+  },
+  {
+    handler: async () => {
       const { createSettingsView } = await import('../views/settings.view.js');
       return await createSettingsView();
     },

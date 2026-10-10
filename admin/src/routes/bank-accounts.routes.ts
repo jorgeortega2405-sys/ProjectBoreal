@@ -1,3 +1,4 @@
+import { requirePermission } from '../middlewares/auth.middleware.js';
 import { createBankAccount, deleteBankAccount, getAllBankAccounts, getBankAccountByUuid, getBankAccountsKpis, toggleBankAccountStatus, updateBankAccount, updateBankAccountGiveaways } from '../services/bank-accounts.service.js';
 import { logger } from '../services/logger.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
@@ -5,7 +6,7 @@ import { Request, Response, Router } from 'express';
 
 const router = Router();
 
-router.get('/kpis', async (_req: Request, res: Response): Promise<void> => {
+router.get('/kpis', requirePermission('bank_accounts:read', 'bank_accounts:manage', 'bank_accounts:delete'), async (_req: Request, res: Response): Promise<void> => {
   try {
     const kpis = await getBankAccountsKpis();
     res.status(200).json({
@@ -21,7 +22,7 @@ router.get('/kpis', async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+router.get('/', requirePermission('bank_accounts:read', 'bank_accounts:manage', 'bank_accounts:delete'), async (req: Request, res: Response): Promise<void> => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search : undefined;
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
@@ -40,7 +41,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/:uuid', async (req: Request, res: Response): Promise<void> => {
+router.get('/:uuid', requirePermission('bank_accounts:read', 'bank_accounts:manage', 'bank_accounts:delete'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const data = await getBankAccountByUuid(uuid);
@@ -64,7 +65,7 @@ router.get('/:uuid', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', requirePermission('bank_accounts:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const created = await createBankAccount(req.body);
     res.status(201).json({
@@ -81,7 +82,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.put('/:uuid', async (req: Request, res: Response): Promise<void> => {
+router.put('/:uuid', requirePermission('bank_accounts:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const updated = await updateBankAccount(uuid, req.body);
@@ -99,7 +100,7 @@ router.put('/:uuid', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.patch('/:uuid/status', async (req: Request, res: Response): Promise<void> => {
+router.patch('/:uuid/status', requirePermission('bank_accounts:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const { isActive } = req.body;
@@ -125,7 +126,7 @@ router.patch('/:uuid/status', async (req: Request, res: Response): Promise<void>
   }
 });
 
-router.put('/:uuid/giveaways', async (req: Request, res: Response): Promise<void> => {
+router.put('/:uuid/giveaways', requirePermission('bank_accounts:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const { assignments } = req.body;
@@ -151,7 +152,7 @@ router.put('/:uuid/giveaways', async (req: Request, res: Response): Promise<void
   }
 });
 
-router.delete('/:uuid', async (req: Request, res: Response): Promise<void> => {
+router.delete('/:uuid', requirePermission('bank_accounts:delete'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     await deleteBankAccount(uuid);

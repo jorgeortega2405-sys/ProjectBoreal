@@ -64,37 +64,11 @@
       </div>
     </div>
 
-    <div class="view-body admin-view-body" data-ref="customers-content-container">
-      <div class="dashboard-stats-grid" data-ref="customers-stats-grid">
-        <div class="dashboard-stat-card" data-ref="card-stat-total">
-          <span class="dashboard-stat-card__title">Total Participantes</span>
-          <div class="stat-card-value" data-ref="kpi-total-customers">0</div>
-          <span class="dashboard-stat-card__desc">Teléfonos únicos registrados</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-active-buyers">
-          <span class="dashboard-stat-card__title">Compradores Liquidados</span>
-          <div class="stat-card-value" data-ref="kpi-active-buyers">0</div>
-          <span class="dashboard-stat-card__desc">Con al menos 1 orden pagada</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-tickets">
-          <span class="dashboard-stat-card__title">Boletos Adquiridos</span>
-          <div class="stat-card-value" data-ref="kpi-total-tickets">0</div>
-          <span class="dashboard-stat-card__desc">Boletos en órdenes liquidadas</span>
-        </div>
-
-        <div class="dashboard-stat-card" data-ref="card-stat-blocked">
-          <span class="dashboard-stat-card__title">Lista Negra</span>
-          <div class="stat-card-value" data-ref="kpi-blocked-count">0</div>
-          <span class="dashboard-stat-card__desc">Teléfonos restringidos por fraude</span>
-        </div>
-      </div>
-
+    <div class="view-body admin-view-body admin-view-body--flush" data-ref="customers-content-container">
       <div class="customers-content-area" data-ref="customers-content-area">
         <section class="canvas-section canvas-section--full" data-ref="customers-section">
           <div class="winners-daily-wrapper" data-ref="customers-table-wrapper">
-            <div class="winners-daily-table-card" data-ref="customers-table-card">
+            <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="customers-table-card">
               <div class="winners-daily-table-scroll">
                 <table class="winners-daily-table" data-ref="customers-table">
                   <thead>
@@ -115,17 +89,6 @@
             </div>
           </div>
         </section>
-
-        <div class="component-empty-state is-hidden" data-ref="customers-empty-state">
-          <div class="component-empty-state__badge">
-            <svg class="component-icon component-empty-state__icon" aria-hidden="true"><use href="/icons.svg#group"></use></svg>
-          </div>
-          <h3 class="component-empty-state__title">Sin participantes encontrados</h3>
-          <p class="component-empty-state__desc">No se encontraron registros que coincidan con los criterios de búsqueda.</p>
-          <div class="component-empty-state__actions">
-            <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-reset-search">Restablecer Búsqueda</button>
-          </div>
-        </div>
       </div>
     </div>
   </div>

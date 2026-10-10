@@ -351,3 +351,58 @@ export const ADMIN_NOT_FOUND_SKELETON_TEMPLATE = `
   </div>
 </div>
 `;
+
+export const ADMIN_ROLES_SKELETON_TEMPLATE = `
+<div class="component-wrapper component-wrapper--full view-wrapper view-skeleton" data-ref="skeleton-admin-roles">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable">
+    <div class="view-header">
+      <div class="view-header__left">
+        <div class="skeleton skeleton--title skeleton--w-200-px skeleton--h-28"></div>
+      </div>
+    </div>
+    <div class="view-body admin-view-body">
+      <div class="dashboard-stats-grid">
+        <div class="dashboard-stat-card">
+          <div class="skeleton skeleton--w-105-px skeleton--h-11"></div>
+          <div class="skeleton skeleton--w-40-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-120-px skeleton--h-11"></div>
+        </div>
+        <div class="dashboard-stat-card">
+          <div class="skeleton skeleton--w-90-px skeleton--h-11"></div>
+          <div class="skeleton skeleton--w-40-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-120-px skeleton--h-11"></div>
+        </div>
+        <div class="dashboard-stat-card">
+          <div class="skeleton skeleton--w-100-px skeleton--h-11"></div>
+          <div class="skeleton skeleton--w-40-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-120-px skeleton--h-11"></div>
+        </div>
+        <div class="dashboard-stat-card">
+          <div class="skeleton skeleton--w-115-px skeleton--h-11"></div>
+          <div class="skeleton skeleton--w-40-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-110-px skeleton--h-11"></div>
+        </div>
+      </div>
+      <div class="winners-daily-table-card">
+        <table>
+          <tbody>
+            <tr class="skeleton-table-row">
+              <td><div class="skeleton-cell skeleton--w-75"></div></td>
+              <td><div class="skeleton-cell skeleton--w-50"></div></td>
+              <td><div class="skeleton-cell skeleton--w-75"></div></td>
+              <td><div class="skeleton-cell skeleton--w-50"></div></td>
+            </tr>
+            <tr class="skeleton-table-row">
+              <td><div class="skeleton-cell skeleton--w-75"></div></td>
+              <td><div class="skeleton-cell skeleton--w-50"></div></td>
+              <td><div class="skeleton-cell skeleton--w-75"></div></td>
+              <td><div class="skeleton-cell skeleton--w-50"></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+

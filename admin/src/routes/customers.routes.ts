@@ -1,3 +1,4 @@
+import { requirePermission } from '../middlewares/auth.middleware.js';
 import { blockCustomer, getAllCustomers, getCustomerDetail, getCustomersKpis, unblockCustomer } from '../services/customers.service.js';
 import { logger } from '../services/logger.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
@@ -5,7 +6,7 @@ import { Request, Response, Router } from 'express';
 
 const router = Router();
 
-router.get('/kpis', async (_req: Request, res: Response): Promise<void> => {
+router.get('/kpis', requirePermission('customers:read', 'customers:block'), async (_req: Request, res: Response): Promise<void> => {
   try {
     const kpis = await getCustomersKpis();
     res.status(200).json({
@@ -21,7 +22,7 @@ router.get('/kpis', async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+router.get('/', requirePermission('customers:read', 'customers:block'), async (req: Request, res: Response): Promise<void> => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search : undefined;
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
@@ -40,7 +41,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/:phone', async (req: Request, res: Response): Promise<void> => {
+router.get('/:phone', requirePermission('customers:read', 'customers:block'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { phone } = req.params;
     const data = await getCustomerDetail(phone);
@@ -64,7 +65,7 @@ router.get('/:phone', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/:phone/block', async (req: Request, res: Response): Promise<void> => {
+router.post('/:phone/block', requirePermission('customers:block'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { phone } = req.params;
     const { customerName, reason } = req.body;
@@ -82,7 +83,7 @@ router.post('/:phone/block', async (req: Request, res: Response): Promise<void> 
   }
 });
 
-router.delete('/:phone/block', async (req: Request, res: Response): Promise<void> => {
+router.delete('/:phone/block', requirePermission('customers:block'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { phone } = req.params;
     await unblockCustomer(phone);

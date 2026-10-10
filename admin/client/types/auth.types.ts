@@ -2,6 +2,8 @@ export interface AdminUser {
   email: string;
   id: number;
   name: string;
+  permissions?: string[];
+  roles?: string[];
   uuid: string;
 }
 

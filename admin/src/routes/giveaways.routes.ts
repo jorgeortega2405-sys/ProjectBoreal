@@ -1,3 +1,4 @@
+import { requirePermission } from '../middlewares/auth.middleware.js';
 import { createGiveaway, deleteDraftGiveaway, executeManualDraw, getActiveBankAccounts, getAllGiveaways, getDailyGiveawayPotPercentage, getGiveawayByUuid, isDailyGiveawayPauseScheduled, saveUploadedGiveawayImage, setDailyGiveawayPauseScheduled, setDailyGiveawayPotPercentage, updateGiveaway, updateGiveawayStatus } from '../services/giveaways.service.js';
 import { logger } from '../services/logger.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
@@ -5,7 +6,7 @@ import { Request, Response, Router } from 'express';
 
 const router = Router();
 
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+router.get('/', requirePermission('giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw', 'orders:read'), async (req: Request, res: Response): Promise<void> => {
   try {
     const search = typeof req.query.search === 'string' ? req.query.search : undefined;
     const status = typeof req.query.status === 'string' ? req.query.status : undefined;
@@ -25,7 +26,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/config/daily', async (_req: Request, res: Response): Promise<void> => {
+router.get('/config/daily', requirePermission('giveaways:read', 'giveaways:manage'), async (_req: Request, res: Response): Promise<void> => {
   try {
     const isPaused = await isDailyGiveawayPauseScheduled();
     const potPercentage = await getDailyGiveawayPotPercentage();
@@ -42,7 +43,7 @@ router.get('/config/daily', async (_req: Request, res: Response): Promise<void> 
   }
 });
 
-router.post('/config/daily/pot-percentage', async (req: Request, res: Response): Promise<void> => {
+router.post('/config/daily/pot-percentage', requirePermission('giveaways:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { potPercentage } = req.body;
     const num = Number(potPercentage);
@@ -68,7 +69,7 @@ router.post('/config/daily/pot-percentage', async (req: Request, res: Response):
   }
 });
 
-router.post('/config/daily/schedule-pause', async (req: Request, res: Response): Promise<void> => {
+router.post('/config/daily/schedule-pause', requirePermission('giveaways:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { pause } = req.body;
     const shouldPause = Boolean(pause);
@@ -89,7 +90,7 @@ router.post('/config/daily/schedule-pause', async (req: Request, res: Response):
   }
 });
 
-router.get('/bank-accounts', async (_req: Request, res: Response): Promise<void> => {
+router.get('/bank-accounts', requirePermission('giveaways:read', 'giveaways:create', 'giveaways:manage', 'bank_accounts:read'), async (_req: Request, res: Response): Promise<void> => {
   try {
     const accounts = await getActiveBankAccounts();
     res.status(200).json({
@@ -105,7 +106,7 @@ router.get('/bank-accounts', async (_req: Request, res: Response): Promise<void>
   }
 });
 
-router.post('/upload', async (req: Request, res: Response): Promise<void> => {
+router.post('/upload', requirePermission('giveaways:create', 'giveaways:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { fileData, fileName } = req.body;
     if (!fileData) {
@@ -130,7 +131,7 @@ router.post('/upload', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.get('/:uuid', async (req: Request, res: Response): Promise<void> => {
+router.get('/:uuid', requirePermission('giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const giveaway = await getGiveawayByUuid(uuid);
@@ -154,7 +155,7 @@ router.get('/:uuid', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+router.post('/', requirePermission('giveaways:create'), async (req: Request, res: Response): Promise<void> => {
   try {
     const created = await createGiveaway(req.body);
     res.status(201).json({
@@ -171,7 +172,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.put('/:uuid', async (req: Request, res: Response): Promise<void> => {
+router.put('/:uuid', requirePermission('giveaways:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const updated = await updateGiveaway(uuid, req.body);
@@ -189,7 +190,7 @@ router.put('/:uuid', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.patch('/:uuid/status', async (req: Request, res: Response): Promise<void> => {
+router.patch('/:uuid/status', requirePermission('giveaways:manage'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const { forceWithSales, status } = req.body;
@@ -215,7 +216,7 @@ router.patch('/:uuid/status', async (req: Request, res: Response): Promise<void>
   }
 });
 
-router.post('/:uuid/draw', async (req: Request, res: Response): Promise<void> => {
+router.post('/:uuid/draw', requirePermission('giveaways:draw'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     const completed = await executeManualDraw(uuid);
@@ -233,7 +234,7 @@ router.post('/:uuid/draw', async (req: Request, res: Response): Promise<void> =>
   }
 });
 
-router.delete('/:uuid', async (req: Request, res: Response): Promise<void> => {
+router.delete('/:uuid', requirePermission('giveaways:delete'), async (req: Request, res: Response): Promise<void> => {
   try {
     const { uuid } = req.params;
     await deleteDraftGiveaway(uuid);

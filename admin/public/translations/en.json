@@ -186,8 +186,13 @@
   "nav": {
     "dashboard": "Dashboard",
     "giveaways": "Giveaways",
+    "roles": "Roles & Permissions",
     "theme": "Theme",
     "toggle_drawer": "Toggle drawer",
     "toggle_theme": "Toggle theme"
+  },
+  "roles": {
+    "description": "Permission-based access control (PBAC), enterprise role catalog and admin assignments",
+    "title": "Roles & Permissions Matrix"
   }
 }
