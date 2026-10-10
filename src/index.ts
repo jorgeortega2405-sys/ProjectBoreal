@@ -6,7 +6,6 @@ import { requestLogger } from './middlewares/request-logger.middleware.js';
 import giveawaysRoutes from './routes/giveaways.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
-import { processBanxicoBatch } from './services/banxico.service.js';
 import { ensureCurrentDailyGiveaway } from './services/daily-giveaway.service.js';
 import { drawGiveawayWinners } from './services/giveaways.service.js';
 import { logger } from './services/logger.service.js';
@@ -43,21 +42,6 @@ function startScheduledTasks(): void {
       logger.app.error('Error en tarea cron:release_expired', err);
     });
   }, 60 * 1000);
-
-  setInterval(() => {
-    (async () => {
-      const lockToken = crypto.randomUUID();
-      const hasLock = await acquireDistributedLock('cron:banxico_batch', 290, lockToken);
-      if (!hasLock) return;
-      try {
-        await processBanxicoBatch();
-      } finally {
-        await releaseDistributedLock('cron:banxico_batch', lockToken);
-      }
-    })().catch((err) => {
-      logger.app.error('Error en tarea cron:banxico_batch', err);
-    });
-  }, 5 * 60 * 1000);
 
   setInterval(() => {
     (async () => {

@@ -16,6 +16,7 @@ from ocr_engine import OCREngine
 from receipt_parser import ReceiptParser
 from banxico_client import BanxicoClient
 from bank_catalog import BANCO_CODES, get_bank_code_by_clabe
+from image_processor import ImageProcessor
 
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -135,7 +136,8 @@ class ReceiptWorker:
             "timestamp": time.time(),
             "worker_id": self.worker_id,
             "pid": os.getpid(),
-            "status": "running"
+            "status": "running",
+            "circuit_breaker": BanxicoClient.get_circuit_status()
         })
         try:
             self.redis.set("boreal:worker:heartbeat", payload, ex=35)
@@ -147,30 +149,56 @@ class ReceiptWorker:
                 logger.warning(f"No se pudo emitir heartbeat a Redis: {e}")
 
     def fetch_and_reserve_batch(self) -> List[Dict[str, Any]]:
+        queued_uuid = None
+        try:
+            queued_uuid = self.redis.rpop("boreal:queue:receipts")
+        except Exception as q_err:
+            logger.debug(f"Aviso al consultar cola Redis: {q_err}")
+
         conn = get_db_connection()
         reserved_orders: List[Dict[str, Any]] = []
         try:
             with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
-                           o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) as total_amount,
-                           o.currency, o.concept_reference, o.status, o.receipt_url, o.receipt_filename, o.tracking_key,
-                           o.created_at,
-                           g.uuid AS giveaway_uuid,
-                           COALESCE(q.attempts, 0) AS queue_attempts,
-                           COALESCE(q.max_attempts, 6) AS queue_max_attempts
-                    FROM orders o
-                    INNER JOIN giveaways g ON o.giveaway_id = g.id
-                    LEFT JOIN spei_validation_queue q ON q.order_id = o.id
-                    WHERE o.status = 'in_review'
-                      AND o.receipt_filename IS NOT NULL
-                      AND (q.status IS NULL OR q.status IN ('pending', 'verifying'))
-                      AND (q.next_retry_at IS NULL OR q.next_retry_at <= NOW())
-                    ORDER BY o.created_at ASC
-                    LIMIT %s
-                    FOR UPDATE SKIP LOCKED
-                """, (BATCH_SIZE,))
-                candidates = cur.fetchall()
+                if queued_uuid:
+                    cur.execute("""
+                        SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
+                               o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) as total_amount,
+                               o.currency, o.concept_reference, o.status, o.receipt_url, o.receipt_filename, o.tracking_key,
+                               o.created_at,
+                               g.uuid AS giveaway_uuid,
+                               COALESCE(q.attempts, 0) AS queue_attempts,
+                               COALESCE(q.max_attempts, 6) AS queue_max_attempts
+                        FROM orders o
+                        INNER JOIN giveaways g ON o.giveaway_id = g.id
+                        LEFT JOIN spei_validation_queue q ON q.order_id = o.id
+                        WHERE o.uuid = %s
+                          AND o.status = 'in_review'
+                          AND o.receipt_filename IS NOT NULL
+                        LIMIT 1
+                        FOR UPDATE SKIP LOCKED
+                    """, (queued_uuid,))
+                    candidates = cur.fetchall()
+                else:
+                    cur.execute("""
+                        SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
+                               o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) as total_amount,
+                               o.currency, o.concept_reference, o.status, o.receipt_url, o.receipt_filename, o.tracking_key,
+                               o.created_at,
+                               g.uuid AS giveaway_uuid,
+                               COALESCE(q.attempts, 0) AS queue_attempts,
+                               COALESCE(q.max_attempts, 6) AS queue_max_attempts
+                        FROM orders o
+                        INNER JOIN giveaways g ON o.giveaway_id = g.id
+                        LEFT JOIN spei_validation_queue q ON q.order_id = o.id
+                        WHERE o.status = 'in_review'
+                          AND o.receipt_filename IS NOT NULL
+                          AND (q.status IS NULL OR q.status IN ('pending', 'verifying'))
+                          AND (q.next_retry_at IS NULL OR q.next_retry_at <= NOW())
+                        ORDER BY o.created_at ASC
+                        LIMIT %s
+                        FOR UPDATE SKIP LOCKED
+                    """, (BATCH_SIZE,))
+                    candidates = cur.fetchall()
 
                 if not candidates:
                     conn.rollback()
@@ -256,11 +284,21 @@ class ReceiptWorker:
                 return False
 
             try:
-                raw_text = self.ocr.extract_text(file_path)
+                raw_text, dhash_str = self.ocr.extract_text_and_hash(file_path)
                 parsed = ReceiptParser.parse(raw_text)
             except Exception as ocr_err:
                 logger.error(f"[{order_uuid}] Error en motor OCR ({file_path}): {ocr_err}")
                 self._schedule_retry(order, conn, {"error": f"Fallo motor OCR: {str(ocr_err)}"}, is_transient=True)
+                return False
+
+            dhash_dup_order = ImageProcessor.check_and_register_dhash(self.redis, dhash_str, order_uuid)
+            if dhash_dup_order:
+                logger.warning(f"[{order_uuid}] Replay attack detectado por dHash visual idéntico a orden {dhash_dup_order}")
+                self._cancel_and_release_order(
+                    order, conn,
+                    [f"Comprobante visualmente idéntico a comprobante registrado previamente en orden {dhash_dup_order}."],
+                    parsed=parsed
+                )
                 return False
 
             validation = ReceiptParser.validate_against_order(parsed, order, bank_accounts)
@@ -352,11 +390,18 @@ class ReceiptWorker:
             if validation["valid"] and tracking_key and is_liquidated_by_banxico:
                 self._approve_and_liquidate_order(order, conn, tracking_key, parsed, validation, banxico_res)
                 return True
-            elif validation["valid"] and tracking_key and banxico_res and banxico_res.get("status") in ("pending", "offline", "unreachable"):
-                logger.info(f"[{order_uuid}] Comprobante válido pero Banxico en tránsito/offline ({banxico_res.get('status')}). Programando reintento...")
-                self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res})
+            elif validation["valid"] and tracking_key and banxico_res and banxico_res.get("status") in ("pending", "offline", "unreachable", "circuit_open"):
+                is_ext_down = banxico_res.get("status") in ("offline", "unreachable", "circuit_open")
+                logger.info(f"[{order_uuid}] Comprobante válido pero Banxico en tránsito/degradado ({banxico_res.get('status')}). Programando reintento...")
+                self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res}, is_transient=is_ext_down)
                 return False
             else:
+                is_ext_down = bool(banxico_res and banxico_res.get("status") in ("offline", "unreachable", "circuit_open"))
+                if is_ext_down:
+                    logger.info(f"[{order_uuid}] Servicio Banxico degradado ({banxico_res.get('status')}). Reintentando sin penalizar orden...")
+                    self._schedule_retry(order, conn, {"ocr_parsed": parsed, "validation": validation, "banxico": banxico_res}, is_transient=True)
+                    return False
+
                 current_attempts = order.get("queue_attempts", 0) + 1
                 max_attempts = order.get("queue_max_attempts", 6)
 
@@ -635,11 +680,16 @@ class ReceiptWorker:
     def _schedule_retry(self, order: Dict[str, Any], conn, response_payload: Dict[str, Any], is_transient: bool = False):
         order_uuid = order["uuid"]
         order_id = order["id"]
-        current_attempts = order.get("queue_attempts", 0) + 1
+        if is_transient:
+            current_attempts = order.get("queue_attempts", 0)
+        else:
+            current_attempts = order.get("queue_attempts", 0) + 1
         max_attempts = order.get("queue_max_attempts", 6)
 
-        idx = min(current_attempts - 1, len(BACKOFF_INTERVALS) - 1)
+        idx = min(max(0, current_attempts - 1), len(BACKOFF_INTERVALS) - 1)
         delay_seconds = BACKOFF_INTERVALS[idx]
+        if is_transient:
+            delay_seconds = max(delay_seconds, 60)
 
         with conn.cursor() as cur:
             cur.execute(f"""
@@ -652,15 +702,16 @@ class ReceiptWorker:
                 WHERE order_id = %s
             """, (current_attempts, json.dumps(response_payload), order_id))
 
-            cur.execute("""
+            extension_minutes = 30 if is_transient else 15
+            cur.execute(f"""
                 UPDATE giveaway_tickets
-                SET reserved_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE)
+                SET reserved_until = DATE_ADD(NOW(), INTERVAL {extension_minutes} MINUTE)
                 WHERE order_id = %s AND status = 'reserved'
             """, (order_id,))
 
             conn.commit()
 
-        logger.info(f"[{order_uuid}] Reintento #{current_attempts}/{max_attempts} programado en {delay_seconds}s.")
+        logger.info(f"[{order_uuid}] Reintento programado en {delay_seconds}s (Intentos: {current_attempts}/{max_attempts}, Transitorio: {is_transient}).")
 
     def sweep_expired_orders(self):
         now = time.time()

@@ -1,6 +1,8 @@
 import asyncio
 import os
+from typing import Tuple
 from PIL import Image
+from image_processor import ImageProcessor
 
 try:
     import pytesseract
@@ -18,49 +20,26 @@ class OCREngine:
     def __init__(self, lang: str = "es-MX"):
         self.lang = lang
 
-    def _load_image(self, file_path: str) -> Image.Image:
-        ext = os.path.splitext(file_path)[1].lower()
-        if ext == ".pdf":
-            doc = None
-            try:
-                import fitz
-                doc = fitz.open(file_path)
-                if len(doc) == 0:
-                    raise ValueError("El archivo PDF está vacío.")
-                page = doc.load_page(0)
-                pix = page.get_pixmap(dpi=200)
-                return Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-            except Exception as e:
-                raise RuntimeError(f"Error al convertir PDF a imagen: {e}")
-            finally:
-                if doc:
-                    try:
-                        doc.close()
-                    except Exception:
-                        pass
-        with Image.open(file_path) as opened_img:
-            return opened_img.copy()
-
-    def extract_text(self, file_path: str) -> str:
+    def extract_text_and_hash(self, file_path: str) -> Tuple[str, str]:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Archivo no encontrado: {file_path}")
 
-        img = self._load_image(file_path)
+        img, dhash_str = ImageProcessor.optimize_image_for_ocr(file_path)
         try:
             if HAS_PYTESSERACT:
                 try:
                     text = pytesseract.image_to_string(img, lang="spa")
                     if text and len(text.strip()) > 5:
-                        return text
+                        return text, dhash_str
                 except Exception:
                     pass
 
             if HAS_WINOCR:
                 res = asyncio.run(winocr.recognize_pil(img, lang=self.lang))
-                return res.text
+                return res.text, dhash_str
 
             if HAS_PYTESSERACT:
-                return pytesseract.image_to_string(img)
+                return pytesseract.image_to_string(img), dhash_str
 
             raise RuntimeError("No se encontró ningún motor OCR disponible (pytesseract o winocr).")
         finally:
@@ -68,3 +47,7 @@ class OCREngine:
                 img.close()
             except Exception:
                 pass
+
+    def extract_text(self, file_path: str) -> str:
+        text, _ = self.extract_text_and_hash(file_path)
+        return text

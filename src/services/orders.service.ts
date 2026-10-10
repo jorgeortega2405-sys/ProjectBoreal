@@ -1,5 +1,5 @@
 import { pool } from '../config/database.config.js';
-import { deleteCache, deleteCachePattern, getCache, publishGiveawayEvent, setCache } from '../config/redis.config.js';
+import { deleteCache, deleteCachePattern, getCache, publishGiveawayEvent, redis, setCache } from '../config/redis.config.js';
 import { BankAccount, Order } from '../types/order.types.js';
 import { normalizeMexicanPhone } from '../utils/phone.util.js';
 import { recordAudit } from './audit.service.js';
@@ -497,6 +497,12 @@ export async function attachReceipt(data: {
     );
 
     await conn.commit();
+
+    try {
+      await redis.lpush('boreal:queue:receipts', data.orderUuid);
+    } catch (queueErr) {
+      logger.db.warn('No se pudo encolar recibo en boreal:queue:receipts:', queueErr);
+    }
 
     await publishGiveawayEvent('boreal:queue:new_receipt', {
       order_id: order.id,

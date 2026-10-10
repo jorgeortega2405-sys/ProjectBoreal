@@ -2,7 +2,6 @@ import { Request, Response } from 'express';
 import fs from 'fs';
 import { redis } from '../config/redis.config.js';
 import { recordAudit } from '../services/audit.service.js';
-import { processBanxicoBatch } from '../services/banxico.service.js';
 import { logger } from '../services/logger.service.js';
 import { attachReceipt, getActiveBankAccounts, getOrderByUuid, getOrdersByPhone, reserveTickets } from '../services/orders.service.js';
 import { Order } from '../types/order.types.js';
@@ -422,13 +421,6 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
         }
       }
     } catch (_) {}
-
-    const cleanKeyUpper = trackingKey ? String(trackingKey).trim().toUpperCase() : '';
-    if (cleanKeyUpper && !cleanKeyUpper.startsWith('INTRA-') && cleanKeyUpper !== 'PENDING_OCR') {
-      void processBanxicoBatch().catch((batchErr) => {
-        logger.app.error('Error al procesar lote Banxico tras recepción de comprobante', batchErr);
-      });
-    }
 
     res.status(200).json({
       data: maskOrder(updatedOrder),
