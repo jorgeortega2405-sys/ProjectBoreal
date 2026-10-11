@@ -4,7 +4,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { DropdownController, escapeHtml, getEmptyIllustration, setupDropdown } from '../utils/dom.util.js';
+import { DropdownController, escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 import { hasPermission } from '../utils/permission.util.js';
 
 interface AdminOrderSummary {
@@ -119,7 +119,7 @@ export class PaymentsController implements ViewController {
     this.container = container;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
 
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -150,9 +150,7 @@ export class PaymentsController implements ViewController {
     this.bindEvents();
     renderIcons(this.container);
 
-    requestAnimationFrame(() => {
-      void this.loadInitialData();
-    });
+    await this.loadInitialData();
   }
 
   bindEvents(): void {
@@ -436,14 +434,14 @@ export class PaymentsController implements ViewController {
           this.totalPages = res.pagination.totalPages;
           this.updatePaginationUi();
         }
-        this.renderOrders();
-        this.updateSelectionUi();
       } else {
         showToast(res.error || 'No se pudieron cargar las órdenes.', 'danger');
       }
     } catch (_) {
       showToast('Error de conexión al cargar órdenes.', 'danger');
     }
+    this.renderOrders();
+    this.updateSelectionUi();
   }
 
   private updatePaginationUi(): void {
@@ -505,43 +503,36 @@ export class PaymentsController implements ViewController {
 
   private renderOrders(): void {
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-payments"]');
-    if (!tbody) return;
+    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="payments-table-card"]');
+    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="payments-table-wrapper"]');
+    if (!tbody || !tableCard || !wrapper) return;
 
     if (this.orders.length === 0) {
       const isFiltered = this.selectedStatus !== 'all' || this.selectedGiveawayUuid !== 'all' || Boolean(this.searchQuery);
-      tbody.innerHTML = `
-        <tr class="winners-table__tr-empty">
-          <td class="winners-table__td-empty" colspan="8">
-            <div class="component-empty-state component-empty-state--table" data-ref="payments-empty-state">
-              <div class="component-empty-state-graphic">
-                ${getEmptyIllustration(isFiltered ? 'search' : 'payments')}
-              </div>
-              <h2 class="component-empty-state-title">Sin órdenes ni comprobantes</h2>
-              <p class="component-empty-state-desc">${
-                isFiltered
-                  ? 'No se encontraron órdenes registradas con los filtros seleccionados.'
-                  : 'Aún no se han registrado órdenes ni comprobantes de pago en la plataforma.'
-              }</p>
-              ${
-                isFiltered
-                  ? `<div class="component-empty-state-actions">
-                      <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-empty-reset-filters">Restablecer Filtros</button>
-                    </div>`
-                  : ''
-              }
-            </div>
-          </td>
-        </tr>
-      `;
-      renderIcons(tbody);
-
-      const btnReset = tbody.querySelector<HTMLButtonElement>('[data-ref="btn-empty-reset-filters"]');
-      btnReset?.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.resetFilters();
+      tableCard.classList.add('is-hidden');
+      tbody.innerHTML = '';
+      renderEmptyState({
+        actionDataRef: isFiltered ? 'btn-empty-reset-filters' : undefined,
+        actionLabel: isFiltered ? 'Restablecer Filtros' : undefined,
+        container: wrapper,
+        dataRef: 'payments-empty-state',
+        desc: isFiltered
+          ? 'No se encontraron órdenes registradas con los filtros seleccionados.'
+          : 'Aún no se han registrado órdenes ni comprobantes de pago en la plataforma.',
+        graphicType: isFiltered ? 'search' : 'payments',
+        onAction: isFiltered
+          ? (e) => {
+              e.preventDefault();
+              this.resetFilters();
+            }
+          : undefined,
+        title: 'Sin órdenes ni comprobantes',
       });
       return;
     }
+
+    tableCard.classList.remove('is-hidden');
+    removeEmptyState(wrapper, 'payments-empty-state');
 
     tbody.innerHTML = this.orders.map((o) => this.buildOrderRowHtml(o)).join('');
     renderIcons(tbody);
@@ -925,7 +916,7 @@ export class PaymentsController implements ViewController {
 export async function createPaymentsView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/payments/payments.html');
   const controller = new PaymentsController(container);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

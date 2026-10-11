@@ -1,12 +1,13 @@
-import { Request, Response } from 'express';
-import fs from 'fs';
 import { redis } from '../config/redis.config.js';
 import { recordAudit } from '../services/audit.service.js';
 import { logger } from '../services/logger.service.js';
 import { attachReceipt, getActiveBankAccounts, getOrderByUuid, getOrdersByPhone, reserveTickets } from '../services/orders.service.js';
+import { deleteS3Object, getS3Object, uploadS3Object } from '../services/s3.service.js';
 import { Order } from '../types/order.types.js';
 import { validateAndCleanPhone } from '../utils/phone.util.js';
-import { deleteReceiptFile, getReceiptFilePath, processReceiptBuffer } from '../utils/receipt-storage.util.js';
+import { processReceiptBuffer } from '../utils/receipt-storage.util.js';
+import { Request, Response } from 'express';
+import path from 'path';
 
 function getClientIp(req: Request): string {
   if (req.ip) return req.ip;
@@ -306,7 +307,7 @@ export async function getBankAccountsHandler(req: Request, res: Response): Promi
 }
 
 export async function uploadReceiptHandler(req: Request, res: Response): Promise<void> {
-  let createdFilePath: string | null = null;
+  let uploadedS3Key: string | null = null;
   try {
     const { bankReference, imageBase64, orderUuid, trackingKey } = req.body;
 
@@ -336,13 +337,11 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
       return;
     }
 
-    const { fileHash, fileName, filePath } = processResult.receipt;
-    createdFilePath = filePath;
+    const { buffer, fileHash, fileName } = processResult.receipt;
 
     try {
       const existingOrderUuid = await redis.get(`boreal:receipt_hash:${fileHash}`);
       if (existingOrderUuid && existingOrderUuid !== orderUuid) {
-        deleteReceiptFile(createdFilePath);
         res.status(400).json({
           error: 'Este comprobante ya fue registrado previamente para otra orden. No se admiten comprobantes duplicados.',
           success: false,
@@ -355,7 +354,6 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
         if (cleanKey && !cleanKey.startsWith('INTRA-') && cleanKey !== 'PENDING_OCR') {
           const existingTrackingOrder = await redis.get(`boreal:tracking_key:${cleanKey}`);
           if (existingTrackingOrder && existingTrackingOrder !== orderUuid) {
-            deleteReceiptFile(createdFilePath);
             res.status(400).json({
               error: 'Esta clave de rastreo SPEI ya fue registrada para otra orden.',
               success: false,
@@ -370,7 +368,6 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
         if (cleanRef.length >= 6) {
           const existingRefOrder = await redis.get(`boreal:bank_ref:${cleanRef}`);
           if (existingRefOrder && existingRefOrder !== orderUuid) {
-            deleteReceiptFile(createdFilePath);
             res.status(400).json({
               error: 'Esta referencia bancaria ya fue registrada previamente.',
               success: false,
@@ -382,6 +379,10 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     } catch (redisErr) {
       logger.app.warn('Advertencia al verificar hash anti-replay en Redis:', redisErr);
     }
+
+    const s3Key = `receipts/${fileName}`;
+    await uploadS3Object(s3Key, buffer);
+    uploadedS3Key = s3Key;
 
     const receiptUrl = `/api/orders/${orderUuid}/receipt`;
 
@@ -396,8 +397,8 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     });
 
     if (!updatedOrder) {
-      if (createdFilePath) {
-        deleteReceiptFile(createdFilePath);
+      if (uploadedS3Key) {
+        await deleteS3Object(uploadedS3Key);
       }
       res.status(404).json({
         error: 'La orden indicada no fue encontrada o ya no está disponible.',
@@ -428,8 +429,8 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
       success: true,
     });
   } catch (error) {
-    if (createdFilePath) {
-      deleteReceiptFile(createdFilePath);
+    if (uploadedS3Key) {
+      await deleteS3Object(uploadedS3Key);
     }
     if ((error as Error).message === 'ORDER_EXPIRED') {
       res.status(400).json({
@@ -441,6 +442,13 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     if ((error as Error).message === 'DUPLICATE_TRACKING_KEY') {
       res.status(400).json({
         error: 'Esta clave de rastreo SPEI ya fue registrada previamente en otra orden.',
+        success: false,
+      });
+      return;
+    }
+    if ((error as Error).message === 'CUSTOMER_BLOCKED') {
+      res.status(403).json({
+        error: 'El número telefónico asociado a esta orden cuenta con una restricción operativa.',
         success: false,
       });
       return;
@@ -487,15 +495,17 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
       return;
     }
 
-    const directPath = getReceiptFilePath(order.receipt_filename);
-    if (fs.existsSync(directPath)) {
+    const cleanFilename = path.basename(order.receipt_filename);
+    const s3Obj = await getS3Object(`receipts/${cleanFilename}`);
+    if (s3Obj) {
+      res.setHeader('Content-Type', s3Obj.contentType);
       res.setHeader('Cache-Control', 'private, no-cache');
-      res.sendFile(directPath);
+      res.status(200).send(s3Obj.body);
       return;
     }
 
     res.status(404).json({
-      error: 'El comprobante solicitado no existe en el almacenamiento.',
+      error: 'El comprobante solicitado no existe en el almacenamiento S3.',
       success: false,
     });
   } catch (error) {

@@ -1,11 +1,14 @@
 import { EmptyIllustrationKey, getEmptyIllustration } from '../graphics/empty-illustrations.graphics.js';
 
 export interface RenderEmptyStateOptions {
+  actionDataRef?: string;
+  actionLabel?: string;
   container: HTMLElement;
   dataRef?: string;
   desc: string;
   graphicType: string | EmptyIllustrationKey;
   isTable?: boolean;
+  onAction?: (e: MouseEvent) => void;
   title: string;
 }
 
@@ -37,6 +40,25 @@ export function renderEmptyState(options: RenderEmptyStateOptions): HTMLElement 
   emptyEl.appendChild(graphicEl);
   emptyEl.appendChild(titleEl);
   emptyEl.appendChild(descEl);
+
+  if (options.actionLabel) {
+    const actionBtn = document.createElement('button');
+    actionBtn.type = 'button';
+    actionBtn.className = 'component-button component-button--h40 component-button--secondary';
+    if (options.actionDataRef) {
+      actionBtn.setAttribute('data-ref', options.actionDataRef);
+    }
+    const spanEl = document.createElement('span');
+    if (options.actionDataRef) {
+      spanEl.setAttribute('data-ref', `${options.actionDataRef}-label`);
+    }
+    spanEl.textContent = options.actionLabel;
+    actionBtn.appendChild(spanEl);
+    if (options.onAction) {
+      actionBtn.addEventListener('click', options.onAction);
+    }
+    emptyEl.appendChild(actionBtn);
+  }
 
   options.container.appendChild(emptyEl);
   return emptyEl;

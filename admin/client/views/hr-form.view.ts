@@ -1,6 +1,6 @@
 import { navigate } from '../app-router.js';
 import { RouteContext } from '../config/routes.config.js';
-import { getApi, postApi, putApi } from '../services/api.service.js';
+import { deleteApi, getApi, postApi, putApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
@@ -22,6 +22,7 @@ type HrEmploymentType = 'contractor' | 'full_time' | 'intern' | 'part_time';
 type HrWorkModality = 'hybrid' | 'onsite' | 'remote';
 type HrPaymentFrequency = 'biweekly' | 'monthly' | 'weekly';
 type HrEmployeeStatus = 'active' | 'on_leave' | 'probation' | 'suspended' | 'terminated';
+type HrDocumentType = 'address_proof' | 'contract' | 'id_card' | 'nda' | 'other' | 'tax_constancy';
 
 interface HrEmployeeRecord {
   bank_name: string | null;
@@ -51,7 +52,31 @@ interface HrEmployeeRecord {
   work_modality: HrWorkModality;
 }
 
+interface HrEmployeeDocumentRecord {
+  created_at: string;
+  document_type: HrDocumentType;
+  employee_id: number;
+  file_name: string;
+  file_size_bytes: number;
+  file_url: string;
+  id: number;
+  mime_type: string;
+  title: string;
+  uploaded_by_name: string | null;
+  uuid: string;
+}
+
+interface QueuedHrDocument {
+  base64Data: string;
+  document_type: HrDocumentType;
+  file_name: string;
+  file_size_bytes: number;
+  tempId: string;
+  title: string;
+}
+
 interface HrEmployeeDetailResponse {
+  documents?: HrEmployeeDocumentRecord[];
   employee: HrEmployeeRecord;
 }
 
@@ -91,6 +116,27 @@ const PAYMENT_FREQUENCY_OPTIONS: SelectOption[] = [
   { icon: 'calendar_month', label: 'Mensual', value: 'monthly' },
   { icon: 'schedule', label: 'Semanal', value: 'weekly' },
 ];
+
+const DOCUMENT_TYPE_OPTIONS: SelectOption[] = [
+  { icon: 'article', label: 'Contrato Individual de Trabajo', value: 'contract' },
+  { icon: 'verified_user', label: 'Convenio de Confidencialidad (NDA)', value: 'nda' },
+  { icon: 'badge', label: 'Identificación Oficial (INE / Pasaporte)', value: 'id_card' },
+  { icon: 'receipt_long', label: 'Constancia de Situación Fiscal (SAT)', value: 'tax_constancy' },
+  { icon: 'home', label: 'Comprobante de Domicilio', value: 'address_proof' },
+  { icon: 'attachment', label: 'Anexo / Otro Documento', value: 'other' },
+];
+
+function formatFileSize(bytes: number): string {
+  const b = Math.max(0, Number(bytes || 0));
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function getDocumentTypeLabel(docType: HrDocumentType): string {
+  const found = DOCUMENT_TYPE_OPTIONS.find((o) => o.value === docType);
+  return found ? found.label : 'Documento';
+}
 
 function formatCurrency(amount: number, currency = 'MXN'): string {
   return (
@@ -162,14 +208,19 @@ export class HrEmployeeFormController implements ViewController {
   private btnCancel: HTMLButtonElement | null = null;
   private btnHeaderCancel: HTMLButtonElement | null = null;
   private btnHeaderSave: HTMLButtonElement | null = null;
+  private btnPickDoc: HTMLButtonElement | null = null;
   private btnSubmit: HTMLButtonElement | null = null;
   private container: HTMLElement;
+  private docListContainer: HTMLElement | null = null;
   private dropdownControllers: Array<DropdownController | null> = [];
+  private existingDocuments: HrEmployeeDocumentRecord[] = [];
   private form: HTMLFormElement | null = null;
   private hireDateDropdown: DatePickerDropdownController | null = null;
   private inputBankName: HTMLInputElement | null = null;
   private inputClabe: HTMLInputElement | null = null;
   private inputCurp: HTMLInputElement | null = null;
+  private inputDocFile: HTMLInputElement | null = null;
+  private inputDocTitle: HTMLInputElement | null = null;
   private inputEmail: HTMLInputElement | null = null;
   private inputEmergName: HTMLInputElement | null = null;
   private inputEmergPhone: HTMLInputElement | null = null;
@@ -185,9 +236,11 @@ export class HrEmployeeFormController implements ViewController {
   private inputVacAllowance: HTMLInputElement | null = null;
   private isSubmitting = false;
   private mode: 'create' | 'edit';
+  private queuedDocuments: QueuedHrDocument[] = [];
   private routeContext?: RouteContext;
   private selectedContract: HrEmploymentType = 'full_time';
   private selectedDepartment: HrDepartment = 'operations';
+  private selectedDocType: HrDocumentType = 'contract';
   private selectedFrequency: HrPaymentFrequency = 'biweekly';
   private selectedModality: HrWorkModality = 'hybrid';
   private uuid: string | null = null;
@@ -198,7 +251,7 @@ export class HrEmployeeFormController implements ViewController {
     this.routeContext = routeContext;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
 
     this.form = this.container.querySelector<HTMLFormElement>('[data-ref="form-hr-employee"]');
@@ -208,6 +261,10 @@ export class HrEmployeeFormController implements ViewController {
     this.btnCancel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-hr"]');
     this.btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-hr"]');
     this.bannerError = this.container.querySelector<HTMLElement>('[data-ref="banner-error"]');
+    this.btnPickDoc = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pick-hr-doc"]');
+    this.inputDocFile = this.container.querySelector<HTMLInputElement>('[data-ref="input-emp-doc-file"]');
+    this.inputDocTitle = this.container.querySelector<HTMLInputElement>('[data-ref="input-emp-doc-title"]');
+    this.docListContainer = this.container.querySelector<HTMLElement>('[data-ref="hr-doc-list"]');
 
     this.mountDropdownSlots();
 
@@ -230,6 +287,7 @@ export class HrEmployeeFormController implements ViewController {
 
     renderIcons(this.container);
     this.bindEvents();
+    this.renderDocumentsList();
     this.updateLivePreview();
 
     if (this.mode === 'edit') {
@@ -245,7 +303,7 @@ export class HrEmployeeFormController implements ViewController {
         return;
       }
 
-      void this.loadEmployeeForEdit(this.uuid);
+      await this.loadEmployeeForEdit(this.uuid);
     }
   }
 
@@ -361,6 +419,7 @@ export class HrEmployeeFormController implements ViewController {
     const slotModality = this.container.querySelector<HTMLElement>('[data-ref="slot-dropdown-modality"]');
     const slotHireDate = this.container.querySelector<HTMLElement>('[data-ref="slot-dropdown-hire-date"]');
     const slotFrequency = this.container.querySelector<HTMLElement>('[data-ref="slot-dropdown-frequency"]');
+    const slotDocType = this.container.querySelector<HTMLElement>('[data-ref="slot-dropdown-doc-type"]');
 
     if (slotDept) {
       slotDept.innerHTML = this.buildCustomDropdownHtml(
@@ -403,6 +462,14 @@ export class HrEmployeeFormController implements ViewController {
         this.selectedFrequency
       );
     }
+    if (slotDocType) {
+      slotDocType.innerHTML = this.buildCustomDropdownHtml(
+        'doc-type',
+        'Tipo de Documento Legal',
+        DOCUMENT_TYPE_OPTIONS,
+        this.selectedDocType
+      );
+    }
 
     this.hireDateDropdown = setupDatePickerDropdown(this.container, {
       fieldRef: 'field-emp-hire-date',
@@ -432,6 +499,9 @@ export class HrEmployeeFormController implements ViewController {
       this.wireCustomDropdown('frequency', PAYMENT_FREQUENCY_OPTIONS, (v) => {
         this.selectedFrequency = v as HrPaymentFrequency;
         this.updateLivePreview();
+      }),
+      this.wireCustomDropdown('doc-type', DOCUMENT_TYPE_OPTIONS, (v) => {
+        this.selectedDocType = v as HrDocumentType;
       }),
       this.hireDateDropdown,
     ];
@@ -463,6 +533,29 @@ export class HrEmployeeFormController implements ViewController {
       (e) => {
         e.preventDefault();
         void this.handleSubmit();
+      },
+      { signal }
+    );
+
+    this.btnPickDoc?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        this.inputDocFile?.click();
+      },
+      { signal }
+    );
+
+    this.inputDocFile?.addEventListener(
+      'change',
+      () => {
+        const files = this.inputDocFile?.files ? Array.from(this.inputDocFile.files) : [];
+        if (files.length > 0) {
+          void this.handleFilesSelected(files);
+        }
+        if (this.inputDocFile) {
+          this.inputDocFile.value = '';
+        }
       },
       { signal }
     );
@@ -524,6 +617,163 @@ export class HrEmployeeFormController implements ViewController {
     });
   }
 
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.onerror = () => reject(new Error('READ_ERROR'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private async handleFilesSelected(files: File[]): Promise<void> {
+    const customTitle = (this.inputDocTitle?.value || '').trim();
+    const docTypeLabel = getDocumentTypeLabel(this.selectedDocType);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > 15 * 1024 * 1024) {
+        showToast(`El archivo "${file.name}" excede el límite de 15 MB.`, 'warning');
+        continue;
+      }
+
+      try {
+        const base64Data = await this.readFileAsDataUrl(file);
+        if (!base64Data) continue;
+
+        const defaultTitle =
+          files.length === 1 && customTitle
+            ? customTitle
+            : customTitle
+              ? `${customTitle} (${i + 1})`
+              : `${docTypeLabel} — ${file.name.replace(/\.[^.]+$/, '')}`;
+
+        this.queuedDocuments.push({
+          base64Data,
+          document_type: this.selectedDocType,
+          file_name: file.name,
+          file_size_bytes: file.size,
+          tempId: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          title: defaultTitle.slice(0, 150),
+        });
+      } catch (_) {
+        showToast(`No se pudo leer el archivo "${file.name}".`, 'danger');
+      }
+    }
+
+    if (this.inputDocTitle) {
+      this.inputDocTitle.value = '';
+    }
+
+    this.renderDocumentsList();
+    this.updateLivePreview();
+  }
+
+  private renderDocumentsList(): void {
+    if (!this.docListContainer) return;
+
+    const totalCount = this.existingDocuments.length + this.queuedDocuments.length;
+    if (totalCount === 0) {
+      this.docListContainer.innerHTML = `
+        <div class="hr-doc-empty" data-ref="hr-doc-empty">
+          No hay documentos adjuntos todavía. Selecciona el tipo de documento y adjunta contratos, NDA o constancias.
+        </div>
+      `;
+      return;
+    }
+
+    const existingHtml = this.existingDocuments
+      .map((doc) => {
+        const opt = DOCUMENT_TYPE_OPTIONS.find((o) => o.value === doc.document_type) || DOCUMENT_TYPE_OPTIONS[0];
+        return `
+          <div class="hr-doc-item" data-ref="hr-doc-existing-${escapeHtml(doc.uuid)}">
+            <div class="hr-doc-item__left">
+              <div class="hr-doc-item__icon-box">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${opt.icon}"></use></svg>
+              </div>
+              <div class="hr-doc-item__info">
+                <div class="hr-doc-item__title-row">
+                  <span class="hr-doc-item__title">${escapeHtml(doc.title)}</span>
+                  <span class="component-badge component-badge--sm">${escapeHtml(opt.label)}</span>
+                </div>
+                <span class="hr-doc-item__meta">${escapeHtml(doc.file_name)} • ${escapeHtml(formatFileSize(doc.file_size_bytes))} • Guardado en expediente</span>
+              </div>
+            </div>
+            <div class="hr-doc-item__actions">
+              <a class="component-button component-button--h32 component-button--secondary" data-ref="btn-view-existing-doc-${escapeHtml(doc.uuid)}" href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener noreferrer">
+                <span>Abrir</span>
+              </a>
+              <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-del-existing-doc-${escapeHtml(doc.uuid)}" data-del-existing-uuid="${escapeHtml(doc.uuid)}" aria-label="Eliminar documento">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    const queuedHtml = this.queuedDocuments
+      .map((doc) => {
+        const opt = DOCUMENT_TYPE_OPTIONS.find((o) => o.value === doc.document_type) || DOCUMENT_TYPE_OPTIONS[0];
+        return `
+          <div class="hr-doc-item" data-ref="hr-doc-queued-${escapeHtml(doc.tempId)}">
+            <div class="hr-doc-item__left">
+              <div class="hr-doc-item__icon-box">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${opt.icon}"></use></svg>
+              </div>
+              <div class="hr-doc-item__info">
+                <div class="hr-doc-item__title-row">
+                  <span class="hr-doc-item__title">${escapeHtml(doc.title)}</span>
+                  <span class="component-badge component-badge--sm">${escapeHtml(opt.label)}</span>
+                </div>
+                <span class="hr-doc-item__meta">${escapeHtml(doc.file_name)} • ${escapeHtml(formatFileSize(doc.file_size_bytes))} • Listo para adjuntar al guardar</span>
+              </div>
+            </div>
+            <div class="hr-doc-item__actions">
+              <button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-del-queued-doc-${escapeHtml(doc.tempId)}" data-del-queued-id="${escapeHtml(doc.tempId)}" aria-label="Quitar archivo">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    this.docListContainer.innerHTML = `${existingHtml}${queuedHtml}`;
+    renderIcons(this.docListContainer);
+
+    const queuedDelBtns = this.docListContainer.querySelectorAll<HTMLButtonElement>('[data-del-queued-id]');
+    queuedDelBtns.forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tempId = btn.getAttribute('data-del-queued-id');
+        this.queuedDocuments = this.queuedDocuments.filter((d) => d.tempId !== tempId);
+        this.renderDocumentsList();
+        this.updateLivePreview();
+      });
+    });
+
+    const existingDelBtns = this.docListContainer.querySelectorAll<HTMLButtonElement>('[data-del-existing-uuid]');
+    existingDelBtns.forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const docUuid = btn.getAttribute('data-del-existing-uuid');
+        if (!docUuid || !this.uuid) return;
+        btn.disabled = true;
+        const res = await deleteApi(`/api/hr/employees/${this.uuid}/documents/${docUuid}`);
+        if (res.success) {
+          this.existingDocuments = this.existingDocuments.filter((d) => d.uuid !== docUuid);
+          this.renderDocumentsList();
+          this.updateLivePreview();
+          showToast('Documento eliminado del expediente.', 'info');
+        } else {
+          btn.disabled = false;
+          showToast(res.error || 'No se pudo eliminar el documento.', 'danger');
+        }
+      });
+    });
+  }
+
   private async loadEmployeeForEdit(uuid: string): Promise<void> {
     const res = await getApi<HrEmployeeDetailResponse>(`/api/hr/employees/${uuid}`);
     if (!res.success || !res.data?.employee) {
@@ -533,6 +783,7 @@ export class HrEmployeeFormController implements ViewController {
     }
 
     const emp = res.data.employee;
+    this.existingDocuments = Array.isArray(res.data.documents) ? res.data.documents : [];
     const titleEl = this.container.querySelector<HTMLElement>('[data-ref="hr-edit-title"]');
     if (titleEl) {
       titleEl.textContent = `Editar Ficha: ${emp.full_name}`;
@@ -579,6 +830,7 @@ export class HrEmployeeFormController implements ViewController {
       statusEl.textContent = getStatusLabel(emp.status || 'active');
     }
 
+    this.renderDocumentsList();
     this.updateLivePreview();
   }
 
@@ -600,6 +852,7 @@ export class HrEmployeeFormController implements ViewController {
     const statVacEl = this.container.querySelector<HTMLElement>('[data-ref="stat-vacation-days"]');
     const statHireEl = this.container.querySelector<HTMLElement>('[data-ref="stat-hire-date"]');
     const statBankEl = this.container.querySelector<HTMLElement>('[data-ref="stat-bank-name"]');
+    const statDocsEl = this.container.querySelector<HTMLElement>('[data-ref="stat-docs-count"]');
 
     if (avatarEl) {
       avatarEl.textContent = getInitials(fullName || 'Nuevo Colaborador');
@@ -640,6 +893,10 @@ export class HrEmployeeFormController implements ViewController {
     }
     if (statBankEl) {
       statBankEl.textContent = bankName || 'Por asignar';
+    }
+    if (statDocsEl) {
+      const totalDocs = this.existingDocuments.length + this.queuedDocuments.length;
+      statDocsEl.textContent = `${totalDocs} ${totalDocs === 1 ? 'documento' : 'documentos'}`;
     }
   }
 
@@ -713,6 +970,12 @@ export class HrEmployeeFormController implements ViewController {
       clabe: clabe || null,
       curp: curp || null,
       department: this.selectedDepartment,
+      documents: this.queuedDocuments.map((d) => ({
+        base64Data: d.base64Data,
+        document_type: d.document_type,
+        file_name: d.file_name,
+        title: d.title,
+      })),
       email,
       emergency_contact_name: emergencyName || null,
       emergency_contact_phone: emergencyPhone || null,
@@ -771,7 +1034,7 @@ export class HrEmployeeFormController implements ViewController {
 export async function createHrCreateView(ctx?: RouteContext): Promise<HTMLElement> {
   const container = await loadTemplate('/views/hr/hr-create.html');
   const controller = new HrEmployeeFormController(container, 'create', ctx);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }
@@ -779,7 +1042,7 @@ export async function createHrCreateView(ctx?: RouteContext): Promise<HTMLElemen
 export async function createHrEditView(ctx?: RouteContext): Promise<HTMLElement> {
   const container = await loadTemplate('/views/hr/hr-edit.html');
   const controller = new HrEmployeeFormController(container, 'edit', ctx);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

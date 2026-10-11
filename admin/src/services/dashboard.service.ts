@@ -197,7 +197,26 @@ export class DashboardService {
     );
 
     const [paymentRows] = await pool.query<RowDataPacket[]>(
-      'SELECT `bank_name` AS method_name FROM `bank_accounts` WHERE `is_active` = 1 ORDER BY `id` ASC'
+      `SELECT
+         ba.bank_name AS method_name,
+         COALESCE(SUM(
+           CASE
+             WHEN o.status = 'completed' AND o.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+             THEN o.total_amount / GREATEST(1, (
+               SELECT COUNT(*) FROM giveaway_bank_accounts gba2
+               INNER JOIN bank_accounts ba2 ON ba2.id = gba2.bank_account_id
+               WHERE gba2.giveaway_id = o.giveaway_id AND gba2.is_active = 1 AND ba2.is_active = 1
+             ))
+             ELSE 0
+           END
+         ), 0) AS attributed_revenue
+       FROM bank_accounts ba
+       LEFT JOIN giveaway_bank_accounts gba ON gba.bank_account_id = ba.id AND gba.is_active = 1
+       LEFT JOIN orders o ON o.giveaway_id = gba.giveaway_id
+       WHERE ba.is_active = 1
+       GROUP BY ba.id, ba.bank_name
+       ORDER BY ba.id ASC`,
+      [days]
     );
 
     const kpi = kpiRows[0] || {};
@@ -271,7 +290,16 @@ export class DashboardService {
     }));
 
     const paymentLabels = paymentRows.length > 0 ? paymentRows.map((r) => r.method_name) : ['Transferencia SPEI'];
-    const paymentAmounts = paymentLabels.map(() => totalRev);
+    const attributedSum = paymentRows.reduce((acc, r) => acc + Number(r.attributed_revenue || 0), 0);
+    const paymentAmounts = paymentRows.length > 0
+      ? paymentRows.map((r) => {
+          const val = Math.round(Number(r.attributed_revenue || 0) * 100) / 100;
+          if (attributedSum === 0 && totalRev > 0) {
+            return Math.round((totalRev / paymentRows.length) * 100) / 100;
+          }
+          return val;
+        })
+      : [totalRev];
 
     let redisLatencyMs = 1;
     let redisOperational = false;

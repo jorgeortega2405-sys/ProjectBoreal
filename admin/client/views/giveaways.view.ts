@@ -1,11 +1,11 @@
 import { navigate } from '../app-router.js';
 import { openModal } from '../components/modal.component.js';
-import { deleteApi, getApi, patchApi, postApi } from '../services/api.service.js';
+import { deleteApi, getApi, patchApi, postApi, putApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { DropdownController, setupDropdown } from '../utils/dom.util.js';
+import { DropdownController, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 import { hasPermission } from '../utils/permission.util.js';
 
 interface AdminGiveawayItem {
@@ -115,10 +115,12 @@ export class GiveawaysController implements ViewController {
   private btnToggleSearch: HTMLButtonElement | null = null;
   private container: HTMLElement;
   private currentGiveaways: AdminGiveawayItem[] = [];
+  private dailyPotPercentage = 50;
+  private dailyTicketPrice = 2;
+  private dailyTotalTickets = 20000;
   private defaultActions: HTMLElement | null = null;
   private filterDropdownController: DropdownController | null = null;
   private inputSearch: HTMLInputElement | null = null;
-  private dailyPotPercentage = 50;
   private isDailyPausedNext = false;
   private isSearchActive = false;
   private searchToolbar: HTMLElement | null = null;
@@ -132,7 +134,7 @@ export class GiveawaysController implements ViewController {
     this.container = container;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
     this.btnToggleSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
@@ -160,9 +162,7 @@ export class GiveawaysController implements ViewController {
 
     this.bindEvents();
     renderIcons(this.container);
-    requestAnimationFrame(() => {
-      void this.loadData();
-    });
+    await this.loadData();
   }
 
   bindEvents(): void {
@@ -373,36 +373,32 @@ export class GiveawaysController implements ViewController {
         { signal }
       );
     });
+  }
 
-    const btnReset = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-filters"]');
-    btnReset?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        this.typeFilter = 'all';
-        this.statusFilter = 'all';
-        this.searchQuery = '';
-        if (this.inputSearch) this.inputSearch.value = '';
-        this.btnClearSearch?.classList.add('is-hidden');
+  private resetFilters(): void {
+    this.typeFilter = 'all';
+    this.statusFilter = 'all';
+    this.searchQuery = '';
+    if (this.inputSearch) this.inputSearch.value = '';
+    this.btnClearSearch?.classList.add('is-hidden');
 
-        typeBtns.forEach((b) => {
-          b.classList.toggle('is-active', b.getAttribute('data-type-filter') === 'all');
-        });
+    const typeBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-type-filter]');
+    typeBtns.forEach((b) => {
+      b.classList.toggle('is-active', b.getAttribute('data-type-filter') === 'all');
+    });
 
-        statusBtns.forEach((b) => {
-          b.classList.toggle('is-active', b.getAttribute('data-status-filter') === 'all');
-        });
+    const statusBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-status-filter]');
+    statusBtns.forEach((b) => {
+      b.classList.toggle('is-active', b.getAttribute('data-status-filter') === 'all');
+    });
 
-        if (this.isSearchActive) {
-          this.toggleSearchToolbar(false);
-        }
+    if (this.isSearchActive) {
+      this.toggleSearchToolbar(false);
+    }
 
-        this.selectedGiveaway = null;
-        this.applyFiltersAndRender();
-        this.updateSelectionUi();
-      },
-      { signal }
-    );
+    this.selectedGiveaway = null;
+    this.applyFiltersAndRender();
+    this.updateSelectionUi();
   }
 
   private toggleSearchToolbar(forceState?: boolean): void {
@@ -423,7 +419,7 @@ export class GiveawaysController implements ViewController {
     try {
       const [giveawaysRes, dailyConfigRes, banksRes] = await Promise.all([
         getApi<AdminGiveawayItem[]>('/api/giveaways'),
-        getApi<{ isPaused: boolean; potPercentage?: number }>('/api/giveaways/config/daily'),
+        getApi<{ isPaused: boolean; potPercentage?: number; ticketPrice?: number; totalTickets?: number }>('/api/giveaways/config/daily'),
         getApi<BankAccountItem[]>('/api/giveaways/bank-accounts'),
       ]);
 
@@ -438,6 +434,12 @@ export class GiveawaysController implements ViewController {
         if (typeof dailyConfigRes.data.potPercentage === 'number') {
           this.dailyPotPercentage = dailyConfigRes.data.potPercentage;
         }
+        if (typeof dailyConfigRes.data.ticketPrice === 'number') {
+          this.dailyTicketPrice = dailyConfigRes.data.ticketPrice;
+        }
+        if (typeof dailyConfigRes.data.totalTickets === 'number') {
+          this.dailyTotalTickets = dailyConfigRes.data.totalTickets;
+        }
       }
 
       if (banksRes?.success && Array.isArray(banksRes?.data)) {
@@ -448,14 +450,13 @@ export class GiveawaysController implements ViewController {
         const found = this.currentGiveaways.find((g) => g.uuid === this.selectedGiveaway?.uuid);
         this.selectedGiveaway = found || null;
       }
-
-      this.updateKpis();
-      this.updateDailyBanner();
-      this.applyFiltersAndRender();
-      this.updateSelectionUi();
     } catch (_) {
       showToast('Error de conexión al cargar la información de sorteos.', 'danger');
     }
+    this.updateKpis();
+    this.updateDailyBanner();
+    this.applyFiltersAndRender();
+    this.updateSelectionUi();
   }
 
   private updateKpis(): void {
@@ -506,17 +507,40 @@ export class GiveawaysController implements ViewController {
     }
 
     const grid = this.container.querySelector<HTMLElement>('[data-ref="giveaways-grid"]');
-    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="giveaways-empty-state"]');
+    const contentContainer = this.container.querySelector<HTMLElement>('[data-ref="giveaways-content-container"]');
 
     if (!grid) return;
 
     if (filtered.length === 0) {
+      const isFiltered = this.typeFilter !== 'all' || this.statusFilter !== 'all' || Boolean(this.searchQuery);
       grid.innerHTML = '';
-      emptyState?.classList.remove('is-hidden');
+      grid.classList.add('is-hidden');
+      if (contentContainer) {
+        renderEmptyState({
+          actionDataRef: isFiltered ? 'btn-reset-filters' : undefined,
+          actionLabel: isFiltered ? 'Restablecer Filtros' : undefined,
+          container: contentContainer,
+          dataRef: 'giveaways-empty-state',
+          desc: isFiltered
+            ? 'No se encontraron sorteos con los filtros seleccionados.'
+            : 'Aún no hay sorteos registrados en la plataforma.',
+          graphicType: isFiltered ? 'search' : 'giveaway',
+          onAction: isFiltered
+            ? (e) => {
+                e.preventDefault();
+                this.resetFilters();
+              }
+            : undefined,
+          title: 'Sin sorteos disponibles',
+        });
+      }
       return;
     }
 
-    emptyState?.classList.add('is-hidden');
+    grid.classList.remove('is-hidden');
+    if (contentContainer) {
+      removeEmptyState(contentContainer, 'giveaways-empty-state');
+    }
     this.renderCards(grid, filtered);
     this.updateSelectionUi();
   }
@@ -700,6 +724,8 @@ export class GiveawaysController implements ViewController {
   private openDailyConfigModal(): void {
     const isPaused = this.isDailyPausedNext;
     const currentPct = this.dailyPotPercentage;
+    const currentPrice = this.dailyTicketPrice;
+    const currentTotalTickets = this.dailyTotalTickets;
 
     const bodyHtml = `
       <div class="daily-modal-content">
@@ -707,20 +733,32 @@ export class GiveawaysController implements ViewController {
           <div class="daily-modal-status-header">
             <span class="daily-modal-status-dot ${isPaused ? 'daily-modal-status-dot--paused' : 'daily-modal-status-dot--active'}"></span>
             <strong class="daily-modal-status-title">
-              ${isPaused ? 'Pausa del Siguiente Sorteo Activa' : 'Renovación Automática Activa'}
+              ${isPaused ? 'Pausa del Siguiente Sorteo Activa' : 'Ciclo Diario Automatizado Activo'}
             </strong>
           </div>
           <p class="daily-modal-status-desc">
             ${isPaused
-              ? 'Cuando concluya el sorteo diario de hoy a las 8:00 PM y se extraiga al ganador, el sistema NO creará un nuevo sorteo diario de forma automática.'
-              : 'El sistema aprovisiona diariamente un nuevo ciclo de lunes a viernes a las 8:00 PM al momento de concluir el sorteo en curso.'}
+              ? 'Cuando concluya el sorteo diario en curso a las 8:00 PM y se extraiga al ganador, el sistema NO creará un nuevo sorteo diario automáticamente.'
+              : 'El Sorteo Diario es un único ciclo automatizado continuo (Lun–Vie 8:00 PM). Estos parámetros gobiernan su bolsa acumulada, precio y emisión.'}
           </p>
         </div>
 
-        <div style="margin-top: 16px; margin-bottom: 16px;">
+        <div class="giveaway-create__grid-2" style="margin-top: 16px;">
           <label class="field" data-ref="field-daily-pot-pct">
             <input class="field__input" data-ref="input-daily-pot-pct" type="number" min="1" max="100" value="${currentPct}" placeholder=" " />
-            <span class="field__label">Porcentaje de la Bolsa del Ganador (%)</span>
+            <span class="field__label">Porcentaje Bolsa Ganador (%)</span>
+          </label>
+
+          <label class="field" data-ref="field-daily-ticket-price">
+            <input class="field__input" data-ref="input-daily-ticket-price" type="number" step="0.5" min="1" value="${currentPrice}" placeholder=" " />
+            <span class="field__label">Precio por Boleto (MXN)</span>
+          </label>
+        </div>
+
+        <div style="margin-top: 12px; margin-bottom: 16px;">
+          <label class="field" data-ref="field-daily-total-tickets">
+            <input class="field__input" data-ref="input-daily-total-tickets" type="number" step="100" min="100" max="500000" value="${currentTotalTickets}" placeholder=" " />
+            <span class="field__label">Emisión Total de Boletos por Ciclo Diario</span>
           </label>
         </div>
 
@@ -735,48 +773,48 @@ export class GiveawaysController implements ViewController {
       bodyHtml,
       confirmClass: 'component-button--black',
       confirmText: 'Guardar Configuración',
-      description: 'Gestión del ciclo continuo y porcentaje de la bolsa para sorteos diarios.',
+      description: 'Gobierna el único ciclo automatizado del Sorteo Diario (bolsa, precio de boleto, emisión y pausa).',
       onConfirm: async () => {
-        const inputEl = document.querySelector<HTMLInputElement>('[data-ref="input-daily-pot-pct"]');
+        const inputPct = document.querySelector<HTMLInputElement>('[data-ref="input-daily-pot-pct"]');
+        const inputPrice = document.querySelector<HTMLInputElement>('[data-ref="input-daily-ticket-price"]');
+        const inputTotal = document.querySelector<HTMLInputElement>('[data-ref="input-daily-total-tickets"]');
         const pauseCheckbox = document.querySelector<HTMLInputElement>('[data-ref="input-daily-pause-toggle"]');
 
-        let hasError = false;
-        if (inputEl) {
-          const newPct = Number(inputEl.value);
-          if (!Number.isNaN(newPct) && newPct >= 1 && newPct <= 100 && newPct !== this.dailyPotPercentage) {
-            const potRes = await postApi<{ potPercentage: number }>('/api/giveaways/config/daily/pot-percentage', { potPercentage: newPct });
-            if (potRes.success) {
-              this.dailyPotPercentage = newPct;
-            } else {
-              showToast(potRes.error || 'No se pudo actualizar el porcentaje.', 'danger');
-              hasError = true;
-            }
-          }
+        const newPct = Math.min(100, Math.max(1, Number(inputPct?.value || this.dailyPotPercentage)));
+        const newPrice = Math.max(1, Number(inputPrice?.value || this.dailyTicketPrice));
+        const newTotal = Math.min(500000, Math.max(100, Math.round(Number(inputTotal?.value || this.dailyTotalTickets))));
+        const shouldPause = Boolean(pauseCheckbox?.checked);
+
+        const res = await putApi<{
+          isPaused: boolean;
+          potPercentage: number;
+          ticketPrice: number;
+          totalTickets: number;
+        }>('/api/giveaways/config/daily', {
+          isPaused: shouldPause,
+          potPercentage: newPct,
+          ticketPrice: newPrice,
+          totalTickets: newTotal,
+        });
+
+        if (!res.success) {
+          showToast(res.error || 'No se pudo actualizar la configuración del ciclo diario.', 'danger');
+          return false;
         }
 
-        if (pauseCheckbox) {
-          const shouldPause = pauseCheckbox.checked;
-          if (shouldPause !== this.isDailyPausedNext) {
-            const pauseRes = await postApi<{ isPaused: boolean }>('/api/giveaways/config/daily/schedule-pause', { pause: shouldPause });
-            if (pauseRes.success) {
-              this.isDailyPausedNext = shouldPause;
-            } else {
-              showToast(pauseRes.error || 'No se pudo actualizar el estado de pausa.', 'danger');
-              hasError = true;
-            }
-          }
+        if (res.data) {
+          this.isDailyPausedNext = res.data.isPaused;
+          this.dailyPotPercentage = res.data.potPercentage;
+          this.dailyTicketPrice = res.data.ticketPrice;
+          this.dailyTotalTickets = res.data.totalTickets;
         }
 
-        if (!hasError) {
-          showToast('Configuración del sorteo diario actualizada.', 'success');
-        }
-        this.updateDailyBanner();
-        this.updateKpis();
-        this.applyFiltersAndRender();
+        showToast('Configuración del Sorteo Diario actualizada.', 'success');
+        await this.loadData();
         return true;
       },
       size: 'sm',
-      title: 'Configuración del Sorteo Diario',
+      title: 'Configuración del Ciclo Diario',
     });
   }
 
@@ -835,11 +873,12 @@ export class GiveawaysController implements ViewController {
       min_threshold_pct: g.min_threshold_pct,
       package_options: g.package_options,
       primary_image_url: g.primary_image_url,
+      prize_amount: g.prize_amount,
       slug: g.slug,
       ticket_price: g.ticket_price,
       title: `${g.title} (Copia)`,
       total_tickets: g.total_tickets,
-      type: g.type,
+      type: 'standard',
     };
     try {
       sessionStorage.setItem('boreal_duplicate_giveaway', JSON.stringify(duplicateData));
@@ -917,7 +956,7 @@ export class GiveawaysController implements ViewController {
 export async function createGiveawaysView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/giveaways/giveaways.html');
   const controller = new GiveawaysController(container);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

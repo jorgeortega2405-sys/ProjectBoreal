@@ -152,6 +152,21 @@ export async function reserveTickets(data: {
     const rawPhoneDigits = data.customerPhone.replace(/\D/g, '');
     const phoneCandidates = Array.from(new Set([normalizedPhone, rawPhoneDigits, data.customerPhone.trim()])).filter(Boolean);
 
+    if (phoneCandidates.length > 0) {
+      const [blockedRows] = await conn.query<RowDataPacket[]>(
+        `SELECT id FROM blocked_customers WHERE phone IN (?) LIMIT 1`,
+        [phoneCandidates]
+      );
+      if (blockedRows.length > 0) {
+        await conn.rollback();
+        return {
+          bankAccounts: [],
+          error: 'El número telefónico proporcionado cuenta con una restricción operativa. Si crees que se trata de un error, contacta a soporte.',
+          success: false,
+        };
+      }
+    }
+
     const [pendingOrders] = await conn.query<RowDataPacket[]>(
       `SELECT COUNT(*) AS active_count
        FROM orders
@@ -441,6 +456,21 @@ export async function attachReceipt(data: {
     }
 
     const order = rows[0] as OrderRow;
+    const normalizedOrderPhone = normalizeMexicanPhone(order.customer_phone) || order.customer_phone.trim();
+    const rawOrderPhone = order.customer_phone.replace(/\D/g, '');
+    const orderPhoneCandidates = Array.from(new Set([normalizedOrderPhone, rawOrderPhone, order.customer_phone.trim()])).filter(Boolean);
+
+    if (orderPhoneCandidates.length > 0) {
+      const [blockedRows] = await conn.query<RowDataPacket[]>(
+        `SELECT id FROM blocked_customers WHERE phone IN (?) LIMIT 1`,
+        [orderPhoneCandidates]
+      );
+      if (blockedRows.length > 0) {
+        await conn.rollback();
+        throw new Error('CUSTOMER_BLOCKED');
+      }
+    }
+
     if (order.status === 'completed' || order.status === 'cancelled') {
       await conn.rollback();
       return await getOrderByUuid(data.orderUuid);
@@ -558,7 +588,7 @@ export async function attachReceipt(data: {
     return await getOrderByUuid(data.orderUuid);
   } catch (error) {
     await conn.rollback();
-    if ((error as Error).message === 'ORDER_EXPIRED' || (error as Error).message === 'DUPLICATE_TRACKING_KEY') {
+    if ((error as Error).message === 'ORDER_EXPIRED' || (error as Error).message === 'DUPLICATE_TRACKING_KEY' || (error as Error).message === 'CUSTOMER_BLOCKED') {
       throw error;
     }
     if ((error as any)?.code === 'ER_DUP_ENTRY') {

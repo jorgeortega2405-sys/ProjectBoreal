@@ -1,5 +1,5 @@
 import { requirePermission } from '../middlewares/auth.middleware.js';
-import { createGiveaway, deleteDraftGiveaway, executeManualDraw, getActiveBankAccounts, getAllGiveaways, getDailyGiveawayPotPercentage, getGiveawayByUuid, isDailyGiveawayPauseScheduled, saveUploadedGiveawayImage, setDailyGiveawayPauseScheduled, setDailyGiveawayPotPercentage, updateGiveaway, updateGiveawayStatus } from '../services/giveaways.service.js';
+import { createGiveaway, deleteDraftGiveaway, executeManualDraw, getActiveBankAccounts, getAllGiveaways, getDailyGiveawayConfig, getGiveawayByUuid, saveUploadedGiveawayImage, setDailyGiveawayPauseScheduled, setDailyGiveawayPotPercentage, updateDailyGiveawayConfig, updateGiveaway, updateGiveawayStatus } from '../services/giveaways.service.js';
 import { logger } from '../services/logger.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
@@ -28,16 +28,32 @@ router.get('/', requirePermission('giveaways:read', 'giveaways:create', 'giveawa
 
 router.get('/config/daily', requirePermission('giveaways:read', 'giveaways:manage'), async (_req: Request, res: Response): Promise<void> => {
   try {
-    const isPaused = await isDailyGiveawayPauseScheduled();
-    const potPercentage = await getDailyGiveawayPotPercentage();
+    const config = await getDailyGiveawayConfig();
     res.status(200).json({
-      data: { isPaused, potPercentage },
+      data: config,
       success: true,
     });
   } catch (err) {
     logger.app.error('Error al consultar configuración de sorteo diario en admin:', err);
     res.status(500).json({
       error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+});
+
+router.put('/config/daily', requirePermission('giveaways:manage'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const updated = await updateDailyGiveawayConfig(req.body || {});
+    res.status(200).json({
+      data: updated,
+      message: 'La configuración global del ciclo diario se actualizó correctamente.',
+      success: true,
+    });
+  } catch (err: any) {
+    logger.app.warn('Error al actualizar configuración global de sorteo diario en admin:', err);
+    res.status(400).json({
+      error: getSafeErrorMessage(err, 'No se pudo actualizar la configuración del ciclo diario.'),
       success: false,
     });
   }

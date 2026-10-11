@@ -3,7 +3,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { DropdownController, escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { DropdownController, escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 import Chart from 'chart.js/auto';
 
 interface DashboardStatsData {
@@ -81,7 +81,7 @@ export class DashboardController implements ViewController {
     this.container = container;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
     const periodWrapper = this.container.querySelector<HTMLElement>('[data-ref="period-dropdown-wrapper"]');
     if (periodWrapper) {
@@ -94,9 +94,7 @@ export class DashboardController implements ViewController {
     this.bindEvents();
     renderIcons(this.container);
     this.setupThemeObserver();
-    requestAnimationFrame(() => {
-      void this.loadStats(this.activePeriod);
-    });
+    await this.loadStats(this.activePeriod);
   }
 
   bindEvents(): void {
@@ -431,17 +429,29 @@ export class DashboardController implements ViewController {
 
   private renderRecentOrders(orders: DashboardStatsData['recentOrders']): void {
     const tbody = this.container.querySelector<HTMLTableSectionElement>('[data-ref="table-body-recent-orders"]');
+    const tableWrapper = this.container.querySelector<HTMLElement>('[data-ref="table-responsive-wrapper"]');
+    const recentOrdersCard = this.container.querySelector<HTMLElement>('[data-ref="table-card-recent-orders"]');
     if (!tbody) return;
 
     if (orders.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td class="dashboard-table-empty" colspan="7">
-            No hay órdenes registradas en este periodo.
-          </td>
-        </tr>
-      `;
+      tableWrapper?.classList.add('is-hidden');
+      tbody.innerHTML = '';
+      if (recentOrdersCard) {
+        renderEmptyState({
+          container: recentOrdersCard,
+          dataRef: 'dashboard-recent-orders-empty',
+          desc: 'No hay órdenes registradas en este periodo.',
+          graphicType: 'payments',
+          isTable: true,
+          title: 'Sin órdenes recientes',
+        });
+      }
       return;
+    }
+
+    tableWrapper?.classList.remove('is-hidden');
+    if (recentOrdersCard) {
+      removeEmptyState(recentOrdersCard, 'dashboard-recent-orders-empty');
     }
 
     const rowsHtml = orders
@@ -556,7 +566,7 @@ export class DashboardController implements ViewController {
 export async function createDashboardView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/dashboard/dashboard.html');
   const controller = new DashboardController(container);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

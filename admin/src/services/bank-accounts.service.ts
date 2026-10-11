@@ -65,10 +65,12 @@ export interface UpdateBankAccountInput {
 
 export async function invalidateBankAccountsCache(): Promise<void> {
   try {
-    if (redis.status === 'ready') {
+    if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
       const keys = await redis.keys('bank_accounts*');
-      if (keys.length > 0) {
-        await redis.del(...keys);
+      const prefixedKeys = await redis.keys('boreal:cache:bank_accounts*');
+      const allKeys = [...keys, ...prefixedKeys, 'giveaways:active', 'boreal:cache:giveaways:active'];
+      if (allKeys.length > 0) {
+        await redis.del(...allKeys);
       }
     }
   } catch (err) {

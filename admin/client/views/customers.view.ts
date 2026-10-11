@@ -4,7 +4,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml, getEmptyIllustration } from '../utils/dom.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { hasPermission } from '../utils/permission.util.js';
 
 interface CustomerSummary {
@@ -109,7 +109,7 @@ export class CustomersController implements ViewController {
     this.container = container;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
 
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -132,9 +132,7 @@ export class CustomersController implements ViewController {
     this.bindEvents();
     renderIcons(this.container);
 
-    requestAnimationFrame(() => {
-      void this.loadInitialData();
-    });
+    await this.loadInitialData();
   }
 
   bindEvents(): void {
@@ -344,14 +342,14 @@ export class CustomersController implements ViewController {
           const fresh = this.customers.find((c) => c.customer_phone === this.selectedCustomer?.customer_phone);
           this.selectedCustomer = fresh || null;
         }
-        this.renderCustomers();
-        this.updateSelectionUi();
       } else {
         showToast(res.error || 'No se pudieron cargar los participantes.', 'danger');
       }
     } catch (_) {
       showToast('Error de conexión al cargar clientes.', 'danger');
     }
+    this.renderCustomers();
+    this.updateSelectionUi();
   }
 
   private toggleCustomerSelection(customer: CustomerSummary): void {
@@ -423,45 +421,37 @@ export class CustomersController implements ViewController {
 
   private renderCustomers(): void {
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-customers"]');
-    if (!tbody) return;
+    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="customers-table-card"]');
+    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="customers-table-wrapper"]');
+    if (!tbody || !tableCard || !wrapper) return;
 
     if (this.customers.length === 0) {
       const isFiltered = Boolean(this.searchQuery);
-      tbody.innerHTML = `
-        <tr class="winners-table__tr-empty">
-          <td class="winners-table__td-empty" colspan="8">
-            <div class="component-empty-state component-empty-state--table" data-ref="customers-empty-state">
-              <div class="component-empty-state-graphic">
-                ${getEmptyIllustration(isFiltered ? 'search' : 'customers')}
-              </div>
-              <h2 class="component-empty-state-title">Sin participantes encontrados</h2>
-              <p class="component-empty-state-desc">${
-                isFiltered
-                  ? 'No se encontraron registros que coincidan con los criterios de búsqueda.'
-                  : 'Aún no hay clientes ni participantes registrados en la plataforma.'
-              }</p>
-              ${
-                isFiltered
-                  ? `<div class="component-empty-state-actions">
-                      <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-empty-reset-search">Restablecer Búsqueda</button>
-                    </div>`
-                  : ''
-              }
-            </div>
-          </td>
-        </tr>
-      `;
-      renderIcons(tbody);
-
-      const btnReset = tbody.querySelector<HTMLButtonElement>('[data-ref="btn-empty-reset-search"]');
-      btnReset?.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.resetSearch();
+      tableCard.classList.add('is-hidden');
+      tbody.innerHTML = '';
+      renderEmptyState({
+        actionDataRef: isFiltered ? 'btn-empty-reset-search' : undefined,
+        actionLabel: isFiltered ? 'Restablecer Búsqueda' : undefined,
+        container: wrapper,
+        dataRef: 'customers-empty-state',
+        desc: isFiltered
+          ? 'No se encontraron registros que coincidan con los criterios de búsqueda.'
+          : 'Aún no hay clientes ni participantes registrados en la plataforma.',
+        graphicType: isFiltered ? 'search' : 'customers',
+        onAction: isFiltered
+          ? (e) => {
+              e.preventDefault();
+              this.resetSearch();
+            }
+          : undefined,
+        title: 'Sin participantes encontrados',
       });
-
       this.updatePaginationUi();
       return;
     }
+
+    tableCard.classList.remove('is-hidden');
+    removeEmptyState(wrapper, 'customers-empty-state');
 
     this.updatePaginationUi();
     const startIndex = (this.currentPage - 1) * this.pageSize;
@@ -682,7 +672,7 @@ export class CustomersController implements ViewController {
 export async function createCustomersView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/customers/customers.html');
   const controller = new CustomersController(container);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

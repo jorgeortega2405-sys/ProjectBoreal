@@ -147,6 +147,33 @@
           </label>
         </div>
 
+        <div class="giveaway-create__section" data-ref="section-documents">
+          <div class="giveaway-create__section-header">
+            <h2 class="giveaway-create__section-title">Expediente Digital y Documentación Legal</h2>
+            <p class="giveaway-create__section-desc">Adjunta contratos firmados, convenios de confidencialidad (NDA), identificación oficial, constancia fiscal y comprobantes.</p>
+          </div>
+
+          <div class="hr-doc-uploader" data-ref="hr-doc-uploader">
+            <div class="hr-doc-uploader__controls">
+              <div class="hr-slot-dropdown" data-ref="slot-dropdown-doc-type"></div>
+
+              <label class="field" data-ref="field-emp-doc-title">
+                <input class="field__input" data-ref="input-emp-doc-title" type="text" placeholder=" " maxlength="150" />
+                <span class="field__label">Título o Referencia del Documento (Opcional)</span>
+              </label>
+
+              <button type="button" class="component-button component-button--h55 component-button--secondary hr-doc-uploader__btn" data-ref="btn-pick-hr-doc">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#attachment"></use></svg>
+                <span>Seleccionar Archivo(s)</span>
+              </button>
+              <input class="is-hidden" data-ref="input-emp-doc-file" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" multiple />
+            </div>
+            <p class="hr-doc-uploader__hint">Formatos aceptados: PDF, DOC, DOCX, PNG, JPG o WEBP (Máx. 15 MB por archivo).</p>
+          </div>
+
+          <div class="hr-doc-list" data-ref="hr-doc-list"></div>
+        </div>
+
         <div class="giveaway-create__actions" data-ref="hr-bottom-actions">
           <button type="button" class="component-button component-button--h45" data-ref="btn-cancel-hr">
             Cancelar
@@ -202,6 +229,10 @@
             <div class="giveaway-create__stat-row">
               <span>Banco Nómina</span>
               <span class="giveaway-create__stat-val" data-ref="stat-bank-name">BBVA México</span>
+            </div>
+            <div class="giveaway-create__stat-row">
+              <span>Expediente Digital</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-docs-count">0 documentos</span>
             </div>
           </div>
         </div>

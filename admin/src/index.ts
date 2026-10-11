@@ -14,6 +14,7 @@ import hrRoutes from './routes/hr.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
 import winnersRoutes from './routes/winners.routes.js';
 import { logger } from './services/logger.service.js';
+import { checkS3Connection, getS3Object } from './services/s3.service.js';
 import express, { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
 import http from 'http';
@@ -172,6 +173,43 @@ function createExpressApp(): express.Express {
   const adminPublicDir = path.resolve(ADMIN_ROOT_DIR, 'public');
   const rootPublicDir = path.resolve(ADMIN_ROOT_DIR, '..', 'public');
 
+  app.get('/uploads/hr/:filename', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const filename = path.basename(req.params.filename || '');
+      if (!filename) return next();
+      const s3Obj = await getS3Object(`hr/${filename}`);
+      if (s3Obj) {
+        res.setHeader('Content-Type', s3Obj.contentType);
+        res.setHeader('Cache-Control', 'private, no-cache');
+        res.status(200).send(s3Obj.body);
+        return;
+      }
+      next();
+    } catch (_) {
+      next();
+    }
+  });
+
+  app.get('/uploads/:category/:filename', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const category = path.basename(req.params.category || '');
+      const filename = path.basename(req.params.filename || '');
+      if (!['giveaways', 'winners'].includes(category) || !filename) {
+        return next();
+      }
+      const s3Obj = await getS3Object(`${category}/${filename}`);
+      if (s3Obj) {
+        res.setHeader('Content-Type', s3Obj.contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.status(200).send(s3Obj.body);
+        return;
+      }
+      next();
+    } catch (_) {
+      next();
+    }
+  });
+
   app.use('/images', express.static(path.join(adminPublicDir, 'images')));
   app.use('/images', express.static(path.join(rootPublicDir, 'images')));
   app.use('/uploads', express.static(path.join(adminPublicDir, 'uploads')));
@@ -207,6 +245,7 @@ async function startServer(): Promise<void> {
 
   void checkDbConnection();
   void checkRedisConnection();
+  void checkS3Connection();
 
   const handleShutdown = async (signal: string) => {
     logger.app.info(`Servidor Admin [PID ${process.pid}] recibió ${signal}. Drenando conexiones...`);

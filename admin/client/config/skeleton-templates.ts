@@ -137,33 +137,6 @@ export const ADMIN_PAYMENTS_SKELETON_TEMPLATE = `
           <div class="skeleton skeleton--w-95-px skeleton--h-11"></div>
         </div>
       </div>
-      <div class="winners-daily-table-card">
-        <table>
-          <tbody>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-35"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-35"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-35"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
     </div>
   </div>
 </div>
@@ -243,24 +216,6 @@ export const ADMIN_CUSTOMERS_SKELETON_TEMPLATE = `
           <div class="skeleton skeleton--w-130-px skeleton--h-11"></div>
         </div>
       </div>
-      <div class="winners-daily-table-card">
-        <table>
-          <tbody>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
     </div>
   </div>
 </div>
@@ -296,24 +251,6 @@ export const ADMIN_WINNERS_SKELETON_TEMPLATE = `
           <div class="skeleton skeleton--w-40-px skeleton--h-16"></div>
           <div class="skeleton skeleton--w-110-px skeleton--h-11"></div>
         </div>
-      </div>
-      <div class="winners-daily-table-card">
-        <table>
-          <tbody>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
   </div>
@@ -369,24 +306,6 @@ export const ADMIN_HR_SKELETON_TEMPLATE = `
           <div class="skeleton skeleton--w-90-px skeleton--h-16"></div>
           <div class="skeleton skeleton--w-110-px skeleton--h-11"></div>
         </div>
-      </div>
-      <div class="winners-daily-table-card">
-        <table>
-          <tbody>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-            <tr class="skeleton-table-row">
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-50"></div></td>
-              <td><div class="skeleton-cell skeleton--w-75"></div></td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
   </div>

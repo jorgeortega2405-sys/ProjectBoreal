@@ -23,6 +23,15 @@ export const config = {
     password: process.env.REDIS_PASSWORD || undefined,
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
   },
+  s3: {
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || 'boreal_s3_access',
+    bucket: process.env.S3_BUCKET || 'boreal-storage',
+    endpoint: process.env.S3_ENDPOINT || 'http://127.0.0.1:9000',
+    forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false',
+    publicUrl: process.env.S3_PUBLIC_URL || '',
+    region: process.env.S3_REGION || 'us-east-1',
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || 'boreal_s3_secret_2026',
+  },
 };
 
 const ALLOWED_ORIGIN_REGEX = /^https?:\/\/(?:[a-zA-Z0-9-]+\.)*(?:projectboreal\.com|boreal\.com|boreal\.local)(?::\d+)?$/;

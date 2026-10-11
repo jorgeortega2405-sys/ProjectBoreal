@@ -5,7 +5,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { buildDatePickerDropdownHtml, DatePickerDropdownController, DropdownController, escapeHtml, getEmptyIllustration, setupDatePickerDropdown, setupDropdown } from '../utils/dom.util.js';
+import { buildDatePickerDropdownHtml, DatePickerDropdownController, DropdownController, escapeHtml, removeEmptyState, renderEmptyState, setupDatePickerDropdown, setupDropdown } from '../utils/dom.util.js';
 import { hasPermission } from '../utils/permission.util.js';
 
 type HrDepartment =
@@ -119,7 +119,24 @@ interface HrEmployeeEvent {
   uuid: string;
 }
 
+type HrDocumentType = 'address_proof' | 'contract' | 'id_card' | 'nda' | 'other' | 'tax_constancy';
+
+interface HrEmployeeDocument {
+  created_at: string;
+  document_type: HrDocumentType;
+  employee_id: number;
+  file_name: string;
+  file_size_bytes: number;
+  file_url: string;
+  id: number;
+  mime_type: string;
+  title: string;
+  uploaded_by_name: string | null;
+  uuid: string;
+}
+
 interface HrEmployeeDetail {
+  documents?: HrEmployeeDocument[];
   employee: HrEmployee;
   events: HrEmployeeEvent[];
   leaveRequests: HrLeaveRequest[];
@@ -181,6 +198,22 @@ const EVENT_TYPE_OPTIONS: SelectOption[] = [
   { icon: 'sync_alt', label: 'Cambio de Departamento / Área', value: 'department_transfer' },
   { icon: 'warning', label: 'Acta Administrativa / Amonestación', value: 'warning' },
 ];
+
+const DOCUMENT_TYPE_OPTIONS: SelectOption[] = [
+  { icon: 'article', label: 'Contrato Individual de Trabajo', value: 'contract' },
+  { icon: 'verified_user', label: 'Convenio de Confidencialidad (NDA)', value: 'nda' },
+  { icon: 'badge', label: 'Identificación Oficial (INE / Pasaporte)', value: 'id_card' },
+  { icon: 'receipt_long', label: 'Constancia de Situación Fiscal (SAT)', value: 'tax_constancy' },
+  { icon: 'home', label: 'Comprobante de Domicilio', value: 'address_proof' },
+  { icon: 'attachment', label: 'Anexo / Otro Documento', value: 'other' },
+];
+
+function formatFileSize(bytes: number): string {
+  const b = Math.max(0, Number(bytes || 0));
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+  return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+}
 
 function formatCurrency(amount: number, currency = 'MXN'): string {
   return (
@@ -365,8 +398,6 @@ export class HrController implements ViewController {
   private btnLeaveReject: HTMLButtonElement | null = null;
   private btnPaginationNext: HTMLButtonElement | null = null;
   private btnPaginationPrev: HTMLButtonElement | null = null;
-  private btnQuickHire: HTMLButtonElement | null = null;
-  private btnQuickLeave: HTMLButtonElement | null = null;
   private btnRequestLeave: HTMLButtonElement | null = null;
   private btnTabEmployees: HTMLButtonElement | null = null;
   private btnTabLeaves: HTMLButtonElement | null = null;
@@ -398,7 +429,7 @@ export class HrController implements ViewController {
     this.container = container;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
 
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -416,8 +447,6 @@ export class HrController implements ViewController {
 
     this.btnHireEmployee = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-hire-employee"]');
     this.btnRequestLeave = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-request-leave"]');
-    this.btnQuickHire = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-quick-hire"]');
-    this.btnQuickLeave = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-quick-leave"]');
 
     this.btnActionDeselect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-deselect"]');
     this.btnActionDossier = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-dossier"]');
@@ -452,17 +481,13 @@ export class HrController implements ViewController {
     this.bindEvents();
     renderIcons(this.container);
 
-    requestAnimationFrame(() => {
-      void this.loadAllData();
-    });
+    await this.loadAllData();
   }
 
   private applyPermissionsUi(): void {
     const canCreate = hasPermission('hr:create') || hasPermission('hr:manage');
     if (this.btnHireEmployee) this.btnHireEmployee.classList.toggle('is-hidden', !canCreate);
     if (this.btnRequestLeave) this.btnRequestLeave.classList.toggle('is-hidden', !canCreate);
-    if (this.btnQuickHire) this.btnQuickHire.classList.toggle('is-hidden', !canCreate);
-    if (this.btnQuickLeave) this.btnQuickLeave.classList.toggle('is-hidden', !canCreate);
   }
 
   bindEvents(): void {
@@ -617,14 +642,12 @@ export class HrController implements ViewController {
       navigate('/hr/create');
     };
     this.btnHireEmployee?.addEventListener('click', openHireHandler, { signal });
-    this.btnQuickHire?.addEventListener('click', openHireHandler, { signal });
 
     const openLeaveHandler = (e: Event): void => {
       e.preventDefault();
       this.openCreateLeaveModal(this.selectedEmployee || undefined);
     };
     this.btnRequestLeave?.addEventListener('click', openLeaveHandler, { signal });
-    this.btnQuickLeave?.addEventListener('click', openLeaveHandler, { signal });
 
     this.btnActionDeselect?.addEventListener(
       'click',
@@ -846,10 +869,10 @@ export class HrController implements ViewController {
       }
       const badgeEmp = this.container.querySelector<HTMLElement>('[data-ref="badge-count-employees"]');
       if (badgeEmp) badgeEmp.textContent = String(this.employees.length);
-      if (this.activeTab === 'employees') {
-        this.renderEmployeesTable();
-        this.updateSelectionUi();
-      }
+    }
+    if (this.activeTab === 'employees') {
+      this.renderEmployeesTable();
+      this.updateSelectionUi();
     }
   }
 
@@ -868,10 +891,10 @@ export class HrController implements ViewController {
       }
       const badgeLeaves = this.container.querySelector<HTMLElement>('[data-ref="badge-count-leaves"]');
       if (badgeLeaves) badgeLeaves.textContent = String(this.leaveRequests.length);
-      if (this.activeTab === 'leaves') {
-        this.renderLeavesTable();
-        this.updateSelectionUi();
-      }
+    }
+    if (this.activeTab === 'leaves') {
+      this.renderLeavesTable();
+      this.updateSelectionUi();
     }
   }
 
@@ -967,7 +990,9 @@ export class HrController implements ViewController {
 
   private renderEmployeesTable(): void {
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-hr-employees"]');
-    if (!tbody) return;
+    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="hr-employees-table-card"]');
+    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="hr-employees-table-wrapper"]');
+    if (!tbody || !tableCard || !wrapper) return;
 
     this.updatePaginationUi(this.employees.length);
 
@@ -975,37 +1000,30 @@ export class HrController implements ViewController {
       const isFiltered = Boolean(
         this.searchQuery || this.statusFilter !== 'all' || this.departmentFilter !== 'all'
       );
-      tbody.innerHTML = `
-        <tr class="winners-table__tr-empty" data-ref="tr-hr-employees-empty">
-          <td class="winners-table__td-empty" colspan="7">
-            <div class="component-empty-state component-empty-state--table" data-ref="hr-employees-empty-state">
-              <div class="component-empty-state-graphic">
-                ${getEmptyIllustration(isFiltered ? 'search' : 'hr')}
-              </div>
-              <h2 class="component-empty-state-title">Sin colaboradores encontrados</h2>
-              <p class="component-empty-state-desc">${
-                isFiltered
-                  ? 'No se encontraron colaboradores que coincidan con los filtros seleccionados.'
-                  : 'Aún no hay colaboradores dados de alta en el directorio de Recursos Humanos.'
-              }</p>
-              ${
-                isFiltered
-                  ? `<div class="component-empty-state-actions">
-                      <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-empty-reset-hr">Restablecer Filtros</button>
-                    </div>`
-                  : ''
-              }
-            </div>
-          </td>
-        </tr>
-      `;
-      const btnReset = tbody.querySelector<HTMLButtonElement>('[data-ref="btn-empty-reset-hr"]');
-      btnReset?.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.resetFilters();
+      tableCard.classList.add('is-hidden');
+      tbody.innerHTML = '';
+      renderEmptyState({
+        actionDataRef: isFiltered ? 'btn-empty-reset-hr' : undefined,
+        actionLabel: isFiltered ? 'Restablecer Filtros' : undefined,
+        container: wrapper,
+        dataRef: 'hr-employees-empty-state',
+        desc: isFiltered
+          ? 'No se encontraron colaboradores que coincidan con los filtros seleccionados.'
+          : 'Aún no hay colaboradores dados de alta en el directorio de Recursos Humanos.',
+        graphicType: isFiltered ? 'search' : 'hr',
+        onAction: isFiltered
+          ? (e) => {
+              e.preventDefault();
+              this.resetFilters();
+            }
+          : undefined,
+        title: 'Sin colaboradores encontrados',
       });
       return;
     }
+
+    tableCard.classList.remove('is-hidden');
+    removeEmptyState(wrapper, 'hr-employees-empty-state');
 
     const start = (this.currentPage - 1) * this.pageSize;
     const pageItems = this.employees.slice(start, start + this.pageSize);
@@ -1103,26 +1121,27 @@ export class HrController implements ViewController {
 
   private renderLeavesTable(): void {
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-hr-leaves"]');
-    if (!tbody) return;
+    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="hr-leaves-table-card"]');
+    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="hr-leaves-table-wrapper"]');
+    if (!tbody || !tableCard || !wrapper) return;
 
     this.updatePaginationUi(this.leaveRequests.length);
 
     if (this.leaveRequests.length === 0) {
-      tbody.innerHTML = `
-        <tr class="winners-table__tr-empty" data-ref="tr-hr-leaves-empty">
-          <td class="winners-table__td-empty" colspan="8">
-            <div class="component-empty-state component-empty-state--table" data-ref="hr-leaves-empty-state">
-              <div class="component-empty-state-graphic">
-                ${getEmptyIllustration('leaves')}
-              </div>
-              <h2 class="component-empty-state-title">Sin solicitudes de vacaciones o permisos</h2>
-              <p class="component-empty-state-desc">No existen solicitudes registradas con los criterios actuales.</p>
-            </div>
-          </td>
-        </tr>
-      `;
+      tableCard.classList.add('is-hidden');
+      tbody.innerHTML = '';
+      renderEmptyState({
+        container: wrapper,
+        dataRef: 'hr-leaves-empty-state',
+        desc: 'No existen solicitudes registradas con los criterios actuales.',
+        graphicType: 'leaves',
+        title: 'Sin solicitudes de vacaciones o permisos',
+      });
       return;
     }
+
+    tableCard.classList.remove('is-hidden');
+    removeEmptyState(wrapper, 'hr-leaves-empty-state');
 
     const start = (this.currentPage - 1) * this.pageSize;
     const pageItems = this.leaveRequests.slice(start, start + this.pageSize);
@@ -1315,6 +1334,7 @@ export class HrController implements ViewController {
     }
 
     const { employee, events, leaveRequests: leaves } = res.data;
+    let documents = Array.isArray(res.data.documents) ? [...res.data.documents] : [];
     const initials = getInitials(employee.full_name);
     const canManage = hasPermission('hr:manage');
     const canCreate = hasPermission('hr:create') || canManage;
@@ -1475,6 +1495,22 @@ export class HrController implements ViewController {
         </div>
       </div>
 
+      <div class="hr-dossier-panel" data-ref="dossier-documents-panel">
+        <div class="hr-dossier-panel__header">
+          <h4 class="hr-dossier-panel__title" data-ref="dossier-docs-title">Expediente Digital y Documentación Legal (${documents.length})</h4>
+          ${
+            canManage
+              ? `<button type="button" class="component-button component-button--h32 component-button--secondary" data-ref="btn-dossier-upload-doc">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#attachment"></use></svg>
+                  <span>Adjuntar Documento</span>
+                </button>
+                <input class="is-hidden" data-ref="input-dossier-doc-file" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" />`
+              : ''
+          }
+        </div>
+        <div class="hr-doc-list" data-ref="dossier-doc-list"></div>
+      </div>
+
       <div class="hr-dossier-columns" data-ref="dossier-history-columns">
         <div class="hr-dossier-panel">
           <div class="hr-dossier-panel__header">
@@ -1496,6 +1532,81 @@ export class HrController implements ViewController {
       </div>
     `;
 
+    const renderDossierDocs = (): void => {
+      const listEl = bodyContainer.querySelector<HTMLElement>('[data-ref="dossier-doc-list"]');
+      const titleEl = bodyContainer.querySelector<HTMLElement>('[data-ref="dossier-docs-title"]');
+      if (titleEl) {
+        titleEl.textContent = `Expediente Digital y Documentación Legal (${documents.length})`;
+      }
+      if (!listEl) return;
+
+      if (documents.length === 0) {
+        listEl.innerHTML = `
+          <div class="hr-doc-empty" data-ref="dossier-doc-empty">
+            Sin contratos, convenios NDA ni constancias adjuntas en el expediente digital.
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = documents
+        .map((doc) => {
+          const opt = DOCUMENT_TYPE_OPTIONS.find((o) => o.value === doc.document_type) || DOCUMENT_TYPE_OPTIONS[0];
+          return `
+            <div class="hr-doc-item" data-ref="dossier-doc-item-${escapeHtml(doc.uuid)}">
+              <div class="hr-doc-item__left">
+                <div class="hr-doc-item__icon-box">
+                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#${opt.icon}"></use></svg>
+                </div>
+                <div class="hr-doc-item__info">
+                  <div class="hr-doc-item__title-row">
+                    <span class="hr-doc-item__title">${escapeHtml(doc.title)}</span>
+                    <span class="component-badge component-badge--sm">${escapeHtml(opt.label)}</span>
+                  </div>
+                  <span class="hr-doc-item__meta">${escapeHtml(doc.file_name)} • ${escapeHtml(formatFileSize(doc.file_size_bytes))} • ${escapeHtml(formatDateShort(doc.created_at))}</span>
+                </div>
+              </div>
+              <div class="hr-doc-item__actions">
+                <a class="component-button component-button--h32 component-button--secondary" data-ref="btn-dossier-open-doc-${escapeHtml(doc.uuid)}" href="${escapeHtml(doc.file_url)}" target="_blank" rel="noopener noreferrer">
+                  <span>Abrir</span>
+                </a>
+                ${
+                  canManage
+                    ? `<button type="button" class="component-button component-button--h32 component-button--icon-only" data-ref="btn-dossier-del-doc-${escapeHtml(doc.uuid)}" data-dossier-del-doc="${escapeHtml(doc.uuid)}" aria-label="Eliminar documento">
+                        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
+                      </button>`
+                    : ''
+                }
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+
+      renderIcons(listEl);
+
+      const delBtns = listEl.querySelectorAll<HTMLButtonElement>('[data-dossier-del-doc]');
+      delBtns.forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const docUuid = btn.getAttribute('data-dossier-del-doc');
+          if (!docUuid) return;
+          btn.disabled = true;
+          const delRes = await deleteApi(`/api/hr/employees/${employee.uuid}/documents/${docUuid}`);
+          if (delRes.success) {
+            documents = documents.filter((d) => d.uuid !== docUuid);
+            renderDossierDocs();
+            showToast('Documento eliminado del expediente.', 'info');
+          } else {
+            btn.disabled = false;
+            showToast(delRes.error || 'No se pudo eliminar el documento.', 'danger');
+          }
+        });
+      });
+    };
+
+    renderDossierDocs();
+
     const modal = openModal({
       bodyHtml: bodyContainer,
       cancelText: 'Cerrar Expediente',
@@ -1505,6 +1616,60 @@ export class HrController implements ViewController {
     });
 
     renderIcons(bodyContainer);
+
+    const btnUploadDoc = bodyContainer.querySelector<HTMLButtonElement>('[data-ref="btn-dossier-upload-doc"]');
+    const inputDocFile = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-dossier-doc-file"]');
+
+    btnUploadDoc?.addEventListener('click', (e) => {
+      e.preventDefault();
+      inputDocFile?.click();
+    });
+
+    inputDocFile?.addEventListener('change', async () => {
+      const file = inputDocFile.files?.[0];
+      inputDocFile.value = '';
+      if (!file) return;
+      if (file.size > 15 * 1024 * 1024) {
+        showToast('El archivo excede el límite de 15 MB.', 'warning');
+        return;
+      }
+
+      if (btnUploadDoc) btnUploadDoc.disabled = true;
+      try {
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+          reader.onerror = () => reject(new Error('READ_ERROR'));
+          reader.readAsDataURL(file);
+        });
+
+        const lowerName = file.name.toLowerCase();
+        let inferredType: HrDocumentType = 'contract';
+        if (lowerName.includes('nda') || lowerName.includes('confidencial')) inferredType = 'nda';
+        else if (lowerName.includes('ine') || lowerName.includes('pasaporte') || lowerName.includes('id')) inferredType = 'id_card';
+        else if (lowerName.includes('csf') || lowerName.includes('sat') || lowerName.includes('fiscal')) inferredType = 'tax_constancy';
+        else if (lowerName.includes('domicilio')) inferredType = 'address_proof';
+
+        const uploadRes = await postApi<HrEmployeeDocument>(`/api/hr/employees/${employee.uuid}/documents`, {
+          base64Data,
+          document_type: inferredType,
+          file_name: file.name,
+          title: file.name.replace(/\.[^.]+$/, ''),
+        });
+
+        if (uploadRes.success && uploadRes.data) {
+          documents.unshift(uploadRes.data);
+          renderDossierDocs();
+          showToast('Documento adjuntado al expediente digital.', 'success');
+        } else {
+          showToast(uploadRes.error || 'No se pudo adjuntar el documento.', 'danger');
+        }
+      } catch (_) {
+        showToast('Error al procesar el archivo seleccionado.', 'danger');
+      } finally {
+        if (btnUploadDoc) btnUploadDoc.disabled = false;
+      }
+    });
 
     bodyContainer.querySelector<HTMLButtonElement>('[data-ref="btn-dossier-edit"]')?.addEventListener('click', (e) => {
       e.preventDefault();
@@ -2011,7 +2176,7 @@ export class HrController implements ViewController {
 export async function createHrView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/hr/hr.html');
   const controller = new HrController(container);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

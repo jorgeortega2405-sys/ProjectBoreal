@@ -1,5 +1,6 @@
 import { logger } from '../services/logger.service.js';
 import { ordersService } from '../services/orders.service.js';
+import { getS3Object } from '../services/s3.service.js';
 import { Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
@@ -224,6 +225,14 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
     }
 
     const cleanFilename = path.basename(order.receipt_filename);
+    const s3Obj = await getS3Object(`receipts/${cleanFilename}`);
+    if (s3Obj) {
+      res.setHeader('Content-Type', s3Obj.contentType);
+      res.setHeader('Cache-Control', 'private, no-cache');
+      res.status(200).send(s3Obj.body);
+      return;
+    }
+
     const storagePaths = [
       path.resolve(process.cwd(), '..', 'storage', 'receipts', cleanFilename),
       path.resolve(process.cwd(), 'storage', 'receipts', cleanFilename),

@@ -1,5 +1,5 @@
 import { requirePermission } from '../middlewares/auth.middleware.js';
-import { createEmployee, createEmployeeEvent, createLeaveRequest, deleteEmployee, getAllEmployees, getAllLeaveRequests, getEmployeeDetail, getHrKpis, reviewLeaveRequest, updateEmployee, updateEmployeeStatus } from '../services/hr.service.js';
+import { addEmployeeDocument, createEmployee, createEmployeeEvent, createLeaveRequest, deleteEmployee, deleteEmployeeDocument, getAllEmployees, getAllLeaveRequests, getEmployeeDetail, getHrKpis, reviewLeaveRequest, updateEmployee, updateEmployeeStatus } from '../services/hr.service.js';
 import { logger } from '../services/logger.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
@@ -227,6 +227,63 @@ router.post(
       logger.app.warn('Error al registrar evento en kárdex de empleado:', err);
       res.status(400).json({
         error: getSafeErrorMessage(err, 'No se pudo registrar el movimiento en el expediente.'),
+        success: false,
+      });
+    }
+  }
+);
+
+router.post(
+  '/employees/:uuid/documents',
+  requirePermission('hr:create', 'hr:manage'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { uuid } = req.params;
+      const actorName = req.adminUser?.name || 'Recursos Humanos';
+      const docRecord = await addEmployeeDocument(uuid, req.body || {}, actorName);
+      logger.security.info('Documento anexado al expediente de colaborador en RRHH', {
+        adminEmail: req.adminUser?.email,
+        adminId: req.adminUser?.id,
+        documentType: docRecord.document_type,
+        documentUuid: docRecord.uuid,
+        employeeUuid: uuid,
+      });
+      res.status(201).json({
+        data: docRecord,
+        message: 'Documento anexado al expediente laboral exitosamente.',
+        success: true,
+      });
+    } catch (err: any) {
+      logger.app.warn('Error al subir documento de colaborador en RRHH:', err);
+      res.status(400).json({
+        error: getSafeErrorMessage(err, 'No se pudo subir el documento al expediente.'),
+        success: false,
+      });
+    }
+  }
+);
+
+router.delete(
+  '/employees/:uuid/documents/:docUuid',
+  requirePermission('hr:manage'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { docUuid, uuid } = req.params;
+      await deleteEmployeeDocument(uuid, docUuid);
+      logger.security.info('Documento eliminado del expediente de colaborador en RRHH', {
+        adminEmail: req.adminUser?.email,
+        adminId: req.adminUser?.id,
+        documentUuid: docUuid,
+        employeeUuid: uuid,
+      });
+      res.status(200).json({
+        message: 'Documento eliminado del expediente exitosamente.',
+        success: true,
+      });
+    } catch (err: any) {
+      logger.app.warn('Error al eliminar documento de colaborador en RRHH:', err);
+      res.status(400).json({
+        error: getSafeErrorMessage(err, 'No se pudo eliminar el documento del expediente.'),
         success: false,
       });
     }

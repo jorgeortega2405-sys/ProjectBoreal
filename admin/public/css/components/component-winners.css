@@ -1,8 +1,3 @@
-/* ============================================================================
-   Project Boreal Admin - Gestión de Ganadores y Entrega de Premios
-   Archivo: admin/public/css/components/component-winners.css
-   ============================================================================ */
-
 .winners-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -130,7 +125,6 @@
   gap: 8px;
 }
 
-/* Modal de Gestión de Entrega */
 .winner-delivery-modal {
   display: flex;
   flex-direction: column;
@@ -144,6 +138,19 @@
   gap: 14px;
   align-items: center;
   width: 100%;
+}
+
+.winner-evidence-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.winner-evidence-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .winner-evidence-preview {
@@ -179,6 +186,23 @@
   box-sizing: border-box;
 }
 
+.winner-upload-group {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.winner-upload-group__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.winner-upload-group__btn {
+  flex-shrink: 0;
+  align-self: center;
+}
+
 .winner-delivery-info {
   padding: 12px 14px;
   background: var(--bg-surface);
@@ -199,4 +223,5 @@
 .btn-action-whatsapp-icon {
   color: #22c55e;
 }
+
 

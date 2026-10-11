@@ -1,5 +1,6 @@
 import { pool } from '../config/database.config.js';
 import { logger } from './logger.service.js';
+import { deleteS3Object, uploadS3Object } from './s3.service.js';
 import crypto from 'crypto';
 import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
@@ -42,6 +43,35 @@ export type HrEventType =
   | 'status_change'
   | 'terminated'
   | 'warning';
+
+export type HrDocumentType =
+  | 'address_proof'
+  | 'contract'
+  | 'id_card'
+  | 'nda'
+  | 'other'
+  | 'tax_constancy';
+
+export interface HrEmployeeDocumentRecord {
+  created_at: string;
+  document_type: HrDocumentType;
+  employee_id: number;
+  file_name: string;
+  file_size_bytes: number;
+  file_url: string;
+  id: number;
+  mime_type: string;
+  title: string;
+  uploaded_by_name: string | null;
+  uuid: string;
+}
+
+export interface HrDocumentUploadInput {
+  document_type: HrDocumentType;
+  file_data: string;
+  file_name: string;
+  title?: string;
+}
 
 export interface HrEmployeeRecord {
   admin_user_id: number | null;
@@ -124,6 +154,7 @@ export interface HrEmployeeEventRecord {
 }
 
 export interface HrEmployeeDossier {
+  documents: HrEmployeeDocumentRecord[];
   employee: HrEmployeeRecord;
   events: HrEmployeeEventRecord[];
   leaveRequests: HrLeaveRequestRecord[];
@@ -148,6 +179,7 @@ export interface CreateEmployeeInput {
   clabe?: string | null;
   curp?: string | null;
   department: HrDepartment;
+  documents?: HrDocumentUploadInput[];
   email: string;
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
@@ -172,6 +204,7 @@ export interface UpdateEmployeeInput {
   clabe?: string | null;
   curp?: string | null;
   department?: HrDepartment;
+  documents?: HrDocumentUploadInput[];
   email?: string;
   emergency_contact_name?: string | null;
   emergency_contact_phone?: string | null;
@@ -262,6 +295,24 @@ const VALID_EVENT_TYPES: readonly HrEventType[] = [
   'terminated',
   'warning',
 ];
+
+const VALID_DOCUMENT_TYPES: readonly HrDocumentType[] = [
+  'address_proof',
+  'contract',
+  'id_card',
+  'nda',
+  'other',
+  'tax_constancy',
+];
+
+const DOCUMENT_TYPE_DEFAULT_TITLES: Record<HrDocumentType, string> = {
+  address_proof: 'Comprobante de Domicilio',
+  contract: 'Contrato Individual de Trabajo',
+  id_card: 'Identificación Oficial (INE / Pasaporte)',
+  nda: 'Convenio de Confidencialidad y Protección de Datos (NDA)',
+  other: 'Documento Anexo de Expediente',
+  tax_constancy: 'Constancia de Situación Fiscal (SAT)',
+};
 
 const fallbackEmployees: HrEmployeeRecord[] = [
   {
@@ -606,6 +657,61 @@ const fallbackEvents: HrEmployeeEventRecord[] = [
   },
 ];
 
+const fallbackDocuments: HrEmployeeDocumentRecord[] = [
+  {
+    created_at: '2023-03-15T09:05:00.000Z',
+    document_type: 'contract',
+    employee_id: 1,
+    file_name: 'Contrato_Laboral_EMP-0001_Alejandro_Garza.pdf',
+    file_size_bytes: 428510,
+    file_url: '/uploads/hr/sample-contract-emp0001.pdf',
+    id: 1,
+    mime_type: 'application/pdf',
+    title: 'Contrato Individual de Trabajo por Tiempo Indeterminado',
+    uploaded_by_name: 'Administrador General',
+    uuid: 'd4400001-e550-4f60-9a70-b88000000001',
+  },
+  {
+    created_at: '2023-03-15T09:06:00.000Z',
+    document_type: 'nda',
+    employee_id: 1,
+    file_name: 'Convenio_NDA_EMP-0001_Alejandro_Garza.pdf',
+    file_size_bytes: 215400,
+    file_url: '/uploads/hr/sample-nda-emp0001.pdf',
+    id: 2,
+    mime_type: 'application/pdf',
+    title: 'Convenio de Confidencialidad y Protección de Datos (NDA)',
+    uploaded_by_name: 'Administrador General',
+    uuid: 'd4400002-e550-4f60-9a70-b88000000002',
+  },
+  {
+    created_at: '2023-08-01T09:10:00.000Z',
+    document_type: 'contract',
+    employee_id: 2,
+    file_name: 'Contrato_Laboral_EMP-0002_Sofia_Mendoza.pdf',
+    file_size_bytes: 389120,
+    file_url: '/uploads/hr/sample-contract-emp0002.pdf',
+    id: 3,
+    mime_type: 'application/pdf',
+    title: 'Contrato Individual de Trabajo por Tiempo Indeterminado',
+    uploaded_by_name: 'Alejandro Garza Elizondo',
+    uuid: 'd4400003-e550-4f60-9a70-b88000000003',
+  },
+  {
+    created_at: '2023-06-10T09:15:00.000Z',
+    document_type: 'nda',
+    employee_id: 3,
+    file_name: 'NDA_Propiedad_Intelectual_EMP-0003_Diego_Reyes.pdf',
+    file_size_bytes: 312800,
+    file_url: '/uploads/hr/sample-nda-emp0003.pdf',
+    id: 4,
+    mime_type: 'application/pdf',
+    title: 'Convenio de Confidencialidad y Propiedad Intelectual',
+    uploaded_by_name: 'Alejandro Garza Elizondo',
+    uuid: 'd4400004-e550-4f60-9a70-b88000000004',
+  },
+];
+
 function isDbOfflineOrMissingTableError(error: any): boolean {
   if (!error) return false;
   const code = String(error.code || '');
@@ -701,17 +807,196 @@ function mapRowToEvent(row: RowDataPacket): HrEmployeeEventRecord {
   };
 }
 
+function mapRowToDocument(row: RowDataPacket): HrEmployeeDocumentRecord {
+  return {
+    created_at: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+    document_type: (row.document_type as HrDocumentType) || 'other',
+    employee_id: Number(row.employee_id),
+    file_name: String(row.file_name || ''),
+    file_size_bytes: Number(row.file_size_bytes || 0),
+    file_url: String(row.file_url || ''),
+    id: Number(row.id),
+    mime_type: String(row.mime_type || 'application/pdf'),
+    title: String(row.title || 'Documento'),
+    uploaded_by_name: row.uploaded_by_name || null,
+    uuid: String(row.uuid || ''),
+  };
+}
+
+async function syncActiveEmployeeLeaveStatuses(): Promise<void> {
+  try {
+    await pool.query(
+      `UPDATE hr_employees e
+       SET e.status = 'on_leave'
+       WHERE e.status = 'active'
+         AND EXISTS (
+           SELECT 1 FROM hr_leave_requests lr
+           WHERE lr.employee_id = e.id
+             AND lr.status = 'approved'
+             AND lr.start_date <= CURDATE()
+             AND lr.end_date >= CURDATE()
+         )`
+    );
+    await pool.query(
+      `UPDATE hr_employees e
+       SET e.status = 'active'
+       WHERE e.status = 'on_leave'
+         AND NOT EXISTS (
+           SELECT 1 FROM hr_leave_requests lr
+           WHERE lr.employee_id = e.id
+             AND lr.status = 'approved'
+             AND lr.start_date <= CURDATE()
+             AND lr.end_date >= CURDATE()
+         )`
+    );
+  } catch (_) {}
+}
+
 function syncFallbackEmployeeCounters(): void {
+  const todayStr = new Date().toISOString().slice(0, 10);
   for (const emp of fallbackEmployees) {
     emp.vacation_days_available = Math.max(0, emp.vacation_days_total - emp.vacation_days_used);
     emp.pending_leaves_count = fallbackLeaveRequests.filter(
       (l) => l.employee_id === emp.id && l.status === 'pending'
     ).length;
+    const hasActiveLeaveToday = fallbackLeaveRequests.some(
+      (l) =>
+        l.employee_id === emp.id &&
+        l.status === 'approved' &&
+        l.start_date <= todayStr &&
+        l.end_date >= todayStr
+    );
+    if (emp.status === 'active' && hasActiveLeaveToday) {
+      emp.status = 'on_leave';
+    } else if (emp.status === 'on_leave' && !hasActiveLeaveToday) {
+      emp.status = 'active';
+    }
+  }
+}
+
+export async function saveUploadedHrDocument(
+  fileData: string,
+  originalName?: string
+): Promise<{ fileName: string; fileSizeBytes: number; fileUrl: string; mimeType: string }> {
+  if (!fileData || typeof fileData !== 'string') {
+    throw new Error('No se proporcionaron datos del documento a subir.');
+  }
+
+  let mimeType = 'application/pdf';
+  let base64String = fileData;
+
+  if (fileData.startsWith('data:')) {
+    const match = fileData.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+      throw new Error('Formato de archivo base64 no válido.');
+    }
+    mimeType = match[1];
+    base64String = match[2];
+  }
+
+  const allowedMimeTypes: Record<string, string> = {
+    'application/msword': 'doc',
+    'application/pdf': 'pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  };
+
+  let ext = allowedMimeTypes[mimeType.toLowerCase()];
+  if (!ext && originalName) {
+    const extMatch = originalName.split('.').pop()?.toLowerCase();
+    if (extMatch && ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'webp'].includes(extMatch)) {
+      ext = extMatch === 'jpeg' ? 'jpg' : extMatch;
+    }
+  }
+
+  if (!ext) {
+    throw new Error(
+      'Formato de documento no permitido. Solo se admiten archivos PDF, Word (DOC/DOCX), PNG, JPG o WEBP.'
+    );
+  }
+
+  const buffer = Buffer.from(base64String, 'base64');
+  const maxSize = 15 * 1024 * 1024;
+  if (buffer.length > maxSize) {
+    throw new Error('El documento excede el tamaño máximo permitido de 15 MB.');
+  }
+
+  const safeOriginal = (originalName || `documento.${ext}`)
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .slice(0, 120);
+  const storedFileName = `hr-doc-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+  const s3Key = `hr/${storedFileName}`;
+  const fileUrl = await uploadS3Object(s3Key, buffer, mimeType);
+
+  return {
+    fileName: safeOriginal,
+    fileSizeBytes: buffer.length,
+    fileUrl,
+    mimeType,
+  };
+}
+
+async function persistEmployeeDocuments(
+  employeeId: number,
+  documents: HrDocumentUploadInput[] | undefined,
+  actorName: string
+): Promise<void> {
+  if (!Array.isArray(documents) || documents.length === 0) return;
+
+  for (const doc of documents) {
+    if (!doc || !doc.file_data) continue;
+    const docType: HrDocumentType = VALID_DOCUMENT_TYPES.includes(doc.document_type)
+      ? doc.document_type
+      : 'other';
+    const title = (doc.title || '').trim() || DOCUMENT_TYPE_DEFAULT_TITLES[docType];
+    const saved = await saveUploadedHrDocument(doc.file_data, doc.file_name);
+    const docUuid = crypto.randomUUID();
+
+    try {
+      await pool.query(
+        `INSERT INTO hr_employee_documents (
+          uuid, employee_id, document_type, title, file_name, file_url, mime_type, file_size_bytes, uploaded_by_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          docUuid,
+          employeeId,
+          docType,
+          title,
+          saved.fileName,
+          saved.fileUrl,
+          saved.mimeType,
+          saved.fileSizeBytes,
+          actorName || 'Recursos Humanos',
+        ]
+      );
+    } catch (err) {
+      if (isDbOfflineOrMissingTableError(err)) {
+        fallbackDocuments.unshift({
+          created_at: new Date().toISOString(),
+          document_type: docType,
+          employee_id: employeeId,
+          file_name: saved.fileName,
+          file_size_bytes: saved.fileSizeBytes,
+          file_url: saved.fileUrl,
+          id: fallbackDocuments.length + 1,
+          mime_type: saved.mimeType,
+          title,
+          uploaded_by_name: actorName || 'Recursos Humanos',
+          uuid: docUuid,
+        });
+      } else {
+        logger.db.warn('Advertencia al insertar documento de RRHH en MySQL:', err);
+      }
+    }
   }
 }
 
 export async function getHrKpis(): Promise<HrKpis> {
   try {
+    await syncActiveEmployeeLeaveStatuses();
     const [empStats] = await pool.query<RowDataPacket[]>(
       `SELECT
         COUNT(*) AS total_employees,
@@ -804,6 +1089,7 @@ export async function getAllEmployees(filters?: {
   status?: string;
 }): Promise<HrEmployeeRecord[]> {
   try {
+    await syncActiveEmployeeLeaveStatuses();
     let whereClause = '1=1';
     const params: unknown[] = [];
 
@@ -897,6 +1183,7 @@ export async function getEmployeeDetail(uuid: string): Promise<HrEmployeeDossier
   if (!cleanUuid) return null;
 
   try {
+    await syncActiveEmployeeLeaveStatuses();
     const [empRows] = await pool.query<RowDataPacket[]>(
       `SELECT
         e.*,
@@ -921,7 +1208,21 @@ export async function getEmployeeDetail(uuid: string): Promise<HrEmployeeDossier
       [employee.id]
     );
 
+    let documents: HrEmployeeDocumentRecord[] = [];
+    try {
+      const [docRows] = await pool.query<RowDataPacket[]>(
+        `SELECT * FROM hr_employee_documents WHERE employee_id = ? ORDER BY created_at DESC, id DESC`,
+        [employee.id]
+      );
+      documents = docRows.map(mapRowToDocument);
+    } catch (_) {
+      documents = fallbackDocuments
+        .filter((d) => d.employee_id === employee.id)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at));
+    }
+
     return {
+      documents,
       employee,
       events: eventRows.map(mapRowToEvent),
       leaveRequests: leaveRows.map(mapRowToLeave),
@@ -937,7 +1238,11 @@ export async function getEmployeeDetail(uuid: string): Promise<HrEmployeeDossier
       const events = fallbackEvents
         .filter((ev) => ev.employee_id === employee.id)
         .sort((a, b) => b.created_at.localeCompare(a.created_at));
+      const documents = fallbackDocuments
+        .filter((d) => d.employee_id === employee.id)
+        .sort((a, b) => b.created_at.localeCompare(a.created_at));
       return {
+        documents,
         employee: { ...employee },
         events,
         leaveRequests,
@@ -1061,6 +1366,10 @@ export async function createEmployee(
       ]
     );
 
+    if (input.documents && input.documents.length > 0) {
+      await persistEmployeeDocuments(newEmployeeId, input.documents, actorName);
+    }
+
     const detail = await getEmployeeDetail(uuid);
     if (!detail) {
       throw new Error('Error al recuperar el expediente del colaborador recién contratado.');
@@ -1124,6 +1433,10 @@ export async function createEmployee(
         title: 'Contratación y Alta de Colaborador',
         uuid: crypto.randomUUID(),
       });
+
+      if (input.documents && input.documents.length > 0) {
+        await persistEmployeeDocuments(nextId, input.documents, actorName);
+      }
 
       return newRecord;
     }
@@ -1289,6 +1602,10 @@ export async function updateEmployee(
       );
     }
 
+    if (input.documents && input.documents.length > 0) {
+      await persistEmployeeDocuments(current.id, input.documents, actorName);
+    }
+
     const updated = await getEmployeeDetail(uuid);
     if (!updated) {
       throw new Error('No se pudo obtener el colaborador actualizado.');
@@ -1334,6 +1651,9 @@ export async function updateEmployee(
         work_modality: workModality,
       };
       fallbackEmployees[idx] = updatedRecord;
+      if (input.documents && input.documents.length > 0) {
+        await persistEmployeeDocuments(current.id, input.documents, actorName);
+      }
       return updatedRecord;
     }
 
@@ -1972,3 +2292,110 @@ export async function createEmployeeEvent(
     throw error;
   }
 }
+
+export async function addEmployeeDocument(
+  employeeUuid: string,
+  input: HrDocumentUploadInput,
+  actorName: string
+): Promise<HrEmployeeDocumentRecord> {
+  const dossier = await getEmployeeDetail(employeeUuid);
+  if (!dossier) {
+    throw new Error('El colaborador especificado no existe.');
+  }
+
+  const docType: HrDocumentType = VALID_DOCUMENT_TYPES.includes(input.document_type)
+    ? input.document_type
+    : 'other';
+  const title = (input.title || '').trim() || DOCUMENT_TYPE_DEFAULT_TITLES[docType];
+  const saved = await saveUploadedHrDocument(input.file_data, input.file_name);
+  const docUuid = crypto.randomUUID();
+  const nowIso = new Date().toISOString();
+
+  try {
+    const [res] = await pool.query<ResultSetHeader>(
+      `INSERT INTO hr_employee_documents (
+        uuid, employee_id, document_type, title, file_name, file_url, mime_type, file_size_bytes, uploaded_by_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        docUuid,
+        dossier.employee.id,
+        docType,
+        title,
+        saved.fileName,
+        saved.fileUrl,
+        saved.mimeType,
+        saved.fileSizeBytes,
+        actorName || 'Recursos Humanos',
+      ]
+    );
+
+    return {
+      created_at: nowIso,
+      document_type: docType,
+      employee_id: dossier.employee.id,
+      file_name: saved.fileName,
+      file_size_bytes: saved.fileSizeBytes,
+      file_url: saved.fileUrl,
+      id: res.insertId,
+      mime_type: saved.mimeType,
+      title,
+      uploaded_by_name: actorName || 'Recursos Humanos',
+      uuid: docUuid,
+    };
+  } catch (error: any) {
+    if (isDbOfflineOrMissingTableError(error)) {
+      const record: HrEmployeeDocumentRecord = {
+        created_at: nowIso,
+        document_type: docType,
+        employee_id: dossier.employee.id,
+        file_name: saved.fileName,
+        file_size_bytes: saved.fileSizeBytes,
+        file_url: saved.fileUrl,
+        id: fallbackDocuments.length + 1,
+        mime_type: saved.mimeType,
+        title,
+        uploaded_by_name: actorName || 'Recursos Humanos',
+        uuid: docUuid,
+      };
+      fallbackDocuments.unshift(record);
+      return record;
+    }
+
+    logger.db.error('Error al subir documento de colaborador en RRHH:', error);
+    throw error;
+  }
+}
+
+export async function deleteEmployeeDocument(
+  employeeUuid: string,
+  docUuid: string
+): Promise<void> {
+  const dossier = await getEmployeeDetail(employeeUuid);
+  if (!dossier) {
+    throw new Error('El colaborador especificado no existe.');
+  }
+
+  const targetDoc = dossier.documents.find((d) => d.uuid === docUuid);
+  if (targetDoc?.file_url) {
+    await deleteS3Object(targetDoc.file_url);
+  }
+
+  try {
+    await pool.query(
+      `DELETE FROM hr_employee_documents WHERE uuid = ? AND employee_id = ?`,
+      [docUuid, dossier.employee.id]
+    );
+  } catch (error: any) {
+    if (isDbOfflineOrMissingTableError(error)) {
+      const idx = fallbackDocuments.findIndex(
+        (d) => d.uuid === docUuid && d.employee_id === dossier.employee.id
+      );
+      if (idx !== -1) fallbackDocuments.splice(idx, 1);
+      return;
+    }
+
+    logger.db.error('Error al eliminar documento de colaborador en RRHH:', error);
+    throw error;
+  }
+}
+

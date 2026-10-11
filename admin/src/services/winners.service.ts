@@ -1,5 +1,8 @@
 import { pool } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
+import { uploadS3Object } from './s3.service.js';
+import crypto from 'crypto';
 import { RowDataPacket } from 'mysql2/promise';
 
 export interface WinnerItem {
@@ -260,6 +263,11 @@ export async function updateWinnerDelivery(
       ]
     );
 
+    if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
+      await redis.del('giveaways:winners', 'boreal:cache:giveaways:winners');
+      await redis.del('giveaway:daily:recent_winners:5', 'boreal:cache:giveaway:daily:recent_winners:5');
+    }
+
     const updated = await getWinnerDetail(giveawayUuid);
     if (!updated) {
       throw new Error('No se pudo recuperar el ganador actualizado.');
@@ -269,4 +277,56 @@ export async function updateWinnerDelivery(
     logger.db.error('Error al actualizar entrega de premio de ganador:', error);
     throw error;
   }
+}
+
+export async function saveUploadedWinnerFile(fileData: string, originalName?: string): Promise<string> {
+  if (!fileData || typeof fileData !== 'string') {
+    throw new Error('No se proporcionaron datos de archivo válidos.');
+  }
+
+  let mimeType = 'image/jpeg';
+  let base64String = fileData;
+
+  if (fileData.startsWith('data:')) {
+    const match = fileData.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+      throw new Error('Formato de datos base64 no válido.');
+    }
+    mimeType = match[1];
+    base64String = match[2];
+  }
+
+  const allowedMimeTypes: Record<string, string> = {
+    'application/pdf': 'pdf',
+    'image/gif': 'gif',
+    'image/jpeg': 'jpg',
+    'image/jpg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  };
+
+  let ext = allowedMimeTypes[mimeType.toLowerCase()];
+  if (!ext && originalName) {
+    const extMatch = originalName.split('.').pop()?.toLowerCase();
+    if (extMatch && ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf'].includes(extMatch)) {
+      ext = extMatch === 'jpeg' ? 'jpg' : extMatch;
+    }
+  }
+
+  if (!ext) {
+    throw new Error('Tipo de archivo no permitido. Solo se admiten formatos PNG, JPG, WEBP, GIF y PDF.');
+  }
+
+  const buffer = Buffer.from(base64String, 'base64');
+  const maxSize = 10 * 1024 * 1024;
+  if (buffer.length > maxSize) {
+    throw new Error('El archivo excede el tamaño máximo permitido de 10 MB.');
+  }
+
+  const filename = `winner-${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+  const s3Key = `winners/${filename}`;
+  const fileUrl = await uploadS3Object(s3Key, buffer, mimeType);
+
+  logger.app.info(`Archivo de evidencia/comprobante de ganador subido a S3 con éxito: ${fileUrl}`);
+  return fileUrl;
 }

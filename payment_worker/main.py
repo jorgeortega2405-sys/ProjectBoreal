@@ -17,6 +17,7 @@ from receipt_parser import ReceiptParser
 from banxico_client import BanxicoClient
 from bank_catalog import BANCO_CODES, get_bank_code_by_clabe
 from image_processor import ImageProcessor
+from s3_client import download_s3_object
 
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -254,9 +255,11 @@ class ReceiptWorker:
 
             file_path = os.path.join(STORAGE_RECEIPTS_DIR, receipt_filename)
             if not os.path.exists(file_path):
-                logger.warning(f"Archivo de comprobante no existe en disco: {file_path}")
-                self._cancel_and_release_order(order, conn, [f"Archivo físico {receipt_filename} no encontrado"])
-                return False
+                downloaded = download_s3_object(f"receipts/{receipt_filename}", file_path)
+                if not downloaded or not os.path.exists(file_path):
+                    logger.warning(f"Archivo de comprobante no encontrado en S3 ni en disco: {file_path}")
+                    self._cancel_and_release_order(order, conn, [f"Archivo físico {receipt_filename} no encontrado en S3"])
+                    return False
 
             logger.info(f"[{order_uuid}] Procesando comprobante: {receipt_filename}")
 

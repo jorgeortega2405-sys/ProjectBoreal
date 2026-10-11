@@ -36,11 +36,16 @@ export interface Giveaway {
 export interface WinnerGiveawayItem {
   currency: string;
   customer_state?: string | null;
+  delivered_at?: string | null;
+  delivery_status?: 'pending_contact' | 'contacted' | 'claimed' | 'delivered' | null;
   draw_date: string | null;
   end_date: string;
+  evidence_image_url?: string | null;
   image_urls: string[] | null;
   primary_image_url: string;
+  prize_amount?: number | null;
   slug: string;
+  testimonial?: string | null;
   ticket_price: number;
   title: string;
   total_tickets: number;

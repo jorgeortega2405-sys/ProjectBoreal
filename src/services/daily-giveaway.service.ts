@@ -88,6 +88,56 @@ export async function getDailyGiveawayPotPercentage(): Promise<number> {
   }
 }
 
+export async function getDailyGiveawayTicketPrice(): Promise<number> {
+  try {
+    const cached = await getCache<string>('boreal:settings:daily_giveaway_ticket_price');
+    if (cached !== null && cached !== undefined) {
+      const parsed = Number(cached);
+      if (!Number.isNaN(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'daily_giveaway_ticket_price' LIMIT 1`
+    );
+    if (rows.length > 0) {
+      const val = Number(rows[0].setting_value);
+      const price = !Number.isNaN(val) && val > 0 ? val : 2;
+      await setCache('boreal:settings:daily_giveaway_ticket_price', String(price), 300);
+      return price;
+    }
+    return 2;
+  } catch (error) {
+    logger.db.warn('Error al consultar setting daily_giveaway_ticket_price en MySQL/Redis', error);
+    return 2;
+  }
+}
+
+export async function getDailyGiveawayTotalTickets(): Promise<number> {
+  try {
+    const cached = await getCache<string>('boreal:settings:daily_giveaway_total_tickets');
+    if (cached !== null && cached !== undefined) {
+      const parsed = Math.floor(Number(cached));
+      if (!Number.isNaN(parsed) && parsed >= 100 && parsed <= 100000) {
+        return parsed;
+      }
+    }
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'daily_giveaway_total_tickets' LIMIT 1`
+    );
+    if (rows.length > 0) {
+      const val = Math.floor(Number(rows[0].setting_value));
+      const total = !Number.isNaN(val) && val >= 100 && val <= 100000 ? val : 20000;
+      await setCache('boreal:settings:daily_giveaway_total_tickets', String(total), 300);
+      return total;
+    }
+    return 20000;
+  } catch (error) {
+    logger.db.warn('Error al consultar setting daily_giveaway_total_tickets en MySQL/Redis', error);
+    return 20000;
+  }
+}
+
 export async function getCurrentDailyGiveaway(): Promise<Giveaway | null> {
   try {
     const cacheKey = 'giveaway:daily:current';
@@ -235,8 +285,11 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
 
     const uuid = crypto.randomUUID();
     const title = `Sorteo Diario (${dayStr}/${monthStr}/${yearStr})`;
+    const configuredTicketPrice = await getDailyGiveawayTicketPrice();
+    const configuredTotalTickets = await getDailyGiveawayTotalTickets();
+    const formattedTotal = configuredTotalTickets.toLocaleString('es-MX');
     const description =
-      '¡Sorteo diario de lunes a viernes a las 8:00 PM! 20,000 boletos disponibles a solo $2 MXN cada uno. El ganador se lleva la bolsa acumulada en efectivo al finalizar el día.';
+      `¡Sorteo diario de lunes a viernes a las 8:00 PM! ${formattedTotal} boletos disponibles a solo $${configuredTicketPrice} MXN cada uno. El ganador se lleva la bolsa acumulada en efectivo al finalizar el día.`;
     const primaryImageUrl = '/images/giveaways/daily/daily-cash-1000-main.jpg';
     const imageUrls = JSON.stringify([
       '/images/giveaways/daily/daily-cash-1000-main.jpg',
@@ -248,7 +301,7 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
         uuid, title, slug, description, primary_image_url, image_urls, package_options,
         ticket_price, total_tickets, available_tickets, currency, type, status,
         start_date, end_date, draw_date, min_threshold_pct, countdown_hours
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 2.00, 20000, 20000, 'MXN', 'daily', 'active', ?, ?, ?, 0, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'MXN', 'daily', 'active', ?, ?, ?, 0, ?)`,
       [
         uuid,
         title,
@@ -257,6 +310,9 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
         primaryImageUrl,
         imageUrls,
         packageOptions,
+        configuredTicketPrice,
+        configuredTotalTickets,
+        configuredTotalTickets,
         startDate,
         endDate,
         endDate,
@@ -289,7 +345,7 @@ export async function ensureCurrentDailyGiveaway(): Promise<Giveaway | null> {
     );
 
     const ticketBatchSize = 2000;
-    const totalDailyTickets = 20000;
+    const totalDailyTickets = configuredTotalTickets;
     for (let i = 1; i <= totalDailyTickets; i += ticketBatchSize) {
       const batchValues: [number, number, string][] = [];
       const end = Math.min(i + ticketBatchSize - 1, totalDailyTickets);

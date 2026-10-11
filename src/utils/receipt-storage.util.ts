@@ -1,13 +1,10 @@
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 
 export interface ProcessedReceipt {
   buffer: Buffer;
   extension: string;
   fileHash: string;
   fileName: string;
-  filePath: string;
 }
 
 export interface ReceiptProcessResult {
@@ -16,19 +13,6 @@ export interface ReceiptProcessResult {
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
-const STORAGE_DIR = path.join(process.cwd(), 'storage', 'receipts');
-
-export function getReceiptFilePath(fileName: string): string {
-  return path.join(STORAGE_DIR, fileName);
-}
-
-export function deleteReceiptFile(filePath: string): void {
-  try {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  } catch (_) {}
-}
 
 export function processReceiptBuffer(orderUuid: string, imageBase64: string): ReceiptProcessResult {
   const matches = imageBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
@@ -66,14 +50,7 @@ export function processReceiptBuffer(orderUuid: string, imageBase64: string): Re
     };
   }
 
-  if (!fs.existsSync(STORAGE_DIR)) {
-    fs.mkdirSync(STORAGE_DIR, { recursive: true });
-  }
-
   const fileName = `receipt-${orderUuid}-${Date.now()}.${ext}`;
-  const filePath = path.join(STORAGE_DIR, fileName);
-  fs.writeFileSync(filePath, buffer);
-
   const fileHash = crypto.createHash('sha256').update(buffer).digest('hex');
 
   return {
@@ -82,7 +59,6 @@ export function processReceiptBuffer(orderUuid: string, imageBase64: string): Re
       extension: ext,
       fileHash,
       fileName,
-      filePath,
     },
   };
 }

@@ -10,6 +10,7 @@ import { ensureCurrentDailyGiveaway } from './services/daily-giveaway.service.js
 import { drawGiveawayWinners } from './services/giveaways.service.js';
 import { logger } from './services/logger.service.js';
 import { releaseExpiredReservations } from './services/orders.service.js';
+import { checkS3Connection, getS3Object } from './services/s3.service.js';
 import cluster from 'cluster';
 import crypto from 'crypto';
 import express, { NextFunction, Request, Response } from 'express';
@@ -176,6 +177,26 @@ function createExpressApp(): express.Express {
   app.use('/api/health', healthRoutes);
   app.use('/api/orders', ordersRoutes);
 
+  app.get('/uploads/:category/:filename', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const category = path.basename(req.params.category || '');
+      const filename = path.basename(req.params.filename || '');
+      if (!['giveaways', 'winners'].includes(category) || !filename) {
+        return next();
+      }
+      const s3Obj = await getS3Object(`${category}/${filename}`);
+      if (s3Obj) {
+        res.setHeader('Content-Type', s3Obj.contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.status(200).send(s3Obj.body);
+        return;
+      }
+      next();
+    } catch (_) {
+      next();
+    }
+  });
+
   app.use(
     express.static(path.join(process.cwd(), 'public'), {
       index: false,
@@ -253,6 +274,7 @@ async function startWorkerServer(): Promise<void> {
   await checkDbConnection();
   await checkRedisConnection();
   await checkCassandraConnection();
+  await checkS3Connection();
   await ensureCurrentDailyGiveaway();
 
   const server = http.createServer(app);

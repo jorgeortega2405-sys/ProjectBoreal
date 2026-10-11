@@ -194,7 +194,9 @@ CREATE TABLE IF NOT EXISTS `system_settings` (
 INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`)
 VALUES 
   ('daily_giveaway_paused_next', '0', 'Indica si la regeneración automática del sorteo diario está en pausa'),
-  ('daily_giveaway_pot_percentage', '50', 'Porcentaje de la recaudación destinado a la bolsa acumulada del ganador')
+  ('daily_giveaway_pot_percentage', '50', 'Porcentaje de la recaudación destinado a la bolsa acumulada del ganador'),
+  ('daily_giveaway_ticket_price', '2', 'Precio por boleto en MXN para el ciclo automático del sorteo diario'),
+  ('daily_giveaway_total_tickets', '20000', 'Emisión total de boletos por ciclo del sorteo diario')
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
 -- ============================================================================
@@ -505,6 +507,23 @@ CREATE TABLE IF NOT EXISTS `hr_employee_events` (
   CONSTRAINT `fk_hr_event_employee` FOREIGN KEY (`employee_id`) REFERENCES `hr_employees` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `hr_employee_documents` (
+  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `uuid` CHAR(36) NOT NULL UNIQUE,
+  `employee_id` INT UNSIGNED NOT NULL,
+  `doc_type` ENUM('contract', 'nda', 'id_card', 'tax_constancy', 'address_proof', 'other') NOT NULL DEFAULT 'contract',
+  `title` VARCHAR(180) NOT NULL,
+  `file_url` VARCHAR(500) NOT NULL,
+  `file_name` VARCHAR(255) NOT NULL,
+  `mime_type` VARCHAR(100) NULL,
+  `file_size_bytes` INT UNSIGNED NOT NULL DEFAULT 0,
+  `uploaded_by_name` VARCHAR(150) NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_hr_doc_emp` (`employee_id`),
+  INDEX `idx_hr_doc_type` (`doc_type`),
+  CONSTRAINT `fk_hr_doc_employee` FOREIGN KEY (`employee_id`) REFERENCES `hr_employees` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO `hr_employees` (
   `id`, `uuid`, `employee_code`, `admin_user_id`, `full_name`, `email`, `phone`,
   `department`, `position_title`, `employment_type`, `work_modality`, `location_state`,
@@ -642,6 +661,43 @@ INSERT INTO `hr_employee_events` (
 ON DUPLICATE KEY UPDATE
   `title` = VALUES(`title`),
   `description` = VALUES(`description`);
+
+INSERT INTO `hr_employee_documents` (
+  `id`, `uuid`, `employee_id`, `doc_type`, `title`, `file_url`, `file_name`, `mime_type`, `file_size_bytes`, `uploaded_by_name`, `created_at`
+) VALUES
+  (
+    1, 'd4400001-e550-4f60-8a70-b88000000001', 1,
+    'contract', 'Contrato Individual de Trabajo por Tiempo Indeterminado',
+    '/uploads/hr/contrato-emp-0001.pdf', 'Contrato_Alejandro_Garza_EMP0001.pdf', 'application/pdf', 248500, 'Administrador General', '2023-03-15 09:10:00'
+  ),
+  (
+    2, 'd4400002-e550-4f60-8a70-b88000000002', 1,
+    'nda', 'Convenio de Confidencialidad y Protección de Datos (NDA)',
+    '/uploads/hr/nda-emp-0001.pdf', 'NDA_Alejandro_Garza_EMP0001.pdf', 'application/pdf', 184200, 'Administrador General', '2023-03-15 09:12:00'
+  ),
+  (
+    3, 'd4400003-e550-4f60-8a70-b88000000003', 2,
+    'contract', 'Contrato Individual de Trabajo Indeterminado',
+    '/uploads/hr/contrato-emp-0002.pdf', 'Contrato_Sofia_Mendoza_EMP0002.pdf', 'application/pdf', 231400, 'Alejandro Garza Elizondo', '2023-08-01 09:20:00'
+  ),
+  (
+    4, 'd4400004-e550-4f60-8a70-b88000000004', 2,
+    'nda', 'Convenio de Confidencialidad Corporativa (NDA)',
+    '/uploads/hr/nda-emp-0002.pdf', 'NDA_Sofia_Mendoza_EMP0002.pdf', 'application/pdf', 176900, 'Alejandro Garza Elizondo', '2023-08-01 09:22:00'
+  ),
+  (
+    5, 'd4400005-e550-4f60-8a70-b88000000005', 3,
+    'contract', 'Contrato Individual de Trabajo Remoto',
+    '/uploads/hr/contrato-emp-0003.pdf', 'Contrato_Diego_Reyes_EMP0003.pdf', 'application/pdf', 265000, 'Sofía Mendoza Villaseñor', '2023-06-10 10:00:00'
+  ),
+  (
+    6, 'd4400006-e550-4f60-8a70-b88000000006', 3,
+    'nda', 'Convenio de Propiedad Intelectual y Confidencialidad (NDA)',
+    '/uploads/hr/nda-emp-0003.pdf', 'NDA_Diego_Reyes_EMP0003.pdf', 'application/pdf', 198400, 'Sofía Mendoza Villaseñor', '2023-06-10 10:05:00'
+  )
+ON DUPLICATE KEY UPDATE
+  `title` = VALUES(`title`),
+  `file_name` = VALUES(`file_name`);
 
 GRANT SELECT, INSERT, UPDATE, DELETE, INDEX, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;

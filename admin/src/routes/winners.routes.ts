@@ -1,6 +1,6 @@
 import { requirePermission } from '../middlewares/auth.middleware.js';
 import { logger } from '../services/logger.service.js';
-import { getAllWinners, getWinnerDetail, getWinnersKpis, updateWinnerDelivery } from '../services/winners.service.js';
+import { getAllWinners, getWinnerDetail, getWinnersKpis, saveUploadedWinnerFile, updateWinnerDelivery } from '../services/winners.service.js';
 import { getSafeErrorMessage } from '../utils/error.util.js';
 import { Request, Response, Router } from 'express';
 
@@ -17,6 +17,31 @@ router.get('/kpis', requirePermission('winners:read', 'winners:manage'), async (
     logger.app.error('Error al obtener KPIs de ganadores en admin:', err);
     res.status(500).json({
       error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+});
+
+router.post('/upload', requirePermission('winners:manage'), async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { fileData, fileName } = req.body || {};
+    if (!fileData) {
+      res.status(400).json({
+        error: 'No se recibieron datos del archivo a subir.',
+        success: false,
+      });
+      return;
+    }
+    const url = await saveUploadedWinnerFile(fileData, fileName);
+    res.status(200).json({
+      data: { url },
+      message: 'Archivo subido exitosamente.',
+      success: true,
+    });
+  } catch (err: any) {
+    logger.app.warn('Error al subir archivo de evidencia/comprobante de ganador:', err);
+    res.status(400).json({
+      error: getSafeErrorMessage(err, 'Error al procesar y almacenar el archivo.'),
       success: false,
     });
   }

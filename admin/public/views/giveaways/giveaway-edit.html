@@ -78,10 +78,17 @@
             </label>
           </div>
 
-          <label class="field" data-ref="field-package-options">
-            <input class="field__input" data-ref="input-package-options" type="text" placeholder=" " />
-            <span class="field__label">Opciones de paquetes rápidos (separados por coma)</span>
-          </label>
+          <div class="giveaway-create__grid-2">
+            <label class="field" data-ref="field-prize-amount">
+              <input class="field__input" data-ref="input-prize-amount" type="number" step="100" min="0" placeholder=" " />
+              <span class="field__label">Valor Comercial del Premio (MXN)</span>
+            </label>
+
+            <label class="field" data-ref="field-package-options">
+              <input class="field__input" data-ref="input-package-options" type="text" placeholder=" " />
+              <span class="field__label">Opciones de paquetes rápidos (separados por coma)</span>
+            </label>
+          </div>
         </div>
 
         <div class="giveaway-create__section" data-ref="section-dates">
@@ -223,6 +230,10 @@
           </div>
 
           <div class="giveaway-create__stats-summary" data-ref="preview-stats">
+            <div class="giveaway-create__stat-row">
+              <span>Valor del Premio</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-prize-amount">$0.00 MXN</span>
+            </div>
             <div class="giveaway-create__stat-row">
               <span>Recaudación Actual</span>
               <span class="giveaway-create__stat-val" data-ref="stat-current-revenue">$0.00 MXN</span>

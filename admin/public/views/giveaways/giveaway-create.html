@@ -40,36 +40,10 @@
               <span class="field__label">Slug / Enlace amigable (Opcional)</span>
             </label>
 
-            <div class="field field--dropdown" data-ref="field-type">
-              <span class="field__label">Modalidad *</span>
-              <div class="settings-dropdown-wrapper dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-type">
-                <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-type" aria-label="Modalidad">
-                  <div class="dropdown-trigger__left">
-                    <svg class="component-icon dropdown-trigger__icon" data-ref="type-selected-icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
-                    <span class="dropdown-trigger__text" data-ref="type-selected-text">Sorteo Estándar</span>
-                  </div>
-                  <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
-                </button>
-
-                <div class="dropdown-backdrop" data-ref="dropdown-backdrop-type">
-                  <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-type">
-                    <div class="menu-panel__drag-zone" data-ref="drag-zone-type" aria-hidden="true">
-                      <div class="menu-panel__drag-handle"></div>
-                    </div>
-                    <div class="menu-panel__list" data-ref="list-type-options">
-                      <button type="button" class="menu-item is-active" data-ref="option-type-standard" data-type-value="standard">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#stars"></use></svg>
-                        <span class="menu-item__text">Sorteo Estándar</span>
-                      </button>
-                      <button type="button" class="menu-item" data-ref="option-type-daily" data-type-value="daily">
-                        <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
-                        <span class="menu-item__text">Sorteo Diario</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <label class="field" data-ref="field-prize-amount">
+              <input class="field__input" data-ref="input-prize-amount" type="number" step="100" min="0" value="15000" placeholder=" " />
+              <span class="field__label">Valor Comercial del Premio (MXN)</span>
+            </label>
           </div>
 
           <label class="field field--textarea" data-ref="field-description">
@@ -279,6 +253,10 @@
           </div>
 
           <div class="giveaway-create__stats-summary" data-ref="preview-stats">
+            <div class="giveaway-create__stat-row">
+              <span>Valor del Premio</span>
+              <span class="giveaway-create__stat-val" data-ref="stat-prize-amount">$15,000.00 MXN</span>
+            </div>
             <div class="giveaway-create__stat-row">
               <span>Recaudación Potencial</span>
               <span class="giveaway-create__stat-val" data-ref="stat-potential-revenue">$25,000.00 MXN</span>

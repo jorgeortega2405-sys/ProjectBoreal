@@ -4,7 +4,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { DropdownController, escapeHtml, setupDropdown } from '../utils/dom.util.js';
+import { DropdownController, escapeHtml, removeEmptyState, renderEmptyState, setupDropdown } from '../utils/dom.util.js';
 import { hasPermission } from '../utils/permission.util.js';
 
 interface BankAccountDetail {
@@ -153,7 +153,6 @@ export class BankAccountsController implements ViewController {
   private btnActionToggleStatus: HTMLButtonElement | null = null;
   private btnClearSearch: HTMLButtonElement | null = null;
   private btnCreateAccount: HTMLButtonElement | null = null;
-  private btnResetSearch: HTMLButtonElement | null = null;
   private btnToggleSearch: HTMLButtonElement | null = null;
   private container: HTMLElement;
   private defaultActions: HTMLElement | null = null;
@@ -169,7 +168,7 @@ export class BankAccountsController implements ViewController {
     this.container = container;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
 
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -177,7 +176,6 @@ export class BankAccountsController implements ViewController {
     this.inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-accounts"]');
     this.btnClearSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-search"]');
     this.btnCreateAccount = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-create-account"]');
-    this.btnResetSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-search"]');
 
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="bank-accounts-default-actions"]');
     this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="bank-accounts-selected-actions"]');
@@ -192,9 +190,7 @@ export class BankAccountsController implements ViewController {
     this.bindEvents();
     renderIcons(this.container);
 
-    requestAnimationFrame(() => {
-      void this.loadInitialData();
-    });
+    await this.loadInitialData();
   }
 
   bindEvents(): void {
@@ -251,22 +247,6 @@ export class BankAccountsController implements ViewController {
         this.searchQuery = '';
         void this.loadAccounts();
         this.inputSearch?.focus();
-      },
-      { signal }
-    );
-
-    this.btnResetSearch?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        if (this.inputSearch) this.inputSearch.value = '';
-        if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
-        this.searchQuery = '';
-        if (this.isSearchActive) {
-          this.toggleSearchToolbar(false);
-        }
-        this.selectedAccount = null;
-        void this.loadAccounts();
       },
       { signal }
     );
@@ -359,6 +339,17 @@ export class BankAccountsController implements ViewController {
     );
   }
 
+  private resetSearch(): void {
+    if (this.inputSearch) this.inputSearch.value = '';
+    if (this.btnClearSearch) this.btnClearSearch.classList.add('is-hidden');
+    this.searchQuery = '';
+    if (this.isSearchActive) {
+      this.toggleSearchToolbar(false);
+    }
+    this.selectedAccount = null;
+    void this.loadAccounts();
+  }
+
   private toggleSearchToolbar(forceState?: boolean): void {
     if (!this.searchToolbar) return;
     this.isSearchActive = forceState !== undefined ? forceState : !this.isSearchActive;
@@ -413,29 +404,52 @@ export class BankAccountsController implements ViewController {
           const found = this.accounts.find((a) => a.uuid === this.selectedAccount?.uuid);
           this.selectedAccount = found || null;
         }
-        this.renderAccounts();
-        this.updateSelectionUi();
       } else {
         showToast(res.error || 'No se pudieron cargar las cuentas bancarias.', 'danger');
       }
     } catch (_) {
       showToast('Error de conexión al cargar cuentas bancarias.', 'danger');
     }
+    this.renderAccounts();
+    this.updateSelectionUi();
   }
 
   private renderAccounts(): void {
     const gridContainer = this.container.querySelector<HTMLElement>('[data-ref="bank-accounts-grid-container"]');
-    const emptyState = this.container.querySelector<HTMLElement>('[data-ref="bank-accounts-empty-state"]');
+    const contentArea = this.container.querySelector<HTMLElement>('[data-ref="bank-accounts-content-area"]');
 
     if (!gridContainer) return;
 
     if (this.accounts.length === 0) {
+      const isFiltered = Boolean(this.searchQuery);
       gridContainer.innerHTML = '';
-      if (emptyState) emptyState.classList.remove('is-hidden');
+      gridContainer.classList.add('is-hidden');
+      if (contentArea) {
+        renderEmptyState({
+          actionDataRef: isFiltered ? 'btn-reset-search' : undefined,
+          actionLabel: isFiltered ? 'Restablecer Búsqueda' : undefined,
+          container: contentArea,
+          dataRef: 'bank-accounts-empty-state',
+          desc: isFiltered
+            ? 'No se encontraron cuentas bancarias con el término de búsqueda proporcionado.'
+            : 'Aún no hay cuentas bancarias registradas en la plataforma.',
+          graphicType: isFiltered ? 'search' : 'bank',
+          onAction: isFiltered
+            ? (e) => {
+                e.preventDefault();
+                this.resetSearch();
+              }
+            : undefined,
+          title: 'Sin cuentas registradas',
+        });
+      }
       return;
     }
 
-    if (emptyState) emptyState.classList.add('is-hidden');
+    gridContainer.classList.remove('is-hidden');
+    if (contentArea) {
+      removeEmptyState(contentArea, 'bank-accounts-empty-state');
+    }
     gridContainer.innerHTML = this.accounts.map((acc) => this.buildAccountCardHtml(acc)).join('');
     renderIcons(gridContainer);
     this.attachCardEvents(gridContainer);
@@ -1283,7 +1297,7 @@ export class BankAccountsController implements ViewController {
 export async function createBankAccountsView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/bank-accounts/bank-accounts.html');
   const controller = new BankAccountsController(container);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

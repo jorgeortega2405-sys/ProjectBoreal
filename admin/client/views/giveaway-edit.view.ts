@@ -112,6 +112,7 @@ export class GiveawayEditController implements ViewController {
   private inputImageUrl: HTMLInputElement | null = null;
   private inputMinThreshold: HTMLInputElement | null = null;
   private inputPackageOptions: HTMLInputElement | null = null;
+  private inputPrizeAmount: HTMLInputElement | null = null;
   private inputSecondaryFiles: HTMLInputElement | null = null;
   private inputSlug: HTMLInputElement | null = null;
   private inputStartDate: HTMLInputElement | null = null;
@@ -136,6 +137,7 @@ export class GiveawayEditController implements ViewController {
   private statCurrentRevenue: HTMLElement | null = null;
   private statDuration: HTMLElement | null = null;
   private statPotentialRevenue: HTMLElement | null = null;
+  private statPrizeAmount: HTMLElement | null = null;
   private statThreshold: HTMLElement | null = null;
   private textPaidCount: HTMLElement | null = null;
   private textareaDesc: HTMLTextAreaElement | null = null;
@@ -147,7 +149,7 @@ export class GiveawayEditController implements ViewController {
     this.routeContext = routeContext;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
 
     this.uuid =
@@ -183,6 +185,7 @@ export class GiveawayEditController implements ViewController {
     this.inputTotalTickets = this.container.querySelector<HTMLInputElement>('[data-ref="input-total-tickets"]');
     this.labelTicketPrice = this.container.querySelector<HTMLElement>('[data-ref="label-ticket-price"]');
     this.labelTotalTickets = this.container.querySelector<HTMLElement>('[data-ref="label-total-tickets"]');
+    this.inputPrizeAmount = this.container.querySelector<HTMLInputElement>('[data-ref="input-prize-amount"]');
     this.inputPackageOptions = this.container.querySelector<HTMLInputElement>('[data-ref="input-package-options"]');
     this.inputStartDate = this.container.querySelector<HTMLInputElement>('[data-ref="input-start-date"]');
     this.inputEndDate = this.container.querySelector<HTMLInputElement>('[data-ref="input-end-date"]');
@@ -209,6 +212,7 @@ export class GiveawayEditController implements ViewController {
     this.previewBadgeStatus = this.container.querySelector<HTMLElement>('[data-ref="preview-badge-status"]');
     this.previewTitle = this.container.querySelector<HTMLElement>('[data-ref="preview-title"]');
     this.previewTickets = this.container.querySelector<HTMLElement>('[data-ref="preview-tickets"]');
+    this.statPrizeAmount = this.container.querySelector<HTMLElement>('[data-ref="stat-prize-amount"]');
     this.statCurrentRevenue = this.container.querySelector<HTMLElement>('[data-ref="stat-current-revenue"]');
     this.statPotentialRevenue = this.container.querySelector<HTMLElement>('[data-ref="stat-potential-revenue"]');
     this.statThreshold = this.container.querySelector<HTMLElement>('[data-ref="stat-threshold-tickets"]');
@@ -216,7 +220,7 @@ export class GiveawayEditController implements ViewController {
 
     this.bindEvents();
     renderIcons(this.container);
-    void this.loadData();
+    await this.loadData();
   }
 
   private extractUuidFromPath(pathname: string): string | null {
@@ -258,6 +262,9 @@ export class GiveawayEditController implements ViewController {
     if (this.textareaDesc) this.textareaDesc.value = g.description || '';
     if (this.inputTicketPrice) this.inputTicketPrice.value = String(g.ticket_price);
     if (this.inputTotalTickets) this.inputTotalTickets.value = String(g.total_tickets);
+    if (this.inputPrizeAmount) {
+      this.inputPrizeAmount.value = typeof g.prize_amount === 'number' && g.prize_amount > 0 ? String(g.prize_amount) : '';
+    }
     if (this.inputPackageOptions) this.inputPackageOptions.value = g.package_options ? g.package_options.join(', ') : '';
     if (this.inputStartDate && g.start_date) this.inputStartDate.value = toLocalIso(new Date(g.start_date));
     if (this.inputEndDate && g.end_date) this.inputEndDate.value = toLocalIso(new Date(g.end_date));
@@ -429,6 +436,7 @@ export class GiveawayEditController implements ViewController {
     if (this.textareaDesc) this.textareaDesc.disabled = true;
     if (this.inputTicketPrice) this.inputTicketPrice.disabled = true;
     if (this.inputTotalTickets) this.inputTotalTickets.disabled = true;
+    if (this.inputPrizeAmount) this.inputPrizeAmount.disabled = true;
     if (this.inputPackageOptions) this.inputPackageOptions.disabled = true;
     if (this.inputStartDate) this.inputStartDate.disabled = true;
     if (this.inputEndDate) this.inputEndDate.disabled = true;
@@ -482,6 +490,7 @@ export class GiveawayEditController implements ViewController {
     this.inputSlug?.addEventListener('input', handleInput, { signal });
     this.inputTicketPrice?.addEventListener('input', handleInput, { signal });
     this.inputTotalTickets?.addEventListener('input', handleInput, { signal });
+    this.inputPrizeAmount?.addEventListener('input', handleInput, { signal });
     this.inputStartDate?.addEventListener('change', handleInput, { signal });
     this.inputEndDate?.addEventListener('change', handleInput, { signal });
     this.inputMinThreshold?.addEventListener('input', handleInput, { signal });
@@ -564,6 +573,7 @@ export class GiveawayEditController implements ViewController {
     const typeVal = this.giveaway ? this.giveaway.type : 'standard';
     const priceVal = Math.max(0, Number(this.inputTicketPrice?.value) || (this.giveaway ? this.giveaway.ticket_price : 0));
     const totalVal = Math.max(1, Number(this.inputTotalTickets?.value) || (this.giveaway ? this.giveaway.total_tickets : 1000));
+    const prizeAmountVal = Math.max(0, Number(this.inputPrizeAmount?.value || 0));
     const paidVal = this.giveaway ? this.giveaway.paid_tickets : 0;
     const progressPct = totalVal > 0 ? Math.min(100, Math.round((paidVal / totalVal) * 100)) : 0;
     const imageVal = this.inputImageUrl?.value.trim() || (this.giveaway ? this.giveaway.primary_image_url : '');
@@ -630,6 +640,11 @@ export class GiveawayEditController implements ViewController {
 
     if (this.previewTickets) {
       this.previewTickets.textContent = `${formatNumber(paidVal)} / ${formatNumber(totalVal)} boletos (${progressPct}%)`;
+    }
+
+    if (this.statPrizeAmount) {
+      this.statPrizeAmount.textContent =
+        prizeAmountVal > 0 ? formatCurrency(prizeAmountVal, this.giveaway?.currency || 'MXN') : 'Variable / Por definir';
     }
 
     if (this.statCurrentRevenue) {
@@ -704,6 +719,7 @@ export class GiveawayEditController implements ViewController {
     const primaryImage = this.inputImageUrl?.value.trim() || '';
     const startDate = this.inputStartDate?.value;
     const endDate = this.inputEndDate?.value;
+    const prizeAmountVal = Number(this.inputPrizeAmount?.value || 0);
 
     if (!title) {
       this.showError('Por favor ingresa el título del sorteo.');
@@ -755,6 +771,7 @@ export class GiveawayEditController implements ViewController {
       min_threshold_pct: Number(this.inputMinThreshold?.value || 0),
       package_options: parsedPackages.length > 0 ? parsedPackages : undefined,
       primary_image_url: primaryImage,
+      prize_amount: !isNaN(prizeAmountVal) && prizeAmountVal > 0 ? prizeAmountVal : null,
       start_date: startDate ? new Date(startDate).toISOString() : undefined,
       title,
     };
@@ -804,7 +821,7 @@ export class GiveawayEditController implements ViewController {
 export async function createGiveawayEditView(ctx?: RouteContext): Promise<HTMLElement> {
   const container = await loadTemplate('/views/giveaways/giveaway-edit.html');
   const controller = new GiveawayEditController(container, ctx);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

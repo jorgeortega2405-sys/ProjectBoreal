@@ -32,21 +32,26 @@ export class ValidatePaymentController {
       const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-phone-search"]');
       if (input) {
         input.value = formatMexicanPhone(phoneParam);
-        void this.searchOrders(phoneParam);
+        await this.searchOrders(phoneParam);
       }
     } else if (orderUuid) {
-      void this.loadOrderByUuid(orderUuid);
+      await this.loadOrderByUuid(orderUuid);
     } else {
+      let searched = false;
       try {
         const savedPhone = localStorage.getItem('boreal_phone');
         if (savedPhone) {
           const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-phone-search"]');
           if (input) {
             input.value = formatMexicanPhone(savedPhone);
-            void this.searchOrders(savedPhone);
+            searched = true;
+            await this.searchOrders(savedPhone);
           }
         }
       } catch (_) {}
+      if (!searched) {
+        this.renderOrders();
+      }
     }
   }
 

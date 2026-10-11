@@ -1,10 +1,10 @@
 import { openModal } from '../components/modal.component.js';
-import { getApi, putApi } from '../services/api.service.js';
+import { getApi, postApi, putApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml, getEmptyIllustration } from '../utils/dom.util.js';
+import { escapeHtml, removeEmptyState, renderEmptyState } from '../utils/dom.util.js';
 import { hasPermission } from '../utils/permission.util.js';
 
 interface WinnerItem {
@@ -92,7 +92,7 @@ export class WinnersController implements ViewController {
     this.container = container;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
 
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
@@ -115,9 +115,7 @@ export class WinnersController implements ViewController {
     this.bindEvents();
     renderIcons(this.container);
 
-    requestAnimationFrame(() => {
-      void this.loadInitialData();
-    });
+    await this.loadInitialData();
   }
 
   bindEvents(): void {
@@ -324,14 +322,14 @@ export class WinnersController implements ViewController {
           const fresh = this.winners.find((w) => w.giveaway_uuid === this.selectedWinner?.giveaway_uuid);
           this.selectedWinner = fresh || null;
         }
-        this.renderWinners();
-        this.updateSelectionUi();
       } else {
         showToast(res.error || 'No se pudieron cargar los ganadores.', 'danger');
       }
     } catch (_) {
       showToast('Error de conexión al cargar ganadores.', 'danger');
     }
+    this.renderWinners();
+    this.updateSelectionUi();
   }
 
   private toggleWinnerSelection(winner: WinnerItem): void {
@@ -393,45 +391,37 @@ export class WinnersController implements ViewController {
 
   private renderWinners(): void {
     const tbody = this.container.querySelector<HTMLElement>('[data-ref="tbody-winners"]');
-    if (!tbody) return;
+    const tableCard = this.container.querySelector<HTMLElement>('[data-ref="winners-table-card"]');
+    const wrapper = this.container.querySelector<HTMLElement>('[data-ref="winners-table-wrapper"]');
+    if (!tbody || !tableCard || !wrapper) return;
 
     if (this.winners.length === 0) {
       const isFiltered = Boolean(this.searchQuery);
-      tbody.innerHTML = `
-        <tr class="winners-table__tr-empty">
-          <td class="winners-table__td-empty" colspan="7">
-            <div class="component-empty-state component-empty-state--table" data-ref="winners-empty-state">
-              <div class="component-empty-state-graphic">
-                ${getEmptyIllustration(isFiltered ? 'search' : 'winners')}
-              </div>
-              <h2 class="component-empty-state-title">Sin ganadores registrados</h2>
-              <p class="component-empty-state-desc">${
-                isFiltered
-                  ? 'No se encontraron registros que coincidan con la búsqueda.'
-                  : 'Aún no se han ejecutado sorteos concluidos ni asignado ganadores.'
-              }</p>
-              ${
-                isFiltered
-                  ? `<div class="component-empty-state-actions">
-                      <button type="button" class="component-button component-button--h36 component-button--secondary component-button--pill" data-ref="btn-empty-reset-search">Restablecer Búsqueda</button>
-                    </div>`
-                  : ''
-              }
-            </div>
-          </td>
-        </tr>
-      `;
-      renderIcons(tbody);
-
-      const btnReset = tbody.querySelector<HTMLButtonElement>('[data-ref="btn-empty-reset-search"]');
-      btnReset?.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.resetSearch();
+      tableCard.classList.add('is-hidden');
+      tbody.innerHTML = '';
+      renderEmptyState({
+        actionDataRef: isFiltered ? 'btn-empty-reset-search' : undefined,
+        actionLabel: isFiltered ? 'Restablecer Búsqueda' : undefined,
+        container: wrapper,
+        dataRef: 'winners-empty-state',
+        desc: isFiltered
+          ? 'No se encontraron registros que coincidan con la búsqueda.'
+          : 'Aún no se han ejecutado sorteos concluidos ni asignado ganadores.',
+        graphicType: isFiltered ? 'search' : 'winners',
+        onAction: isFiltered
+          ? (e) => {
+              e.preventDefault();
+              this.resetSearch();
+            }
+          : undefined,
+        title: 'Sin ganadores registrados',
       });
-
       this.updatePaginationUi();
       return;
     }
+
+    tableCard.classList.remove('is-hidden');
+    removeEmptyState(wrapper, 'winners-empty-state');
 
     this.updatePaginationUi();
     const startIndex = (this.currentPage - 1) * this.pageSize;
@@ -507,20 +497,44 @@ export class WinnersController implements ViewController {
   }
 
   private openInspectEvidenceModal(winner: WinnerItem): void {
-    const url = winner.evidence_image_url || winner.spei_receipt_url;
-    if (!url) {
+    const evidenceUrl = winner.evidence_image_url;
+    const speiUrl = winner.spei_receipt_url;
+    if (!evidenceUrl && !speiUrl && !winner.testimonial) {
       showToast('No hay evidencia digital ni comprobante SPEI registrado.', 'info');
       return;
     }
 
+    const renderPreviewBlock = (url: string, label: string, refPrefix: string): string => {
+      const isPdf = url.toLowerCase().endsWith('.pdf');
+      if (isPdf) {
+        return `
+          <div class="winner-evidence-section" data-ref="${refPrefix}-section">
+            <span class="winner-evidence-label">${escapeHtml(label)}</span>
+            <a class="component-button component-button--h36 component-button--secondary" data-ref="${refPrefix}-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#description"></use></svg>
+              <span>Abrir Documento PDF</span>
+            </a>
+          </div>
+        `;
+      }
+      return `
+        <div class="winner-evidence-section" data-ref="${refPrefix}-section">
+          <span class="winner-evidence-label">${escapeHtml(label)}</span>
+          <div class="winner-evidence-preview" data-ref="${refPrefix}-preview">
+            <img class="winner-evidence-img" data-ref="${refPrefix}-img" src="${escapeHtml(url)}" alt="${escapeHtml(label)}" />
+          </div>
+        </div>
+      `;
+    };
+
     const modalBody = document.createElement('div');
     modalBody.className = 'winner-evidence-modal';
     modalBody.innerHTML = `
-      <div class="winner-evidence-preview">
-        <img class="winner-evidence-img" src="${escapeHtml(url)}" alt="Evidencia de entrega" />
-      </div>
-      ${winner.testimonial ? `<p class="winner-testimonial-quote">"${escapeHtml(winner.testimonial)}"</p>` : ''}
+      ${evidenceUrl ? renderPreviewBlock(evidenceUrl, 'Evidencia Fotográfica de Entrega', 'evidence') : ''}
+      ${speiUrl ? renderPreviewBlock(speiUrl, 'Comprobante de Transferencia SPEI', 'spei') : ''}
+      ${winner.testimonial ? `<p class="winner-testimonial-quote" data-ref="winner-testimonial-quote">"${escapeHtml(winner.testimonial)}"</p>` : ''}
     `;
+    renderIcons(modalBody);
 
     openModal({
       bodyHtml: modalBody,
@@ -536,8 +550,8 @@ export class WinnersController implements ViewController {
     bodyContainer.className = 'winner-delivery-modal';
 
     bodyContainer.innerHTML = `
-      <div class="winner-delivery-form">
-        <div class="winner-delivery-info">
+      <div class="winner-delivery-form" data-ref="winner-delivery-form">
+        <div class="winner-delivery-info" data-ref="winner-delivery-info">
           <strong>Ganador:</strong> ${escapeHtml(winner.winner_name)} • <strong>Boleto #${String(winner.winner_ticket_number).padStart(3, '0')}</strong><br/>
           <strong>Teléfono:</strong> ${formatPhone(winner.winner_phone)} • <strong>Sorteo:</strong> ${escapeHtml(winner.giveaway_title)}
         </div>
@@ -557,10 +571,29 @@ export class WinnersController implements ViewController {
           <span class="field__label">Bitácora de Contacto y Notas de la Llamada</span>
         </label>
 
-        <label class="field" data-ref="field-evidence-url">
-          <input class="field__input" data-ref="input-evidence-url" type="text" placeholder=" " value="${escapeHtml(winner.evidence_image_url || '')}" />
-          <span class="field__label">URL de Fotografía de Entrega / Comprobante SPEI</span>
-        </label>
+        <div class="winner-upload-group" data-ref="group-evidence-upload">
+          <label class="field winner-upload-group__field" data-ref="field-evidence-url">
+            <input class="field__input" data-ref="input-evidence-url" type="text" placeholder=" " value="${escapeHtml(winner.evidence_image_url || '')}" />
+            <span class="field__label">Fotografía de Entrega de Premio (URL o Archivo)</span>
+          </label>
+          <input class="is-hidden" data-ref="file-evidence-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf" />
+          <button type="button" class="component-button component-button--h42 component-button--secondary winner-upload-group__btn" data-ref="btn-upload-evidence">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+            <span>Subir Evidencia</span>
+          </button>
+        </div>
+
+        <div class="winner-upload-group" data-ref="group-spei-upload">
+          <label class="field winner-upload-group__field" data-ref="field-spei-url">
+            <input class="field__input" data-ref="input-spei-url" type="text" placeholder=" " value="${escapeHtml(winner.spei_receipt_url || '')}" />
+            <span class="field__label">Comprobante SPEI / Liquidación (URL o Archivo)</span>
+          </label>
+          <input class="is-hidden" data-ref="file-spei-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf" />
+          <button type="button" class="component-button component-button--h42 component-button--secondary winner-upload-group__btn" data-ref="btn-upload-spei">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#upload"></use></svg>
+            <span>Subir SPEI</span>
+          </button>
+        </div>
 
         <label class="field" data-ref="field-testimonial">
           <textarea class="field__input winner-textarea--testimonial" data-ref="input-testimonial" placeholder=" " rows="2">${escapeHtml(winner.testimonial || '')}</textarea>
@@ -568,6 +601,67 @@ export class WinnersController implements ViewController {
         </label>
       </div>
     `;
+    renderIcons(bodyContainer);
+
+    const bindUploadTrigger = (
+      btnRef: string,
+      fileRef: string,
+      inputRef: string,
+      successLabel: string
+    ): void => {
+      const btn = bodyContainer.querySelector<HTMLButtonElement>(`[data-ref="${btnRef}"]`);
+      const fileInput = bodyContainer.querySelector<HTMLInputElement>(`[data-ref="${fileRef}"]`);
+      const urlInput = bodyContainer.querySelector<HTMLInputElement>(`[data-ref="${inputRef}"]`);
+      if (!btn || !fileInput || !urlInput) return;
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        fileInput.click();
+      });
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+          showToast('El archivo excede el límite máximo de 10 MB.', 'danger');
+          fileInput.value = '';
+          return;
+        }
+
+        btn.disabled = true;
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const fileData = typeof reader.result === 'string' ? reader.result : '';
+            const res = await postApi<{ url: string }>('/api/winners/upload', {
+              fileData,
+              fileName: file.name,
+            });
+            if (res.success && res.data?.url) {
+              urlInput.value = res.data.url;
+              showToast(`${successLabel} subido exitosamente.`, 'success');
+            } else {
+              showToast(res.error || 'No se pudo subir el archivo.', 'danger');
+            }
+          } catch (_) {
+            showToast('Error de red al subir el archivo.', 'danger');
+          } finally {
+            btn.disabled = false;
+            fileInput.value = '';
+          }
+        };
+        reader.onerror = () => {
+          btn.disabled = false;
+          fileInput.value = '';
+          showToast('Error al leer el archivo seleccionado.', 'danger');
+        };
+        reader.readAsDataURL(file);
+      });
+    };
+
+    bindUploadTrigger('btn-upload-evidence', 'file-evidence-upload', 'input-evidence-url', 'Archivo de evidencia');
+    bindUploadTrigger('btn-upload-spei', 'file-spei-upload', 'input-spei-url', 'Comprobante SPEI');
 
     openModal({
       bodyHtml: bodyContainer,
@@ -578,17 +672,20 @@ export class WinnersController implements ViewController {
         const selectStatus = bodyContainer.querySelector<HTMLSelectElement>('[data-ref="select-delivery-status"]');
         const inputNotes = bodyContainer.querySelector<HTMLTextAreaElement>('[data-ref="input-contact-notes"]');
         const inputEvidence = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-evidence-url"]');
+        const inputSpei = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-spei-url"]');
         const inputTestimonial = bodyContainer.querySelector<HTMLTextAreaElement>('[data-ref="input-testimonial"]');
 
         const status = (selectStatus?.value || 'pending_contact') as 'pending_contact' | 'contacted' | 'claimed' | 'delivered';
         const notes = (inputNotes?.value || '').trim();
         const evidence = (inputEvidence?.value || '').trim();
+        const spei = (inputSpei?.value || '').trim();
         const testimonial = (inputTestimonial?.value || '').trim();
 
         const res = await putApi<WinnerItem>(`/api/winners/${winner.giveaway_uuid}/delivery`, {
           contact_notes: notes || null,
           delivery_status: status,
           evidence_image_url: evidence || null,
+          spei_receipt_url: spei || null,
           testimonial: testimonial || null,
         });
 
@@ -621,7 +718,7 @@ export class WinnersController implements ViewController {
 export async function createWinnersView(): Promise<HTMLElement> {
   const container = await loadTemplate('/views/winners/winners.html');
   const controller = new WinnersController(container);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }

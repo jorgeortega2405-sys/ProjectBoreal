@@ -28,6 +28,7 @@ export async function getActiveGiveaways(): Promise<Giveaway[]> {
               total_tickets, available_tickets, currency, type, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
               winner_ticket_number, winner_name, winner_order_id, winner_announced_at,
+              CAST(prize_amount AS DOUBLE) AS prize_amount,
               draw_date, created_at, updated_at
        FROM giveaways
        WHERE (status = 'active' OR (status = 'completed' AND type != 'daily' AND end_date >= DATE_SUB(NOW(), INTERVAL 24 HOUR)))
@@ -90,11 +91,16 @@ export async function getCompletedGiveawaysWithWinners(): Promise<WinnerGiveaway
     interface WinnerRow extends RowDataPacket {
       currency: string;
       customer_state: string | null;
+      delivered_at: string | null;
+      delivery_status: 'pending_contact' | 'contacted' | 'claimed' | 'delivered' | null;
       draw_date: string | null;
       end_date: string;
+      evidence_image_url: string | null;
       image_urls: string | string[] | null;
       primary_image_url: string;
+      prize_amount: number | null;
       slug: string;
+      testimonial: string | null;
       ticket_price: number;
       title: string;
       total_tickets: number;
@@ -107,11 +113,14 @@ export async function getCompletedGiveawaysWithWinners(): Promise<WinnerGiveaway
     const [rows] = await pool.query<WinnerRow[]>(
       `SELECT g.uuid, g.title, g.slug, g.primary_image_url, g.image_urls,
               CAST(g.ticket_price AS DOUBLE) AS ticket_price,
+              CAST(g.prize_amount AS DOUBLE) AS prize_amount,
               g.total_tickets, g.currency, g.draw_date, g.end_date,
               g.winner_ticket_number, g.winner_name, g.winner_announced_at,
-              o.customer_state
+              o.customer_state,
+              wd.delivery_status, wd.evidence_image_url, wd.testimonial, wd.delivered_at
        FROM giveaways g
        LEFT JOIN orders o ON g.winner_order_id = o.id
+       LEFT JOIN winner_deliveries wd ON wd.giveaway_id = g.id
        WHERE g.status = 'completed' AND g.winner_ticket_number IS NOT NULL
        ORDER BY COALESCE(g.winner_announced_at, g.end_date) DESC`
     );
@@ -119,11 +128,16 @@ export async function getCompletedGiveawaysWithWinners(): Promise<WinnerGiveaway
     const list: WinnerGiveawayItem[] = rows.map((row) => ({
       currency: row.currency,
       customer_state: row.customer_state,
+      delivered_at: row.delivered_at || null,
+      delivery_status: row.delivery_status || null,
       draw_date: row.draw_date,
       end_date: row.end_date,
+      evidence_image_url: row.evidence_image_url || null,
       image_urls: typeof row.image_urls === 'string' ? JSON.parse(row.image_urls) : row.image_urls,
       primary_image_url: row.primary_image_url,
+      prize_amount: row.prize_amount !== null && row.prize_amount !== undefined ? Number(row.prize_amount) : null,
       slug: row.slug,
+      testimonial: row.testimonial || null,
       ticket_price: row.ticket_price,
       title: row.title,
       total_tickets: row.total_tickets,
@@ -150,6 +164,7 @@ export async function getGiveawayByUuid(uuid: string): Promise<Giveaway | null> 
     const [rows] = await pool.query<GiveawayRow[]>(
       `SELECT id, uuid, title, slug, description, primary_image_url, image_urls, package_options,
               CAST(ticket_price AS DOUBLE) AS ticket_price,
+              CAST(prize_amount AS DOUBLE) AS prize_amount,
               total_tickets, available_tickets, currency, type, status,
               start_date, end_date, min_threshold_pct, countdown_hours, threshold_reached_at,
               winner_ticket_number, winner_name, winner_order_id, winner_announced_at,
@@ -467,6 +482,14 @@ export async function drawGiveawayWinners(): Promise<void> {
            WHERE id = ?`,
           [winnerTicketNumber, winnerName, winnerOrderId, safePrizeAmount, giveaway.id]
         );
+
+        if (winnerTicketNumber !== null) {
+          await connection.query(
+            `INSERT IGNORE INTO winner_deliveries (giveaway_id, delivery_status)
+             VALUES (?, 'pending_contact')`,
+            [giveaway.id]
+          );
+        }
 
         await connection.commit();
         connection.release();

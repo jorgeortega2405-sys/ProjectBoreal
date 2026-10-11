@@ -145,44 +145,7 @@ export const WINNERS_SKELETON_TEMPLATE = `
         </div>
       </div>
       <section class="canvas-section">
-        <div class="winners-daily-wrapper">
-          <div class="winners-daily-table-card">
-            <div class="winners-daily-table-scroll">
-              <table class="winners-daily-table">
-                <tbody>
-                  <tr class="skeleton-table-row">
-                    <td><div class="skeleton-cell skeleton--w-75"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-50"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-50"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-35"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-75"></div></td>
-                  </tr>
-                  <tr class="skeleton-table-row">
-                    <td><div class="skeleton-cell skeleton--w-75"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-50"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-50"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-35"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-75"></div></td>
-                  </tr>
-                  <tr class="skeleton-table-row">
-                    <td><div class="skeleton-cell skeleton--w-75"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-50"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-50"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-35"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-75"></div></td>
-                  </tr>
-                  <tr class="skeleton-table-row">
-                    <td><div class="skeleton-cell skeleton--w-75"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-50"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-50"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-35"></div></td>
-                    <td><div class="skeleton-cell skeleton--w-75"></div></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+        <div class="winners-daily-wrapper"></div>
       </section>
     </div>
   </div>

@@ -27,6 +27,7 @@ interface GiveawayDuplicateData {
   min_threshold_pct?: number;
   package_options?: number[];
   primary_image_url?: string;
+  prize_amount?: number | null;
   slug?: string;
   ticket_price?: number;
   title?: string;
@@ -90,6 +91,7 @@ export class GiveawayCreateController implements ViewController {
   private inputImageUrl: HTMLInputElement | null = null;
   private inputMinThreshold: HTMLInputElement | null = null;
   private inputPackageOptions: HTMLInputElement | null = null;
+  private inputPrizeAmount: HTMLInputElement | null = null;
   private inputSecondaryFiles: HTMLInputElement | null = null;
   private inputSlug: HTMLInputElement | null = null;
   private inputStartDate: HTMLInputElement | null = null;
@@ -108,24 +110,21 @@ export class GiveawayCreateController implements ViewController {
   private secondaryGrid: HTMLElement | null = null;
   private secondaryImages: string[] = [];
   private selectedStatus: 'active' | 'draft' = 'active';
-  private selectedType: 'standard' | 'daily' = 'standard';
   private statDuration: HTMLElement | null = null;
+  private statPrizeAmount: HTMLElement | null = null;
   private statRevenue: HTMLElement | null = null;
   private statThreshold: HTMLElement | null = null;
   private statusDropdownController: DropdownController | null = null;
   private statusSelectedIconUse: SVGUseElement | null = null;
   private statusSelectedText: HTMLElement | null = null;
   private textareaDesc: HTMLTextAreaElement | null = null;
-  private typeDropdownController: DropdownController | null = null;
-  private typeSelectedIconUse: SVGUseElement | null = null;
-  private typeSelectedText: HTMLElement | null = null;
 
   constructor(container: HTMLElement, routeContext?: RouteContext) {
     this.container = container;
     this.routeContext = routeContext;
   }
 
-  init(): void {
+  async init(): Promise<void> {
     this.abortController = new AbortController();
 
     this.form = this.container.querySelector<HTMLFormElement>('[data-ref="form-giveaway-create"]');
@@ -139,6 +138,7 @@ export class GiveawayCreateController implements ViewController {
 
     this.inputTitle = this.container.querySelector<HTMLInputElement>('[data-ref="input-title"]');
     this.inputSlug = this.container.querySelector<HTMLInputElement>('[data-ref="input-slug"]');
+    this.inputPrizeAmount = this.container.querySelector<HTMLInputElement>('[data-ref="input-prize-amount"]');
     this.textareaDesc = this.container.querySelector<HTMLTextAreaElement>('[data-ref="textarea-description"]');
     this.inputTicketPrice = this.container.querySelector<HTMLInputElement>('[data-ref="input-ticket-price"]');
     this.inputTotalTickets = this.container.querySelector<HTMLInputElement>('[data-ref="input-total-tickets"]');
@@ -161,8 +161,6 @@ export class GiveawayCreateController implements ViewController {
     this.btnAddSecondaryImg = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-add-secondary-img"]');
     this.secondaryGrid = this.container.querySelector<HTMLElement>('[data-ref="secondary-images-grid"]');
 
-    this.typeSelectedText = this.container.querySelector<HTMLElement>('[data-ref="type-selected-text"]');
-    this.typeSelectedIconUse = this.container.querySelector<SVGUseElement>('[data-ref="type-selected-icon"] use');
     this.statusSelectedText = this.container.querySelector<HTMLElement>('[data-ref="status-selected-text"]');
     this.statusSelectedIconUse = this.container.querySelector<SVGUseElement>('[data-ref="status-selected-icon"] use');
 
@@ -173,18 +171,10 @@ export class GiveawayCreateController implements ViewController {
     this.previewBadgeStatus = this.container.querySelector<HTMLElement>('[data-ref="preview-badge-status"]');
     this.previewTitle = this.container.querySelector<HTMLElement>('[data-ref="preview-title"]');
     this.previewTickets = this.container.querySelector<HTMLElement>('[data-ref="preview-tickets"]');
+    this.statPrizeAmount = this.container.querySelector<HTMLElement>('[data-ref="stat-prize-amount"]');
     this.statRevenue = this.container.querySelector<HTMLElement>('[data-ref="stat-potential-revenue"]');
     this.statThreshold = this.container.querySelector<HTMLElement>('[data-ref="stat-threshold-tickets"]');
     this.statDuration = this.container.querySelector<HTMLElement>('[data-ref="stat-duration-days"]');
-
-    const typeWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-type"]');
-    if (typeWrapper) {
-      this.typeDropdownController = setupDropdown(typeWrapper, {
-        isSelect: true,
-        matchWidth: true,
-        placement: 'bottom-start',
-      });
-    }
 
     const statusWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-status"]');
     if (statusWrapper) {
@@ -199,8 +189,8 @@ export class GiveawayCreateController implements ViewController {
     this.checkPrefillData();
     this.bindEvents();
     this.updateLivePreview();
-    void this.loadBankAccounts();
     renderIcons(this.container);
+    await this.loadBankAccounts();
   }
 
   private initializeDefaultDates(): void {
@@ -223,7 +213,7 @@ export class GiveawayCreateController implements ViewController {
         const data = JSON.parse(stored) as GiveawayDuplicateData;
         if (data.title && this.inputTitle) this.inputTitle.value = data.title;
         if (data.slug && this.inputSlug) this.inputSlug.value = `${data.slug}-copia`;
-        if (data.type) this.setType(data.type);
+        if (typeof data.prize_amount === 'number' && this.inputPrizeAmount) this.inputPrizeAmount.value = String(data.prize_amount);
         if (data.description && this.textareaDesc) this.textareaDesc.value = data.description;
         if (typeof data.ticket_price === 'number' && this.inputTicketPrice) this.inputTicketPrice.value = String(data.ticket_price);
         if (typeof data.total_tickets === 'number' && this.inputTotalTickets) this.inputTotalTickets.value = String(data.total_tickets);
@@ -239,25 +229,6 @@ export class GiveawayCreateController implements ViewController {
         }
       }
     } catch (_) {}
-  }
-
-  private setType(type: 'standard' | 'daily'): void {
-    this.selectedType = type;
-    if (this.typeSelectedText) {
-      this.typeSelectedText.textContent = type === 'daily' ? 'Sorteo Diario' : 'Sorteo Estándar';
-    }
-    if (this.typeSelectedIconUse) {
-      this.typeSelectedIconUse.setAttribute('href', type === 'daily' ? '/icons.svg#schedule' : '/icons.svg#stars');
-    }
-    const options = this.container.querySelectorAll<HTMLButtonElement>('[data-type-value]');
-    options.forEach((opt) => {
-      if (opt.getAttribute('data-type-value') === type) {
-        opt.classList.add('is-active');
-      } else {
-        opt.classList.remove('is-active');
-      }
-    });
-    this.updateLivePreview();
   }
 
   private setStatus(status: 'active' | 'draft'): void {
@@ -412,6 +383,7 @@ export class GiveawayCreateController implements ViewController {
     const handleInput = () => this.updateLivePreview();
     this.inputTitle?.addEventListener('input', handleInput, { signal });
     this.inputSlug?.addEventListener('input', handleInput, { signal });
+    this.inputPrizeAmount?.addEventListener('input', handleInput, { signal });
     this.inputTicketPrice?.addEventListener('input', handleInput, { signal });
     this.inputTotalTickets?.addEventListener('input', handleInput, { signal });
     this.inputStartDate?.addEventListener('change', handleInput, { signal });
@@ -465,22 +437,6 @@ export class GiveawayCreateController implements ViewController {
       }
     }, { signal });
 
-    const typeOptions = this.container.querySelectorAll<HTMLButtonElement>('[data-type-value]');
-    typeOptions.forEach((btn) => {
-      btn.addEventListener(
-        'click',
-        (e) => {
-          e.preventDefault();
-          const val = btn.getAttribute('data-type-value') as 'standard' | 'daily';
-          if (val) {
-            this.setType(val);
-            this.typeDropdownController?.close();
-          }
-        },
-        { signal }
-      );
-    });
-
     const statusOptions = this.container.querySelectorAll<HTMLButtonElement>('[data-status-value]');
     statusOptions.forEach((btn) => {
       btn.addEventListener(
@@ -519,9 +475,9 @@ export class GiveawayCreateController implements ViewController {
 
   private updateLivePreview(): void {
     const titleVal = this.inputTitle?.value.trim() || 'Título del Sorteo';
-    const typeVal = this.selectedType;
     const priceVal = Math.max(0, Number(this.inputTicketPrice?.value) || 0);
     const totalVal = Math.max(0, Number(this.inputTotalTickets?.value) || 0);
+    const prizeAmountVal = Math.max(0, Number(this.inputPrizeAmount?.value) || 0);
     const imageVal = this.inputImageUrl?.value.trim() || '';
     const statusVal = this.selectedStatus;
     const minThresholdVal = Math.min(100, Math.max(0, Number(this.inputMinThreshold?.value) || 0));
@@ -532,7 +488,7 @@ export class GiveawayCreateController implements ViewController {
     }
 
     if (this.previewBadgeType) {
-      this.previewBadgeType.textContent = typeVal === 'daily' ? 'Diario' : 'Estándar';
+      this.previewBadgeType.textContent = 'Estándar';
     }
 
     if (this.previewBadgePrice) {
@@ -561,6 +517,10 @@ export class GiveawayCreateController implements ViewController {
 
     if (this.previewTickets) {
       this.previewTickets.textContent = `0 / ${formatNumber(totalVal)} boletos (0%)`;
+    }
+
+    if (this.statPrizeAmount) {
+      this.statPrizeAmount.textContent = prizeAmountVal > 0 ? formatCurrency(prizeAmountVal, 'MXN') : 'Por definir';
     }
 
     if (this.statRevenue) {
@@ -656,6 +616,7 @@ export class GiveawayCreateController implements ViewController {
     const title = this.inputTitle?.value.trim() || '';
     const price = Number(this.inputTicketPrice?.value);
     const totalTickets = Number(this.inputTotalTickets?.value);
+    const prizeAmount = Number(this.inputPrizeAmount?.value || 0);
     const primaryImage = this.inputImageUrl?.value.trim() || '';
     const startDate = this.inputStartDate?.value;
     const endDate = this.inputEndDate?.value;
@@ -719,13 +680,14 @@ export class GiveawayCreateController implements ViewController {
       min_threshold_pct: Number(this.inputMinThreshold?.value || 0),
       package_options: parsedPackages.length > 0 ? parsedPackages : [1, 5, 10, 20],
       primary_image_url: primaryImage,
+      prize_amount: !isNaN(prizeAmount) && prizeAmount > 0 ? prizeAmount : null,
       slug: this.inputSlug?.value.trim() || undefined,
       start_date: new Date(startDate).toISOString(),
       status: this.selectedStatus,
       ticket_price: price,
       title,
       total_tickets: totalTickets,
-      type: this.selectedType,
+      type: 'standard',
     };
 
     this.isSubmitting = true;
@@ -745,8 +707,6 @@ export class GiveawayCreateController implements ViewController {
   }
 
   destroy(): void {
-    this.typeDropdownController?.destroy();
-    this.typeDropdownController = null;
     this.statusDropdownController?.destroy();
     this.statusDropdownController = null;
     if (this.abortController) {
@@ -759,7 +719,7 @@ export class GiveawayCreateController implements ViewController {
 export async function createGiveawayCreateView(ctx?: RouteContext): Promise<HTMLElement> {
   const container = await loadTemplate('/views/giveaways/giveaway-create.html');
   const controller = new GiveawayCreateController(container, ctx);
-  controller.init();
+  await controller.init();
   (container as any).__controller = controller;
   return container;
 }
