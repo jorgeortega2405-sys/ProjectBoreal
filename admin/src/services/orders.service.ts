@@ -39,6 +39,22 @@ export interface AdminOrderDetail extends AdminOrderSummary {
   raw_receipt_url?: string;
 }
 
+export interface CashReconciliationItem {
+  bank_name: string;
+  order_count: number;
+  ticket_count: number;
+  total_amount: number;
+}
+
+export interface CashReconciliationSummary {
+  breakdown: CashReconciliationItem[];
+  endDate: string;
+  startDate: string;
+  totalAmount: number;
+  totalOrders: number;
+  totalTickets: number;
+}
+
 export interface OrdersFilterParams {
   giveawayUuid?: string;
   limit?: number;
@@ -605,6 +621,199 @@ export class OrdersService {
     );
 
     return await this.getOrderDetail(orderUuid);
+  }
+
+  async retrySpeiVerification(orderUuid: string): Promise<AdminOrderDetail | null> {
+    const [orderRows] = await pool.query<RowDataPacket[]>(
+      'SELECT id, tracking_key, total_amount FROM orders WHERE uuid = ? LIMIT 1',
+      [orderUuid]
+    );
+    if (orderRows.length === 0) return null;
+    const order = orderRows[0];
+
+    await pool.query(
+      `INSERT INTO spei_validation_queue (order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status)
+       VALUES (?, ?, ?, 0, 6, NOW(), 'pending')
+       ON DUPLICATE KEY UPDATE attempts = 0, status = 'pending', next_retry_at = NOW(), last_checked_at = NULL`,
+      [order.id, order.tracking_key || 'PENDING_OCR', order.total_amount]
+    );
+
+    try {
+      await redis.lpush('boreal:queue:receipts', orderUuid);
+    } catch (err) {
+      logger.app.warn('Advertencia al encolar orden para reintento SPEI en Redis:', err);
+    }
+
+    logger.app.info(`Reintento de validación SPEI programado manualmente para orden ${orderUuid}`);
+    return await this.getOrderDetail(orderUuid);
+  }
+
+  async getCashReconciliation(startDate?: string, endDate?: string): Promise<CashReconciliationSummary> {
+    let dateCondition = '';
+    const params: any[] = [];
+
+    if (startDate) {
+      dateCondition += ' AND o.created_at >= ?';
+      params.push(`${startDate} 00:00:00`);
+    }
+    if (endDate) {
+      dateCondition += ' AND o.created_at <= ?';
+      params.push(`${endDate} 23:59:59`);
+    }
+
+    const query = `
+      SELECT o.id, o.uuid, o.total_amount, o.ticket_count, o.bank_reference, o.tracking_key, o.created_at,
+             ba.bank_name as designated_bank_name
+      FROM orders o
+      LEFT JOIN giveaway_bank_accounts gba ON gba.giveaway_id = o.giveaway_id AND gba.is_active = 1
+      LEFT JOIN bank_accounts ba ON ba.id = gba.bank_account_id
+      WHERE o.status = 'completed' ${dateCondition}
+      GROUP BY o.id
+      ORDER BY o.created_at DESC
+    `;
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
+
+    const breakdownMap: Record<string, { order_count: number; ticket_count: number; total_amount: number }> = {};
+    let totalAmount = 0;
+    let totalOrders = 0;
+    let totalTickets = 0;
+
+    for (const r of rows) {
+      const amount = Number(r.total_amount || 0);
+      const tickets = Number(r.ticket_count || 0);
+      totalAmount += amount;
+      totalOrders += 1;
+      totalTickets += tickets;
+
+      let bankName = 'Transferencia SPEI';
+      const ref = String(r.bank_reference || '').toUpperCase();
+      const tracking = String(r.tracking_key || '').toUpperCase();
+      const designated = String(r.designated_bank_name || '').trim();
+
+      if (ref.includes('BBVA') || tracking.startsWith('012')) {
+        bankName = 'BBVA México';
+      } else if (ref.includes('SANTANDER') || tracking.startsWith('014')) {
+        bankName = 'Santander México';
+      } else if (ref.includes('MERCADO') || tracking.startsWith('722') || tracking.startsWith('646')) {
+        bankName = 'Mercado Pago / STP';
+      } else if (designated) {
+        bankName = designated;
+      }
+
+      if (!breakdownMap[bankName]) {
+        breakdownMap[bankName] = { order_count: 0, ticket_count: 0, total_amount: 0 };
+      }
+      breakdownMap[bankName].order_count += 1;
+      breakdownMap[bankName].ticket_count += tickets;
+      breakdownMap[bankName].total_amount += amount;
+    }
+
+    const breakdown: CashReconciliationItem[] = Object.entries(breakdownMap).map(([bank_name, data]) => ({
+      bank_name,
+      order_count: data.order_count,
+      ticket_count: data.ticket_count,
+      total_amount: Math.round(data.total_amount * 100) / 100,
+    })).sort((a, b) => b.total_amount - a.total_amount);
+
+    return {
+      breakdown,
+      endDate: endDate || new Date().toISOString().slice(0, 10),
+      startDate: startDate || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+      totalAmount: Math.round(totalAmount * 100) / 100,
+      totalOrders,
+      totalTickets,
+    };
+  }
+
+  async exportReconciliationCsv(startDate?: string, endDate?: string): Promise<string> {
+    let dateCondition = '';
+    const params: any[] = [];
+
+    if (startDate) {
+      dateCondition += ' AND o.created_at >= ?';
+      params.push(`${startDate} 00:00:00`);
+    }
+    if (endDate) {
+      dateCondition += ' AND o.created_at <= ?';
+      params.push(`${endDate} 23:59:59`);
+    }
+
+    const query = `
+      SELECT o.uuid, o.created_at, o.customer_name, o.customer_phone, g.title as giveaway_title,
+             o.ticket_count, o.total_amount, o.currency, o.bank_reference, o.tracking_key, o.status,
+             ba.bank_name as designated_bank_name
+      FROM orders o
+      INNER JOIN giveaways g ON g.id = o.giveaway_id
+      LEFT JOIN giveaway_bank_accounts gba ON gba.giveaway_id = o.giveaway_id AND gba.is_active = 1
+      LEFT JOIN bank_accounts ba ON ba.id = gba.bank_account_id
+      WHERE o.status = 'completed' ${dateCondition}
+      GROUP BY o.id
+      ORDER BY o.created_at DESC
+    `;
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params);
+
+    const headers = [
+      'Folio Orden',
+      'Fecha y Hora',
+      'Cliente',
+      'Telefono',
+      'Sorteo',
+      'Boletos',
+      'Monto',
+      'Moneda',
+      'Institucion / Banco Receptor',
+      'Clave Rastreo SPEI',
+      'Referencia Bancaria',
+      'Estado',
+    ];
+
+    const escapeCsv = (val: any): string => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const csvLines = [headers.map(escapeCsv).join(',')];
+
+    for (const r of rows) {
+      let bankName = 'Transferencia SPEI';
+      const ref = String(r.bank_reference || '').toUpperCase();
+      const tracking = String(r.tracking_key || '').toUpperCase();
+      const designated = String(r.designated_bank_name || '').trim();
+
+      if (ref.includes('BBVA') || tracking.startsWith('012')) {
+        bankName = 'BBVA México';
+      } else if (ref.includes('SANTANDER') || tracking.startsWith('014')) {
+        bankName = 'Santander México';
+      } else if (ref.includes('MERCADO') || tracking.startsWith('722') || tracking.startsWith('646')) {
+        bankName = 'Mercado Pago / STP';
+      } else if (designated) {
+        bankName = designated;
+      }
+
+      const dateStr = r.created_at instanceof Date ? r.created_at.toISOString().replace('T', ' ').slice(0, 19) : String(r.created_at);
+
+      csvLines.push(
+        [
+          escapeCsv(r.uuid),
+          escapeCsv(dateStr),
+          escapeCsv(r.customer_name),
+          escapeCsv(r.customer_phone),
+          escapeCsv(r.giveaway_title),
+          escapeCsv(r.ticket_count),
+          escapeCsv(Number(r.total_amount).toFixed(2)),
+          escapeCsv(r.currency || 'MXN'),
+          escapeCsv(bankName),
+          escapeCsv(r.tracking_key || 'N/A'),
+          escapeCsv(r.bank_reference || 'N/A'),
+          escapeCsv('Liquidado / Pagado'),
+        ].join(',')
+      );
+    }
+
+    return csvLines.join('\r\n');
   }
 }
 

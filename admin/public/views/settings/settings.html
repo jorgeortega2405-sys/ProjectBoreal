@@ -137,6 +137,93 @@
 
       </div>
 
+      <div class="settings-group is-hidden" data-ref="group-system-settings">
+        <div class="settings-group__header" data-ref="header-system-settings">
+          <h2 class="settings-group__title">Configuración Global de la Plataforma</h2>
+          <p class="settings-group__desc">Parámetros del sorteo diario, reglas de reserva de boletos y canales de contacto y alertas.</p>
+        </div>
+
+        <div class="settings-group__body" data-ref="body-system-settings">
+          <div class="settings-section" data-ref="section-daily-giveaway-settings">
+            <h3 class="settings-section__title">Sorteo Diario Automático</h3>
+            <div class="settings-grid settings-grid--2">
+              <label class="field" data-ref="field-setting-daily-ticket-price">
+                <input class="field__input" data-ref="input-setting-daily-ticket-price" type="number" step="0.5" min="1" placeholder=" " />
+                <span class="field__label">Precio del Boleto (MXN) *</span>
+              </label>
+
+              <label class="field" data-ref="field-setting-daily-pot-percentage">
+                <input class="field__input" data-ref="input-setting-daily-pot-percentage" type="number" step="1" min="1" max="100" placeholder=" " />
+                <span class="field__label">% Bolsa Acumulada para el Ganador *</span>
+              </label>
+            </div>
+
+            <div class="settings-grid settings-grid--2">
+              <label class="field" data-ref="field-setting-daily-total-tickets">
+                <input class="field__input" data-ref="input-setting-daily-total-tickets" type="number" step="100" min="100" max="1000000" placeholder=" " />
+                <span class="field__label">Emisión Total de Boletos por Ciclo *</span>
+              </label>
+
+              <div class="settings-item settings-item--inline" data-ref="item-setting-daily-paused">
+                <div class="settings-item__content">
+                  <span class="settings-item__label">Pausar Ciclo Automático</span>
+                  <span class="settings-item__sublabel">Evita la regeneración automática al concluir el sorteo diario</span>
+                </div>
+                <div class="settings-item__actions">
+                  <label class="toggle-switch" data-ref="label-toggle-setting-daily-paused">
+                    <input class="toggle-switch__input" data-ref="toggle-setting-daily-paused" type="checkbox" />
+                    <span class="toggle-switch__slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="settings-divider" />
+
+          <div class="settings-section" data-ref="section-reservations-settings">
+            <h3 class="settings-section__title">Reglas de Reservas y Apartados</h3>
+            <div class="settings-grid settings-grid--2">
+              <label class="field" data-ref="field-setting-reservation-timeout">
+                <input class="field__input" data-ref="input-setting-reservation-timeout" type="number" step="1" min="1" max="1440" placeholder=" " />
+                <span class="field__label">Tolerancia para Pago (Minutos) *</span>
+              </label>
+            </div>
+          </div>
+
+          <hr class="settings-divider" />
+
+          <div class="settings-section" data-ref="section-contact-settings">
+            <h3 class="settings-section__title">Contacto y Alertas Administrativas</h3>
+            <div class="settings-grid settings-grid--2">
+              <label class="field" data-ref="field-setting-whatsapp">
+                <input class="field__input" data-ref="input-setting-whatsapp" type="text" placeholder=" " />
+                <span class="field__label">Teléfono de Soporte WhatsApp</span>
+              </label>
+
+              <label class="field" data-ref="field-setting-gateways">
+                <input class="field__input" data-ref="input-setting-gateways" type="text" placeholder=" " />
+                <span class="field__label">Pasarelas Activas (ej. spei,card)</span>
+              </label>
+            </div>
+
+            <label class="field" data-ref="field-setting-alert-emails">
+              <input class="field__input" data-ref="input-setting-alert-emails" type="text" placeholder=" " />
+              <span class="field__label">Correos de Alerta Administrativa (separados por coma)</span>
+            </label>
+          </div>
+
+          <div class="settings-actions-footer" data-ref="settings-system-actions">
+            <button type="button" class="component-button component-button--h48 component-button--black" data-ref="btn-save-system-settings">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
+              <span>Guardar Configuración de la Plataforma</span>
+            </button>
+            <div class="banner banner--danger is-hidden" data-ref="banner-settings-error"></div>
+            <div class="banner banner--success is-hidden" data-ref="banner-settings-success"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>

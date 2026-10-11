@@ -48,6 +48,22 @@ interface GiveawayOption {
   uuid: string;
 }
 
+interface CashReconciliationItem {
+  bank_name: string;
+  order_count: number;
+  ticket_count: number;
+  total_amount: number;
+}
+
+interface CashReconciliationSummary {
+  breakdown: CashReconciliationItem[];
+  endDate: string;
+  startDate: string;
+  totalAmount: number;
+  totalOrders: number;
+  totalTickets: number;
+}
+
 function formatCurrency(amount: number, currency = 'MXN'): string {
   return (
     new Intl.NumberFormat('es-MX', {
@@ -92,7 +108,9 @@ export class PaymentsController implements ViewController {
   private btnActionDeselect: HTMLButtonElement | null = null;
   private btnActionInspect: HTMLButtonElement | null = null;
   private btnActionReject: HTMLButtonElement | null = null;
+  private btnActionRetrySpei: HTMLButtonElement | null = null;
   private btnClearSearch: HTMLButtonElement | null = null;
+  private btnOpenReconciliation: HTMLButtonElement | null = null;
   private btnPaginationNext: HTMLButtonElement | null = null;
   private btnPaginationPrev: HTMLButtonElement | null = null;
   private btnResetFilters: HTMLButtonElement | null = null;
@@ -124,6 +142,7 @@ export class PaymentsController implements ViewController {
 
     this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
     this.btnToggleSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
+    this.btnOpenReconciliation = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-open-reconciliation"]');
     this.inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-payments"]');
     this.btnClearSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-search"]');
     this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="payments-default-actions"]');
@@ -133,6 +152,7 @@ export class PaymentsController implements ViewController {
     this.btnActionApprove = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-approve"]');
     this.btnActionReject = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-reject"]');
     this.btnActionCopySpei = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-copy-spei"]');
+    this.btnActionRetrySpei = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-retry-spei"]');
     this.btnResetFilters = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-reset-filters"]');
     this.btnPaginationPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-prev"]');
     this.btnPaginationNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-pagination-next"]');
@@ -233,6 +253,37 @@ export class PaymentsController implements ViewController {
           void navigator.clipboard.writeText(this.selectedOrder.concept_reference);
           showToast('Concepto de pago copiado al portapapeles.', 'success');
         }
+      },
+      { signal }
+    );
+
+    this.btnActionRetrySpei?.addEventListener(
+      'click',
+      async (e) => {
+        e.preventDefault();
+        if (!this.selectedOrder) return;
+        try {
+          const res = await postApi(`/api/orders/${this.selectedOrder.uuid}/retry-spei`);
+          if (res.success) {
+            showToast('Validación SPEI reenviada con éxito a Banxico CEP.', 'success');
+            this.selectedOrder = null;
+            this.updateSelectionUi();
+            await this.loadOrders();
+          } else {
+            showToast(res.error || 'No fue posible forzar el reintento SPEI.', 'danger');
+          }
+        } catch {
+          showToast('Error de comunicación con el servidor.', 'danger');
+        }
+      },
+      { signal }
+    );
+
+    this.btnOpenReconciliation?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        void this.openReconciliationModal();
       },
       { signal }
     );
@@ -477,6 +528,7 @@ export class PaymentsController implements ViewController {
     if (isSelected) {
       this.btnActionApprove?.classList.toggle('is-hidden', !hasPermission('orders:approve'));
       this.btnActionReject?.classList.toggle('is-hidden', !hasPermission('orders:reject'));
+      this.btnActionRetrySpei?.classList.toggle('is-hidden', !hasPermission('orders:manage'));
     }
 
     const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr');
@@ -899,6 +951,171 @@ export class PaymentsController implements ViewController {
       size: 'sm',
       title: 'Rechazar Comprobante de Pago',
     });
+  }
+
+  private async openReconciliationModal(): Promise<void> {
+    const today = new Date().toISOString().slice(0, 10);
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+
+    const bodyContainer = document.createElement('div');
+    bodyContainer.className = 'reconciliation-modal-content';
+    bodyContainer.setAttribute('data-ref', 'reconciliation-modal-content');
+
+    bodyContainer.innerHTML = `
+      <div class="reconciliation-period-bar">
+        <div class="reconciliation-dates-form">
+          <label class="field" data-ref="field-recon-start">
+            <input class="field__input reconciliation-date-input" data-ref="input-recon-start" type="date" value="${thirtyDaysAgo}" />
+            <span class="field__label">Desde</span>
+          </label>
+          <label class="field" data-ref="field-recon-end">
+            <input class="field__input reconciliation-date-input" data-ref="input-recon-end" type="date" value="${today}" />
+            <span class="field__label">Hasta</span>
+          </label>
+          <button type="button" class="component-button component-button--h34 component-button--black" data-ref="btn-recon-filter">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <span>Filtrar</span>
+          </button>
+        </div>
+      </div>
+      <div class="reconciliation-summary-cards" data-ref="recon-summary-cards">
+        <div class="reconciliation-card">
+          <span class="reconciliation-card__label">Total Recaudado</span>
+          <span class="reconciliation-card__value reconciliation-card__value--highlight" data-ref="recon-total-amount">...</span>
+        </div>
+        <div class="reconciliation-card">
+          <span class="reconciliation-card__label">Órdenes Liquidadas</span>
+          <span class="reconciliation-card__value" data-ref="recon-total-orders">...</span>
+        </div>
+        <div class="reconciliation-card">
+          <span class="reconciliation-card__label">Boletos Vendidos</span>
+          <span class="reconciliation-card__value" data-ref="recon-total-tickets">...</span>
+        </div>
+      </div>
+      <div class="reconciliation-table-wrapper" data-ref="recon-table-wrapper">
+        <table class="reconciliation-table" data-ref="recon-table">
+          <thead>
+            <tr>
+              <th>Institución / Receptor</th>
+              <th style="text-align: right;">Órdenes</th>
+              <th style="text-align: right;">Boletos</th>
+              <th style="text-align: right;">Total Recaudado</th>
+              <th style="text-align: right;">Participación</th>
+            </tr>
+          </thead>
+          <tbody data-ref="recon-table-tbody">
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--text-tertiary); padding: 24px;">Cargando información contable...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    const inputStart = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-recon-start"]');
+    const inputEnd = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-recon-end"]');
+    const btnFilter = bodyContainer.querySelector<HTMLButtonElement>('[data-ref="btn-recon-filter"]');
+    const totalAmountEl = bodyContainer.querySelector<HTMLElement>('[data-ref="recon-total-amount"]');
+    const totalOrdersEl = bodyContainer.querySelector<HTMLElement>('[data-ref="recon-total-orders"]');
+    const totalTicketsEl = bodyContainer.querySelector<HTMLElement>('[data-ref="recon-total-tickets"]');
+    const tbodyEl = bodyContainer.querySelector<HTMLElement>('[data-ref="recon-table-tbody"]');
+
+    const fetchAndRenderReconciliation = async () => {
+      const sDate = inputStart?.value || '';
+      const eDate = inputEnd?.value || '';
+      if (tbodyEl) {
+        tbodyEl.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-tertiary); padding: 24px;">Consultando movimientos bancarios...</td></tr>`;
+      }
+      try {
+        const queryParams = new URLSearchParams();
+        if (sDate) queryParams.set('startDate', sDate);
+        if (eDate) queryParams.set('endDate', eDate);
+        const res = await getApi<CashReconciliationSummary>(`/api/orders/reconciliation/summary?${queryParams.toString()}`);
+        if (!res.success || !res.data) {
+          showToast(res.error || 'No fue posible cargar el corte de caja.', 'danger');
+          return;
+        }
+
+        const summary = res.data;
+        if (totalAmountEl) totalAmountEl.textContent = formatCurrency(summary.totalAmount);
+        if (totalOrdersEl) totalOrdersEl.textContent = formatNumber(summary.totalOrders);
+        if (totalTicketsEl) totalTicketsEl.textContent = formatNumber(summary.totalTickets);
+
+        if (!tbodyEl) return;
+        if (summary.breakdown.length === 0) {
+          tbodyEl.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-tertiary); padding: 24px;">No se registraron cobros liquidados en el periodo seleccionado.</td></tr>`;
+          return;
+        }
+
+        const totalAmt = summary.totalAmount || 1;
+        tbodyEl.innerHTML = summary.breakdown.map((item) => {
+          const pct = Math.round((item.total_amount / totalAmt) * 100);
+          return `
+            <tr>
+              <td>
+                <span class="reconciliation-table__bank-badge">
+                  <svg class="component-icon" style="width: 16px; height: 16px; color: var(--text-secondary);" aria-hidden="true"><use href="/icons.svg#wallet"></use></svg>
+                  ${escapeHtml(item.bank_name)}
+                </span>
+              </td>
+              <td style="text-align: right;">${formatNumber(item.order_count)}</td>
+              <td style="text-align: right;">${formatNumber(item.ticket_count)}</td>
+              <td style="text-align: right; font-weight: 600;">${formatCurrency(item.total_amount)}</td>
+              <td style="text-align: right; color: var(--text-tertiary);">${pct}%</td>
+            </tr>
+          `;
+        }).join('');
+        renderIcons(tbodyEl);
+      } catch {
+        showToast('Error de comunicación al consultar corte de caja.', 'danger');
+      }
+    };
+
+    btnFilter?.addEventListener('click', (e) => {
+      e.preventDefault();
+      void fetchAndRenderReconciliation();
+    });
+
+    openModal({
+      bodyHtml: bodyContainer,
+      confirmClass: 'component-button--black',
+      confirmText: 'Exportar CSV',
+      description: 'Resumen financiero de cobros liquidados desglosado por banco receptor.',
+      onConfirm: async () => {
+        const sDate = inputStart?.value || '';
+        const eDate = inputEnd?.value || '';
+        const queryParams = new URLSearchParams();
+        if (sDate) queryParams.set('startDate', sDate);
+        if (eDate) queryParams.set('endDate', eDate);
+        try {
+          const res = await fetch(`/api/orders/reconciliation/export?${queryParams.toString()}`, {
+            credentials: 'include',
+          });
+          if (!res.ok) {
+            showToast('Error al exportar corte de caja.', 'danger');
+            return false;
+          }
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `corte_caja_${new Date().toISOString().slice(0, 10)}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          showToast('Corte de caja exportado exitosamente a CSV.', 'success');
+          return true;
+        } catch {
+          showToast('Error de red al descargar el archivo CSV.', 'danger');
+          return false;
+        }
+      },
+      size: 'lg',
+      title: 'Conciliación Bancaria y Corte de Caja',
+    });
+
+    void fetchAndRenderReconciliation();
   }
 
   destroy(): void {

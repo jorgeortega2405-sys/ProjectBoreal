@@ -1,8 +1,10 @@
+import { getApi, patchApi } from '../services/api.service.js';
 import { getCurrentLanguage, setLanguage, t } from '../services/i18n.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { getTheme, setTheme } from '../services/theme.service.js';
 import { showToast } from '../services/toast.service.js';
 import { getLanguageName } from '../utils/languages.util.js';
+import { hasAnyPermission } from '../utils/permission.util.js';
 
 export class SettingsController {
   private abortController: AbortController | null = null;
@@ -19,6 +21,7 @@ export class SettingsController {
     this.bindPreferencesToggles();
     this.bindDocumentDismiss();
     this.bindLanguageChangeEvent();
+    await this.initSystemSettings();
   }
 
   private bindDocumentDismiss(): void {
@@ -310,6 +313,136 @@ export class SettingsController {
         { signal }
       );
     }
+  }
+
+  private async initSystemSettings(): Promise<void> {
+    const systemGroup = this.container.querySelector<HTMLElement>('[data-ref="group-system-settings"]');
+    if (!systemGroup) return;
+
+    const canManage = hasAnyPermission('settings:read', 'settings:manage', 'giveaways:manage');
+    if (!canManage) {
+      systemGroup.classList.add('is-hidden');
+      return;
+    }
+
+    systemGroup.classList.remove('is-hidden');
+    await this.loadSystemSettings();
+    this.bindSystemSettingsEvents();
+  }
+
+  private async loadSystemSettings(): Promise<void> {
+    const res = await getApi<{ settings: Array<{ key: string; value: string }> }>('/api/settings');
+    if (!res.success || !res.data?.settings) return;
+
+    const map = new Map<string, string>();
+    for (const item of res.data.settings) {
+      map.set(item.key, item.value);
+    }
+
+    const priceInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-daily-ticket-price"]');
+    if (priceInput && map.has('daily_giveaway_ticket_price')) {
+      priceInput.value = map.get('daily_giveaway_ticket_price') || '2';
+    }
+
+    const potInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-daily-pot-percentage"]');
+    if (potInput && map.has('daily_giveaway_pot_percentage')) {
+      potInput.value = map.get('daily_giveaway_pot_percentage') || '50';
+    }
+
+    const ticketsInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-daily-total-tickets"]');
+    if (ticketsInput && map.has('daily_giveaway_total_tickets')) {
+      ticketsInput.value = map.get('daily_giveaway_total_tickets') || '20000';
+    }
+
+    const pauseToggle = this.container.querySelector<HTMLInputElement>('[data-ref="toggle-setting-daily-paused"]');
+    if (pauseToggle && map.has('daily_giveaway_paused_next')) {
+      const isPaused = map.get('daily_giveaway_paused_next') === '1';
+      pauseToggle.checked = isPaused;
+    }
+
+    const timeoutInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-reservation-timeout"]');
+    if (timeoutInput && map.has('order_reservation_timeout_minutes')) {
+      timeoutInput.value = map.get('order_reservation_timeout_minutes') || '30';
+    }
+
+    const whatsappInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-whatsapp"]');
+    if (whatsappInput && map.has('support_whatsapp_phone')) {
+      whatsappInput.value = map.get('support_whatsapp_phone') || '';
+    }
+
+    const gatewaysInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-gateways"]');
+    if (gatewaysInput && map.has('active_payment_gateways')) {
+      gatewaysInput.value = map.get('active_payment_gateways') || 'spei,card';
+    }
+
+    const emailsInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-alert-emails"]');
+    if (emailsInput && map.has('admin_alert_emails')) {
+      emailsInput.value = map.get('admin_alert_emails') || '';
+    }
+  }
+
+  private bindSystemSettingsEvents(): void {
+    const signal = this.abortController?.signal;
+    const saveBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-save-system-settings"]');
+    const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="banner-settings-error"]');
+    const successBanner = this.container.querySelector<HTMLElement>('[data-ref="banner-settings-success"]');
+
+    saveBtn?.addEventListener(
+      'click',
+      async () => {
+        if (!hasAnyPermission('settings:manage', 'giveaways:manage')) {
+          showToast('No cuentas con permisos para modificar la configuración de la plataforma.', 'error');
+          return;
+        }
+
+        errorBanner?.classList.add('is-hidden');
+        successBanner?.classList.add('is-hidden');
+
+        const priceInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-daily-ticket-price"]');
+        const potInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-daily-pot-percentage"]');
+        const ticketsInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-daily-total-tickets"]');
+        const pauseToggle = this.container.querySelector<HTMLInputElement>('[data-ref="toggle-setting-daily-paused"]');
+        const timeoutInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-reservation-timeout"]');
+        const whatsappInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-whatsapp"]');
+        const gatewaysInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-gateways"]');
+        const emailsInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-setting-alert-emails"]');
+
+        const updates: Record<string, string> = {
+          active_payment_gateways: gatewaysInput?.value.trim() || 'spei,card',
+          admin_alert_emails: emailsInput?.value.trim() || '',
+          daily_giveaway_paused_next: pauseToggle?.checked ? '1' : '0',
+          daily_giveaway_pot_percentage: potInput?.value.trim() || '50',
+          daily_giveaway_ticket_price: priceInput?.value.trim() || '2',
+          daily_giveaway_total_tickets: ticketsInput?.value.trim() || '20000',
+          order_reservation_timeout_minutes: timeoutInput?.value.trim() || '30',
+          support_whatsapp_phone: whatsappInput?.value.trim() || '',
+        };
+
+        saveBtn.disabled = true;
+        try {
+          const res = await patchApi('/api/settings', { settings: updates });
+          if (res.success) {
+            showToast('Configuraciones de la plataforma actualizadas con éxito.', 'success');
+            if (successBanner) {
+              successBanner.textContent = 'Configuraciones guardadas y caché purgada correctamente.';
+              successBanner.classList.remove('is-hidden');
+            }
+          } else {
+            const err = res.error || 'No fue posible guardar las configuraciones.';
+            showToast(err, 'error');
+            if (errorBanner) {
+              errorBanner.textContent = err;
+              errorBanner.classList.remove('is-hidden');
+            }
+          }
+        } catch {
+          showToast('Error de comunicación con el servidor.', 'error');
+        } finally {
+          saveBtn.disabled = false;
+        }
+      },
+      { signal }
+    );
   }
 
   destroy(): void {

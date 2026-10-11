@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS `spei_validation_queue` (
   `next_retry_at` DATETIME NOT NULL,
   `last_checked_at` DATETIME NULL,
   `banxico_response` JSON NULL,
-  `status` ENUM('pending', 'verifying', 'matched', 'failed', 'expired') NOT NULL DEFAULT 'pending',
+  `status` ENUM('pending', 'verifying', 'matched', 'failed', 'expired', 'manual_review') NOT NULL DEFAULT 'pending',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE INDEX `idx_spei_queue_order_id` (`order_id`),
@@ -197,6 +197,10 @@ VALUES
   ('daily_giveaway_pot_percentage', '50', 'Porcentaje de la recaudación destinado a la bolsa acumulada del ganador'),
   ('daily_giveaway_ticket_price', '2', 'Precio por boleto en MXN para el ciclo automático del sorteo diario'),
   ('daily_giveaway_total_tickets', '20000', 'Emisión total de boletos por ciclo del sorteo diario'),
+  ('order_reservation_timeout_minutes', '30', 'Tiempo límite de tolerancia en minutos para subir comprobante antes de liberar boletos reservados'),
+  ('support_whatsapp_phone', '+5215500000000', 'Número de atención y soporte por WhatsApp para participantes'),
+  ('admin_alert_emails', 'alertas@projectboreal.com', 'Direcciones de correo electrónico para alertas operativas y administrativas'),
+  ('active_payment_gateways', 'spei,card', 'Pasarelas y métodos de pago activos en la plataforma'),
   ('backup_auto_enabled', '1', 'Habilita la ejecución programada automática de copias de seguridad hacia S3 (MinIO)'),
   ('backup_schedule_frequency', 'daily', 'Frecuencia de respaldos automáticos (daily, every_12h, every_6h, weekly)'),
   ('backup_schedule_time', '03:00', 'Hora programada (formato 24h HH:MM) para la ejecución de respaldos automáticos'),
@@ -367,7 +371,9 @@ INSERT INTO `permissions` (`name`, `display_name`, `description`, `module`) VALU
   ('backups:delete', 'Eliminar Copias de Seguridad', 'Eliminar archivos de respaldo almacenados en S3 (MinIO) no protegidos.', 'backups'),
   ('admins:read', 'Ver Administradores y PBAC', 'Consultar directorio de administradores, asignación de roles y sesiones activas en Redis.', 'admins'),
   ('admins:manage', 'Gestionar Administradores y PBAC', 'Crear, editar administradores, asignar roles, gestionar permisos y revocar sesiones.', 'admins'),
-  ('audit:read', 'Ver Bitácora de Auditoría', 'Consultar registro cronológico inmutable en Apache Cassandra, trazabilidad forense y expedientes de eventos.', 'audit')
+  ('audit:read', 'Ver Bitácora de Auditoría', 'Consultar registro cronológico inmutable en Apache Cassandra, trazabilidad forense y expedientes de eventos.', 'audit'),
+  ('settings:read', 'Ver Configuración del Sistema', 'Consultar parámetros globales de la plataforma, reglas de negocio y contacto.', 'settings'),
+  ('settings:manage', 'Gestionar Configuración del Sistema', 'Modificar parámetros de sorteo diario, tiempos de reserva, pasarelas y contacto.', 'settings')
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),
   `description` = VALUES(`description`),
@@ -410,7 +416,7 @@ WHERE r.`name` = 'BILLING_AGENT'
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'OPERATIONS_MANAGER'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw', 'giveaways:delete', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'customers:read', 'customers:block', 'winners:read', 'winners:manage', 'hr:read', 'hr:manage', 'backups:read', 'backups:create', 'backups:manage');
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw', 'giveaways:delete', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'customers:read', 'customers:block', 'winners:read', 'winners:manage', 'hr:read', 'hr:manage', 'backups:read', 'backups:create', 'backups:manage', 'settings:read', 'settings:manage');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p

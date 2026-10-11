@@ -16,6 +16,7 @@ import giveawaysRoutes from './routes/giveaways.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import hrRoutes from './routes/hr.routes.js';
 import ordersRoutes from './routes/orders.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
 import winnersRoutes from './routes/winners.routes.js';
 import { logger } from './services/logger.service.js';
 import { checkS3Connection, getS3Object } from './services/s3.service.js';
@@ -175,6 +176,7 @@ function createExpressApp(): express.Express {
   app.use('/api/giveaways', requireAuth, giveawaysRoutes);
   app.use('/api/hr', requireAuth, hrRoutes);
   app.use('/api/orders', requireAuth, ordersRoutes);
+  app.use('/api/settings', requireAuth, settingsRoutes);
   app.use('/api/winners', requireAuth, winnersRoutes);
 
   const adminPublicDir = path.resolve(ADMIN_ROOT_DIR, 'public');

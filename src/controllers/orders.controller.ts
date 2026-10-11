@@ -434,7 +434,7 @@ export async function uploadReceiptHandler(req: Request, res: Response): Promise
     }
     if ((error as Error).message === 'ORDER_EXPIRED') {
       res.status(400).json({
-        error: 'El tiempo límite de 30 minutos para subir el comprobante ha expirado. Por favor aparta tus boletos nuevamente.',
+        error: 'El tiempo límite de tolerancia para subir el comprobante ha expirado. Por favor aparta tus boletos nuevamente.',
         success: false,
       });
       return;

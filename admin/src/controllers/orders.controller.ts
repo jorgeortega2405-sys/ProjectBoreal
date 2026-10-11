@@ -244,3 +244,77 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
     });
   }
 }
+
+export async function retrySpeiHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const { uuid } = req.params;
+    if (!uuid) {
+      res.status(400).json({
+        error: 'El identificador de la orden es requerido.',
+        success: false,
+      });
+      return;
+    }
+
+    const updated = await ordersService.retrySpeiVerification(uuid);
+    if (!updated) {
+      res.status(404).json({
+        error: 'La orden solicitada no fue encontrada.',
+        success: false,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      data: updated,
+      message: 'Validación SPEI reenviada al procesador Banxico en segundo plano.',
+      success: true,
+    });
+  } catch (error) {
+    logger.app.error('Error al forzar reintento SPEI en Admin', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+}
+
+export async function getReconciliationHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : undefined;
+    const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : undefined;
+
+    const data = await ordersService.getCashReconciliation(startDate, endDate);
+    res.status(200).json({
+      data,
+      success: true,
+    });
+  } catch (error) {
+    logger.app.error('Error al consultar conciliación de caja', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+}
+
+export async function exportReconciliationCsvHandler(req: Request, res: Response): Promise<void> {
+  try {
+    const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : undefined;
+    const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : undefined;
+
+    const csvData = await ordersService.exportReconciliationCsv(startDate, endDate);
+    const filename = `corte_caja_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.status(200).send('\uFEFF' + csvData);
+  } catch (error) {
+    logger.app.error('Error al exportar conciliación de caja en CSV', error);
+    res.status(500).json({
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
+    });
+  }
+}
+

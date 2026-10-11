@@ -62,6 +62,30 @@ export async function getActiveBankAccounts(giveawayIdOrUuid?: number | string):
   }
 }
 
+export async function getReservationTimeoutMinutes(): Promise<number> {
+  try {
+    const cached = await getCache<string>('boreal:settings:order_reservation_timeout_minutes');
+    if (cached !== null && cached !== undefined) {
+      const parsed = Number(cached);
+      if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 1440) {
+        return parsed;
+      }
+    }
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT setting_value FROM system_settings WHERE setting_key = 'order_reservation_timeout_minutes' LIMIT 1`
+    );
+    if (rows.length > 0) {
+      const val = Number(rows[0].setting_value);
+      const minutes = !Number.isNaN(val) && val >= 1 && val <= 1440 ? val : 30;
+      await setCache('boreal:settings:order_reservation_timeout_minutes', String(minutes), 300);
+      return minutes;
+    }
+    return 30;
+  } catch (error) {
+    logger.db.warn('Error al consultar setting order_reservation_timeout_minutes en MySQL/Redis', error);
+    return 30;
+  }
+}
 
 export async function reserveTickets(data: {
   customerName: string;
@@ -216,7 +240,8 @@ export async function reserveTickets(data: {
     const conceptReference = data.customerName.trim().replace(/\s+/g, ' ').toUpperCase();
     const ticketCount = cleanNumbers.length;
     const totalAmount = ticketCount * Number(giveaway.ticket_price);
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const timeoutMinutes = await getReservationTimeoutMinutes();
+    const expiresAt = new Date(Date.now() + timeoutMinutes * 60 * 1000);
 
     const [orderResult] = await conn.query<ResultSetHeader>(
       `INSERT INTO orders (
