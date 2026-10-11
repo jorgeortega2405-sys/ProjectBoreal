@@ -1,6 +1,8 @@
 import { getCurrentUser } from '../services/auth.service.js';
 
 export const MODULE_PERMISSIONS: Record<string, string[]> = {
+  'admins': ['admins:read', 'admins:manage'],
+  'audit': ['audit:read'],
   'backups': ['backups:read', 'backups:create', 'backups:restore', 'backups:manage', 'backups:delete'],
   'bank-accounts': ['bank_accounts:read', 'bank_accounts:manage', 'bank_accounts:delete'],
   'customers': ['customers:read', 'customers:block'],
@@ -129,6 +131,26 @@ export function resolveModuleFromPath(path: string): string | null {
     return 'hr';
   }
   if (
+    path === '/admins' ||
+    path.startsWith('/admins') ||
+    path === '/administradores' ||
+    path.startsWith('/administradores') ||
+    path === '/seguridad' ||
+    path.startsWith('/seguridad')
+  ) {
+    return 'admins';
+  }
+  if (
+    path === '/audit' ||
+    path.startsWith('/audit') ||
+    path === '/auditoria' ||
+    path.startsWith('/auditoria') ||
+    path === '/bitacora' ||
+    path.startsWith('/bitacora')
+  ) {
+    return 'audit';
+  }
+  if (
     path === '/backups' ||
     path.startsWith('/backups') ||
     path === '/copias-seguridad' ||
@@ -169,6 +191,8 @@ export function getDefaultLandingRoute(): string {
     { moduleId: 'winners', path: '/winners' },
     { moduleId: 'hr', path: '/hr' },
     { moduleId: 'backups', path: '/backups' },
+    { moduleId: 'admins', path: '/admins' },
+    { moduleId: 'audit', path: '/audit' },
   ];
 
   for (const item of priorityOrder) {

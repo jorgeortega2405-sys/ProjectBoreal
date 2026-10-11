@@ -192,6 +192,34 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
+      const { createAdminsView } = await import('../views/admins.view.js');
+      return await createAdminsView();
+    },
+    id: 'admins',
+    match: (path) =>
+      path === '/admins' ||
+      path.startsWith('/admins') ||
+      path === '/administradores' ||
+      path.startsWith('/administradores') ||
+      path === '/seguridad' ||
+      path.startsWith('/seguridad'),
+  },
+  {
+    handler: async () => {
+      const { createAuditView } = await import('../views/audit.view.js');
+      return await createAuditView();
+    },
+    id: 'audit',
+    match: (path) =>
+      path === '/audit' ||
+      path.startsWith('/audit') ||
+      path === '/auditoria' ||
+      path.startsWith('/auditoria') ||
+      path === '/bitacora' ||
+      path.startsWith('/bitacora'),
+  },
+  {
+    handler: async () => {
       const { createSettingsView } = await import('../views/settings.view.js');
       return await createSettingsView();
     },

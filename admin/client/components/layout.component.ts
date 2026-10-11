@@ -60,6 +60,8 @@ export function updateSidebarUserInfo(sidebar: HTMLElement): void {
     { moduleId: 'customers', ref: 'rail-item-customers' },
     { moduleId: 'winners', ref: 'rail-item-winners' },
     { moduleId: 'hr', ref: 'rail-item-hr' },
+    { moduleId: 'admins', ref: 'rail-item-admins' },
+    { moduleId: 'audit', ref: 'rail-item-audit' },
     { moduleId: 'backups', ref: 'rail-item-backups' },
   ];
 
@@ -110,6 +112,16 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     path.startsWith('/empleados') ||
     path === '/personal' ||
     path.startsWith('/personal');
+  const isAdmins =
+    path === '/admins' ||
+    path.startsWith('/admins') ||
+    path === '/administradores' ||
+    path.startsWith('/administradores');
+  const isAudit =
+    path === '/audit' ||
+    path.startsWith('/audit') ||
+    path === '/auditoria' ||
+    path.startsWith('/auditoria');
   const isBackups =
     path === '/backups' ||
     path.startsWith('/backups') ||
@@ -131,6 +143,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     !isCustomers &&
     !isWinners &&
     !isHr &&
+    !isAdmins &&
+    !isAudit &&
     !isBackups &&
     !isSettings &&
     (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
@@ -149,6 +163,10 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnWinners = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-winners"]');
   const itemHr = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-hr"]');
   const btnHr = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-hr"]');
+  const itemAdmins = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-admins"]');
+  const btnAdmins = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-admins"]');
+  const itemAudit = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-audit"]');
+  const btnAudit = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-audit"]');
   const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
   const btnBackups = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-backups"]');
   const itemAvatar = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
@@ -170,6 +188,10 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnWinners?.classList.toggle('is-active', isWinners);
   itemHr?.classList.toggle('is-active', isHr);
   btnHr?.classList.toggle('is-active', isHr);
+  itemAdmins?.classList.toggle('is-active', isAdmins);
+  btnAdmins?.classList.toggle('is-active', isAdmins);
+  itemAudit?.classList.toggle('is-active', isAudit);
+  btnAudit?.classList.toggle('is-active', isAudit);
   itemBackups?.classList.toggle('is-active', isBackups);
   btnBackups?.classList.toggle('is-active', isBackups);
   itemAvatar?.classList.toggle('is-active', isSettings);
@@ -261,6 +283,18 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   itemBackups?.addEventListener('click', (e) => {
     e.preventDefault();
     navigate('/backups');
+  });
+
+  const itemAdmins = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-admins"]');
+  itemAdmins?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/admins');
+  });
+
+  const itemAudit = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-audit"]');
+  itemAudit?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/audit');
   });
 
   if (avatarContainer && btnAvatar && avatarMenu) {

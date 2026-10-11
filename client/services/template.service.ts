@@ -25,7 +25,7 @@ export async function loadTemplate(url: string): Promise<HTMLElement> {
     throw new Error(`Plantilla vacía o inválida: ${url}`);
   }
 
-  const clone = element.cloneNode(true) as HTMLElement;
+  const clone = document.importNode(element, true) as HTMLElement;
   renderIcons(clone);
   return translateElement(clone);
 }

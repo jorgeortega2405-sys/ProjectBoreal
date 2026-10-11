@@ -364,7 +364,10 @@ INSERT INTO `permissions` (`name`, `display_name`, `description`, `module`) VALU
   ('backups:create', 'Crear Copias de Seguridad', 'Generar respaldos completos o selectivos de MySQL, Cassandra, S3 (MinIO) y Redis hacia almacenamiento S3.', 'backups'),
   ('backups:restore', 'Restaurar Copias de Seguridad', 'Ejecutar restauraciones selectivas o completas de bases de datos (MySQL, Cassandra), objetos S3 (MinIO) y estado Redis.', 'backups'),
   ('backups:manage', 'Gestionar Política y Retención de Respaldos', 'Fijar/proteger respaldos, sincronizar catálogo con S3 (MinIO), verificar integridad y configurar programación automática.', 'backups'),
-  ('backups:delete', 'Eliminar Copias de Seguridad', 'Eliminar archivos de respaldo almacenados en S3 (MinIO) no protegidos.', 'backups')
+  ('backups:delete', 'Eliminar Copias de Seguridad', 'Eliminar archivos de respaldo almacenados en S3 (MinIO) no protegidos.', 'backups'),
+  ('admins:read', 'Ver Administradores y PBAC', 'Consultar directorio de administradores, asignación de roles y sesiones activas en Redis.', 'admins'),
+  ('admins:manage', 'Gestionar Administradores y PBAC', 'Crear, editar administradores, asignar roles, gestionar permisos y revocar sesiones.', 'admins'),
+  ('audit:read', 'Ver Bitácora de Auditoría', 'Consultar registro cronológico inmutable en Apache Cassandra, trazabilidad forense y expedientes de eventos.', 'audit')
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),
   `description` = VALUES(`description`),

@@ -25,6 +25,9 @@ export function getAdminSkeletonTemplateForRouteId(routeId: string): string {
       return ADMIN_HR_SKELETON_TEMPLATE;
     case 'backups':
       return ADMIN_BACKUPS_SKELETON_TEMPLATE;
+    case 'admins':
+    case 'audit':
+      return ADMIN_BACKUPS_SKELETON_TEMPLATE;
     case 'not-found':
       return ADMIN_NOT_FOUND_SKELETON_TEMPLATE;
     default:

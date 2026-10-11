@@ -30,6 +30,9 @@ export const PLATFORM_PERMISSIONS: readonly PermissionDefinition[] = [
   { description: 'Ejecutar restauraciones selectivas o completas de bases de datos (MySQL, Cassandra), objetos S3 (MinIO) y estado Redis.', display_name: 'Restaurar Copias de Seguridad', module: 'backups', name: 'backups:restore' },
   { description: 'Fijar/proteger respaldos, sincronizar catálogo con S3 (MinIO), verificar integridad y configurar programación automática.', display_name: 'Gestionar Política y Retención de Respaldos', module: 'backups', name: 'backups:manage' },
   { description: 'Eliminar archivos de respaldo almacenados en S3 (MinIO) no protegidos.', display_name: 'Eliminar Copias de Seguridad', module: 'backups', name: 'backups:delete' },
+  { description: 'Consultar directorio de administradores, asignación de roles y sesiones activas en Redis.', display_name: 'Ver Administradores y PBAC', module: 'admins', name: 'admins:read' },
+  { description: 'Crear, editar administradores, asignar roles, gestionar permisos y revocar sesiones.', display_name: 'Gestionar Administradores y PBAC', module: 'admins', name: 'admins:manage' },
+  { description: 'Consultar registro cronológico inmutable en Apache Cassandra, trazabilidad forense y expedientes de eventos.', display_name: 'Ver Bitácora de Auditoría', module: 'audit', name: 'audit:read' },
 ];
 
 export async function getAdminRoles(adminUserId: number): Promise<string[]> {

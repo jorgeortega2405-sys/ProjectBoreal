@@ -1,6 +1,14 @@
 import 'dotenv/config';
 
 export const config = {
+  cassandra: {
+    contactPoints: (process.env.CASSANDRA_CONTACT_POINTS || '127.0.0.1').split(','),
+    keyspace: process.env.CASSANDRA_KEYSPACE || 'boreal_audit',
+    localDataCenter: process.env.CASSANDRA_LOCAL_DC || 'datacenter1',
+    password: process.env.CASSANDRA_PASSWORD || 'cassandra',
+    port: parseInt(process.env.CASSANDRA_PORT || '9042', 10),
+    user: process.env.CASSANDRA_USER || 'cassandra',
+  },
   cors: {
     allowedOrigins: (process.env.ALLOWED_ORIGINS || '')
       .split(',')
