@@ -212,8 +212,6 @@ function createExpressApp(): express.Express {
 
   app.use('/images', express.static(path.join(adminPublicDir, 'images')));
   app.use('/images', express.static(path.join(rootPublicDir, 'images')));
-  app.use('/uploads', express.static(path.join(adminPublicDir, 'uploads')));
-  app.use('/uploads', express.static(path.join(rootPublicDir, 'uploads')));
 
   app.use(
     express.static(adminPublicDir, {

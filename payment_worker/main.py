@@ -293,6 +293,12 @@ class ReceiptWorker:
                 logger.error(f"[{order_uuid}] Error en motor OCR ({file_path}): {ocr_err}")
                 self._schedule_retry(order, conn, {"error": f"Fallo motor OCR: {str(ocr_err)}"}, is_transient=True)
                 return False
+            finally:
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except Exception:
+                    pass
 
             dhash_dup_order = ImageProcessor.check_and_register_dhash(self.redis, dhash_str, order_uuid)
             if dhash_dup_order:

@@ -2,7 +2,6 @@ import { logger } from '../services/logger.service.js';
 import { ordersService } from '../services/orders.service.js';
 import { getS3Object } from '../services/s3.service.js';
 import { Request, Response } from 'express';
-import fs from 'fs';
 import path from 'path';
 
 export async function getOrdersHandler(req: Request, res: Response): Promise<void> {
@@ -233,29 +232,10 @@ export async function getOrderReceiptHandler(req: Request, res: Response): Promi
       return;
     }
 
-    const storagePaths = [
-      path.resolve(process.cwd(), '..', 'storage', 'receipts', cleanFilename),
-      path.resolve(process.cwd(), 'storage', 'receipts', cleanFilename),
-    ];
-
-    let foundPath: string | null = null;
-    for (const sp of storagePaths) {
-      if (fs.existsSync(sp)) {
-        foundPath = sp;
-        break;
-      }
-    }
-
-    if (!foundPath) {
-      res.status(404).json({
-        error: 'El archivo físico del comprobante no existe en almacenamiento.',
-        success: false,
-      });
-      return;
-    }
-
-    res.setHeader('Cache-Control', 'private, no-cache');
-    res.sendFile(foundPath);
+    res.status(404).json({
+      error: 'El comprobante solicitado no existe en el almacenamiento S3.',
+      success: false,
+    });
   } catch (error) {
     logger.app.error('Error al transmitir comprobante en Admin', error);
     res.status(500).json({
