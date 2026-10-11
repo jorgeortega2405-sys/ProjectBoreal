@@ -178,6 +178,20 @@ export const APP_ROUTES: RouteDefinition[] = [
   },
   {
     handler: async () => {
+      const { createBackupsView } = await import('../views/backups.view.js');
+      return await createBackupsView();
+    },
+    id: 'backups',
+    match: (path) =>
+      path === '/backups' ||
+      path.startsWith('/backups') ||
+      path === '/copias-seguridad' ||
+      path.startsWith('/copias-seguridad') ||
+      path === '/respaldos' ||
+      path.startsWith('/respaldos'),
+  },
+  {
+    handler: async () => {
       const { createSettingsView } = await import('../views/settings.view.js');
       return await createSettingsView();
     },

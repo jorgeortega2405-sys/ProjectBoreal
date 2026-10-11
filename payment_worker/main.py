@@ -18,6 +18,7 @@ from banxico_client import BanxicoClient
 from bank_catalog import BANCO_CODES, get_bank_code_by_clabe
 from image_processor import ImageProcessor
 from s3_client import download_s3_object
+import backup_engine
 
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
@@ -122,6 +123,7 @@ class ReceiptWorker:
         self.worker_id = f"worker-{os.getpid()}-{int(time.time())}"
         self.running = True
         self.last_sweep_time = 0
+        self.last_backup_check_time = 0
         self.executor = concurrent.futures.ThreadPoolExecutor(
             max_workers=MAX_WORKERS,
             thread_name_prefix="PaymentWorkerThread"
@@ -817,7 +819,90 @@ class ReceiptWorker:
         finally:
             conn.close()
 
+    def process_backup_maintenance(self):
+        try:
+            job_raw = self.redis.rpop("boreal:queue:backup_jobs")
+            if job_raw:
+                job = json.loads(job_raw)
+                action = job.get("action")
+                logger.info(f"[BACKUP-RPC] Procesando acción en cola: {action}")
+                if action == "create":
+                    backup_engine.create_backup(
+                        backup_name=job.get("backup_name"),
+                        backup_type=job.get("backup_type", "full"),
+                        engines=job.get("engines"),
+                        selected_mysql_tables=job.get("selected_mysql_tables"),
+                        selected_cassandra_tables=job.get("selected_cassandra_tables"),
+                        selected_s3_prefixes=job.get("selected_s3_prefixes"),
+                        is_pinned=job.get("is_pinned", False),
+                        retention_days=job.get("retention_days", 30),
+                        created_by_name=job.get("created_by_name", "Worker RPC")
+                    )
+                elif action == "restore":
+                    backup_engine.restore_backup(
+                        backup_uuid=job.get("backup_uuid"),
+                        restore_mode=job.get("restore_mode", "merge"),
+                        selected_components=job.get("selected_components"),
+                        create_pre_restore_backup=job.get("create_pre_restore_backup", False),
+                        restored_by_name=job.get("restored_by_name", "Worker RPC")
+                    )
+
+            conn = get_db_connection()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT setting_key, setting_value FROM system_settings WHERE setting_key LIKE 'backup_%'")
+                    settings = {r["setting_key"]: r["setting_value"] for r in cur.fetchall()}
+
+                    if settings.get("backup_auto_enabled") == "1":
+                        freq = settings.get("backup_schedule_frequency", "daily")
+                        sched_time = settings.get("backup_schedule_time", "03:00")
+                        retention_days = int(settings.get("backup_default_retention_days", 30))
+                        default_engines = [e.strip() for e in settings.get("backup_default_engines", "mysql,cassandra,s3,redis").split(",") if e.strip()]
+
+                        now_dt = datetime.datetime.now()
+                        now_hhmm = now_dt.strftime("%H:%M")
+
+                        cur.execute("SELECT created_at FROM system_backups WHERE backup_type = 'automated' ORDER BY created_at DESC LIMIT 1")
+                        last_row = cur.fetchone()
+
+                        should_run = False
+                        if not last_row:
+                            should_run = True
+                        else:
+                            last_at = last_row["created_at"]
+                            elapsed_hours = (now_dt - last_at).total_seconds() / 3600.0
+                            if freq == "every_6h" and elapsed_hours >= 6:
+                                should_run = True
+                            elif freq == "every_12h" and elapsed_hours >= 12:
+                                should_run = True
+                            elif freq == "weekly" and elapsed_hours >= 168 and now_hhmm == sched_time:
+                                should_run = True
+                            elif freq == "daily" and elapsed_hours >= 23 and now_hhmm == sched_time:
+                                should_run = True
+
+                        if should_run:
+                            logger.info("[BACKUP-WORKER] Ejecutando respaldo automático programado en S3...")
+                            backup_engine.create_backup(
+                                backup_name=f"Respaldo Automático - {now_dt.strftime('%Y%m%d_%H%M%S')}",
+                                backup_type="automated",
+                                engines=default_engines,
+                                retention_days=retention_days,
+                                created_by_name="Programador Automático"
+                            )
+
+                    backup_engine.purge_expired_backups()
+            finally:
+                conn.close()
+
+        except Exception as e:
+            logger.debug(f"[BACKUP-MAINTENANCE] Aviso en ciclo de respaldo: {e}")
+
     def run_cycle(self):
+        now = time.time()
+        if now - self.last_backup_check_time >= 60:
+            self.last_backup_check_time = now
+            self.process_backup_maintenance()
+
         try:
             batch = self.fetch_and_reserve_batch()
         except pymysql.err.OperationalError as db_err:

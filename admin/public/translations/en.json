@@ -188,6 +188,7 @@
     "title": "Human Resources & People"
   },
   "nav": {
+    "backups": "Backups & DR",
     "dashboard": "Dashboard",
     "giveaways": "Giveaways",
     "hr": "Human Resources",

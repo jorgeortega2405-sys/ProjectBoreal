@@ -1,6 +1,7 @@
 import { getCurrentUser } from '../services/auth.service.js';
 
 export const MODULE_PERMISSIONS: Record<string, string[]> = {
+  'backups': ['backups:read', 'backups:create', 'backups:restore', 'backups:manage', 'backups:delete'],
   'bank-accounts': ['bank_accounts:read', 'bank_accounts:manage', 'bank_accounts:delete'],
   'customers': ['customers:read', 'customers:block'],
   'dashboard': ['dashboard:read'],
@@ -128,6 +129,16 @@ export function resolveModuleFromPath(path: string): string | null {
     return 'hr';
   }
   if (
+    path === '/backups' ||
+    path.startsWith('/backups') ||
+    path === '/copias-seguridad' ||
+    path.startsWith('/copias-seguridad') ||
+    path === '/respaldos' ||
+    path.startsWith('/respaldos')
+  ) {
+    return 'backups';
+  }
+  if (
     path === '/settings' ||
     path.startsWith('/settings') ||
     path === '/configuracion' ||
@@ -157,6 +168,7 @@ export function getDefaultLandingRoute(): string {
     { moduleId: 'customers', path: '/customers' },
     { moduleId: 'winners', path: '/winners' },
     { moduleId: 'hr', path: '/hr' },
+    { moduleId: 'backups', path: '/backups' },
   ];
 
   for (const item of priorityOrder) {

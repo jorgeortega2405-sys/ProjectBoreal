@@ -60,6 +60,7 @@ export function updateSidebarUserInfo(sidebar: HTMLElement): void {
     { moduleId: 'customers', ref: 'rail-item-customers' },
     { moduleId: 'winners', ref: 'rail-item-winners' },
     { moduleId: 'hr', ref: 'rail-item-hr' },
+    { moduleId: 'backups', ref: 'rail-item-backups' },
   ];
 
   for (const item of moduleRailMap) {
@@ -109,6 +110,13 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     path.startsWith('/empleados') ||
     path === '/personal' ||
     path.startsWith('/personal');
+  const isBackups =
+    path === '/backups' ||
+    path.startsWith('/backups') ||
+    path === '/copias-seguridad' ||
+    path.startsWith('/copias-seguridad') ||
+    path === '/respaldos' ||
+    path.startsWith('/respaldos');
   const isSettings =
     path === '/settings' ||
     path.startsWith('/settings') ||
@@ -123,6 +131,7 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
     !isCustomers &&
     !isWinners &&
     !isHr &&
+    !isBackups &&
     !isSettings &&
     (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
 
@@ -140,6 +149,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   const btnWinners = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-winners"]');
   const itemHr = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-hr"]');
   const btnHr = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-hr"]');
+  const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
+  const btnBackups = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-backups"]');
   const itemAvatar = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
   const btnAvatar = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
   const btnMenuSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
@@ -159,6 +170,8 @@ export function updateSidebarActiveState(sidebar: HTMLElement, path = window.loc
   btnWinners?.classList.toggle('is-active', isWinners);
   itemHr?.classList.toggle('is-active', isHr);
   btnHr?.classList.toggle('is-active', isHr);
+  itemBackups?.classList.toggle('is-active', isBackups);
+  btnBackups?.classList.toggle('is-active', isBackups);
   itemAvatar?.classList.toggle('is-active', isSettings);
   btnAvatar?.classList.toggle('is-active', isSettings);
   btnMenuSettings?.classList.toggle('is-active', isSettings);
@@ -242,6 +255,12 @@ function setupRailNavigation(sidebar: HTMLElement): void {
   itemHr?.addEventListener('click', (e) => {
     e.preventDefault();
     navigate('/hr');
+  });
+
+  const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
+  itemBackups?.addEventListener('click', (e) => {
+    e.preventDefault();
+    navigate('/backups');
   });
 
   if (avatarContainer && btnAvatar && avatarMenu) {

@@ -25,6 +25,11 @@ export const PLATFORM_PERMISSIONS: readonly PermissionDefinition[] = [
   { description: 'Registrar nuevas contrataciones, altas de personal y asignar condiciones laborales.', display_name: 'Contratar Empleados', module: 'hr', name: 'hr:create' },
   { description: 'Editar expedientes, aprobar o rechazar vacaciones y permisos, ajustar compensación, registrar promociones y bajas.', display_name: 'Gestionar Personal y Vacaciones', module: 'hr', name: 'hr:manage' },
   { description: 'Eliminar expedientes o solicitudes registradas por error en Recursos Humanos.', display_name: 'Eliminar Registros de RRHH', module: 'hr', name: 'hr:delete' },
+  { description: 'Consultar catálogo de respaldos en S3 (MinIO), manifiestos, integridad SHA-256, estado de motores e historial de restauraciones.', display_name: 'Ver Copias de Seguridad', module: 'backups', name: 'backups:read' },
+  { description: 'Generar respaldos completos o selectivos de MySQL, Cassandra, S3 (MinIO) y Redis hacia almacenamiento S3.', display_name: 'Crear Copias de Seguridad', module: 'backups', name: 'backups:create' },
+  { description: 'Ejecutar restauraciones selectivas o completas de bases de datos (MySQL, Cassandra), objetos S3 (MinIO) y estado Redis.', display_name: 'Restaurar Copias de Seguridad', module: 'backups', name: 'backups:restore' },
+  { description: 'Fijar/proteger respaldos, sincronizar catálogo con S3 (MinIO), verificar integridad y configurar programación automática.', display_name: 'Gestionar Política y Retención de Respaldos', module: 'backups', name: 'backups:manage' },
+  { description: 'Eliminar archivos de respaldo almacenados en S3 (MinIO) no protegidos.', display_name: 'Eliminar Copias de Seguridad', module: 'backups', name: 'backups:delete' },
 ];
 
 export async function getAdminRoles(adminUserId: number): Promise<string[]> {

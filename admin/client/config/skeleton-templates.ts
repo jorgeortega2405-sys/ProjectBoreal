@@ -328,3 +328,44 @@ export const ADMIN_NOT_FOUND_SKELETON_TEMPLATE = `
 </div>
 `;
 
+export const ADMIN_BACKUPS_SKELETON_TEMPLATE = `
+<div class="component-wrapper component-wrapper--full view-wrapper view-skeleton" data-ref="skeleton-admin-backups">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable">
+    <div class="view-header">
+      <div class="view-header__left">
+        <div class="skeleton skeleton--title skeleton--w-200-px skeleton--h-28"></div>
+      </div>
+      <div class="view-header__right">
+        <div class="skeleton skeleton--button-sm skeleton--w-140-px skeleton--h-40"></div>
+      </div>
+    </div>
+    <div class="view-body admin-view-body">
+      <div class="dashboard-stats-grid">
+        <div class="dashboard-stat-card">
+          <div class="skeleton skeleton--w-90-px skeleton--h-11"></div>
+          <div class="skeleton skeleton--w-50-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-120-px skeleton--h-11"></div>
+        </div>
+        <div class="dashboard-stat-card">
+          <div class="skeleton skeleton--w-100-px skeleton--h-11"></div>
+          <div class="skeleton skeleton--w-70-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-110-px skeleton--h-11"></div>
+        </div>
+        <div class="dashboard-stat-card">
+          <div class="skeleton skeleton--w-110-px skeleton--h-11"></div>
+          <div class="skeleton skeleton--w-60-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-100-px skeleton--h-11"></div>
+        </div>
+        <div class="dashboard-stat-card">
+          <div class="skeleton skeleton--w-95-px skeleton--h-11"></div>
+          <div class="skeleton skeleton--w-40-px skeleton--h-16"></div>
+          <div class="skeleton skeleton--w-115-px skeleton--h-11"></div>
+        </div>
+      </div>
+      <div class="skeleton--card skeleton--h-320"></div>
+    </div>
+  </div>
+</div>
+`;
+
+

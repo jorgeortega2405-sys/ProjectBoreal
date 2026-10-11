@@ -196,7 +196,12 @@ VALUES
   ('daily_giveaway_paused_next', '0', 'Indica si la regeneración automática del sorteo diario está en pausa'),
   ('daily_giveaway_pot_percentage', '50', 'Porcentaje de la recaudación destinado a la bolsa acumulada del ganador'),
   ('daily_giveaway_ticket_price', '2', 'Precio por boleto en MXN para el ciclo automático del sorteo diario'),
-  ('daily_giveaway_total_tickets', '20000', 'Emisión total de boletos por ciclo del sorteo diario')
+  ('daily_giveaway_total_tickets', '20000', 'Emisión total de boletos por ciclo del sorteo diario'),
+  ('backup_auto_enabled', '1', 'Habilita la ejecución programada automática de copias de seguridad hacia S3 (MinIO)'),
+  ('backup_schedule_frequency', 'daily', 'Frecuencia de respaldos automáticos (daily, every_12h, every_6h, weekly)'),
+  ('backup_schedule_time', '03:00', 'Hora programada (formato 24h HH:MM) para la ejecución de respaldos automáticos'),
+  ('backup_default_retention_days', '30', 'Días de retención predeterminados para copias de seguridad en S3 antes de expirar'),
+  ('backup_default_engines', 'mysql,cassandra,s3,redis', 'Motores de almacenamiento incluidos por defecto en respaldos automáticos')
 ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
 
 -- ============================================================================
@@ -354,7 +359,12 @@ INSERT INTO `permissions` (`name`, `display_name`, `description`, `module`) VALU
   ('hr:read', 'Ver Recursos Humanos', 'Consultar plantilla de empleados, expediente laboral, KPIs de talento, nómina y calendario de vacaciones.', 'hr'),
   ('hr:create', 'Contratar Empleados', 'Registrar nuevas contrataciones, altas de personal y asignar condiciones laborales.', 'hr'),
   ('hr:manage', 'Gestionar Personal y Vacaciones', 'Editar expedientes, aprobar o rechazar vacaciones y permisos, ajustar compensación, registrar promociones y bajas.', 'hr'),
-  ('hr:delete', 'Eliminar Registros de RRHH', 'Eliminar expedientes o solicitudes registradas por error en Recursos Humanos.', 'hr')
+  ('hr:delete', 'Eliminar Registros de RRHH', 'Eliminar expedientes o solicitudes registradas por error en Recursos Humanos.', 'hr'),
+  ('backups:read', 'Ver Copias de Seguridad', 'Consultar catálogo de respaldos en S3 (MinIO), manifiestos, integridad SHA-256, estado de motores e historial de restauraciones.', 'backups'),
+  ('backups:create', 'Crear Copias de Seguridad', 'Generar respaldos completos o selectivos de MySQL, Cassandra, S3 (MinIO) y Redis hacia almacenamiento S3.', 'backups'),
+  ('backups:restore', 'Restaurar Copias de Seguridad', 'Ejecutar restauraciones selectivas o completas de bases de datos (MySQL, Cassandra), objetos S3 (MinIO) y estado Redis.', 'backups'),
+  ('backups:manage', 'Gestionar Política y Retención de Respaldos', 'Fijar/proteger respaldos, sincronizar catálogo con S3 (MinIO), verificar integridad y configurar programación automática.', 'backups'),
+  ('backups:delete', 'Eliminar Copias de Seguridad', 'Eliminar archivos de respaldo almacenados en S3 (MinIO) no protegidos.', 'backups')
 ON DUPLICATE KEY UPDATE
   `display_name` = VALUES(`display_name`),
   `description` = VALUES(`description`),
@@ -367,17 +377,17 @@ WHERE r.`name` = 'SUPER_ADMIN';
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'SECURITY_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'customers:read', 'customers:block', 'orders:read');
+  AND p.`name` IN ('dashboard:read', 'customers:read', 'customers:block', 'orders:read', 'backups:read', 'backups:create', 'backups:manage');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'COMPLIANCE_ADMIN'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'customers:block', 'winners:read', 'hr:read');
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'customers:read', 'customers:block', 'winners:read', 'hr:read', 'backups:read');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'AUDITOR'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read', 'hr:read');
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'orders:read', 'bank_accounts:read', 'customers:read', 'winners:read', 'hr:read', 'backups:read');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
@@ -397,7 +407,7 @@ WHERE r.`name` = 'BILLING_AGENT'
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
 WHERE r.`name` = 'OPERATIONS_MANAGER'
-  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw', 'giveaways:delete', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'customers:read', 'customers:block', 'winners:read', 'winners:manage', 'hr:read', 'hr:manage');
+  AND p.`name` IN ('dashboard:read', 'giveaways:read', 'giveaways:create', 'giveaways:manage', 'giveaways:draw', 'giveaways:delete', 'orders:read', 'orders:approve', 'orders:reject', 'orders:manage', 'bank_accounts:read', 'customers:read', 'customers:block', 'winners:read', 'winners:manage', 'hr:read', 'hr:manage', 'backups:read', 'backups:create', 'backups:manage');
 
 INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
 SELECT r.`id`, p.`id` FROM `roles` r CROSS JOIN `permissions` p
@@ -699,7 +709,65 @@ ON DUPLICATE KEY UPDATE
   `title` = VALUES(`title`),
   `file_name` = VALUES(`file_name`);
 
+-- ============================================================================
+-- Tabla de Catálogo de Copias de Seguridad (Backups en S3 MinIO)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `system_backups` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `uuid` CHAR(36) NOT NULL UNIQUE,
+  `backup_name` VARCHAR(255) NOT NULL,
+  `backup_type` ENUM('full', 'selective', 'automated') NOT NULL DEFAULT 'full',
+  `status` ENUM('in_progress', 'completed', 'failed') NOT NULL DEFAULT 'in_progress',
+  `engines` VARCHAR(100) NOT NULL DEFAULT 'mysql,cassandra,s3,redis',
+  `s3_bucket` VARCHAR(100) NOT NULL DEFAULT 'boreal-storage',
+  `s3_archive_key` VARCHAR(500) NULL,
+  `s3_manifest_key` VARCHAR(500) NULL,
+  `sha256_checksum` CHAR(64) NULL,
+  `size_bytes` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `uncompressed_size_bytes` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `total_tables` INT UNSIGNED NOT NULL DEFAULT 0,
+  `total_rows` BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `total_s3_objects` INT UNSIGNED NOT NULL DEFAULT 0,
+  `total_redis_keys` INT UNSIGNED NOT NULL DEFAULT 0,
+  `execution_duration_ms` INT UNSIGNED NOT NULL DEFAULT 0,
+  `is_pinned` TINYINT(1) NOT NULL DEFAULT 0,
+  `retention_days` INT UNSIGNED NOT NULL DEFAULT 30,
+  `expires_at` DATETIME NULL,
+  `created_by_name` VARCHAR(150) NOT NULL DEFAULT 'Sistema',
+  `error_message` TEXT NULL,
+  `metadata` JSON NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_backups_status_created` (`status`, `created_at`),
+  INDEX `idx_backups_expires_pinned` (`expires_at`, `is_pinned`),
+  INDEX `idx_backups_uuid` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- Tabla de Historial y Auditoría de Restauraciones Selectivas
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS `system_backup_restores` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `uuid` CHAR(36) NOT NULL UNIQUE,
+  `backup_uuid` CHAR(36) NOT NULL,
+  `status` ENUM('pending', 'in_progress', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+  `restore_mode` ENUM('replace', 'merge') NOT NULL DEFAULT 'merge',
+  `selected_engines` VARCHAR(100) NOT NULL,
+  `selected_components` JSON NOT NULL,
+  `pre_restore_backup_uuid` CHAR(36) NULL,
+  `restored_by_name` VARCHAR(150) NOT NULL DEFAULT 'Administrador',
+  `execution_duration_ms` INT UNSIGNED NOT NULL DEFAULT 0,
+  `error_message` TEXT NULL,
+  `restore_report` JSON NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_restores_backup_uuid` (`backup_uuid`),
+  INDEX `idx_restores_status_created` (`status`, `created_at`),
+  INDEX `idx_restores_uuid` (`uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 GRANT SELECT, INSERT, UPDATE, DELETE, INDEX, LOCK TABLES, EXECUTE ON `db_lottery`.* TO 'sprite_user'@'%';
 FLUSH PRIVILEGES;
+
 
 

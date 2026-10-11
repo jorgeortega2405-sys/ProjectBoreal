@@ -5,6 +5,7 @@ import { handleAvatarRequest } from './controllers/avatar.controller.js';
 import { requireAuth } from './middlewares/auth.middleware.js';
 import { requestLogger } from './middlewares/request-logger.middleware.js';
 import authRoutes from './routes/auth.routes.js';
+import backupsRoutes from './routes/backups.routes.js';
 import bankAccountsRoutes from './routes/bank-accounts.routes.js';
 import customersRoutes from './routes/customers.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
@@ -162,6 +163,7 @@ function createExpressApp(): express.Express {
   app.get('/api/avatar.svg', handleAvatarRequest);
   app.use('/api/auth', authRoutes);
   app.use('/api/health', healthRoutes);
+  app.use('/api/backups', requireAuth, backupsRoutes);
   app.use('/api/bank-accounts', requireAuth, bankAccountsRoutes);
   app.use('/api/customers', requireAuth, customersRoutes);
   app.use('/api/dashboard', requireAuth, dashboardRoutes);

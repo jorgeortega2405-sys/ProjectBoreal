@@ -1,0 +1,554 @@
+<div class="component-wrapper component-wrapper--full view-wrapper backups-view" data-ref="backups-view">
+  <div class="backups-header" data-ref="backups-header">
+    <div class="backups-header__title-box" data-ref="backups-title-box">
+      <h1 class="backups-header__title" data-ref="backups-title">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud_upload"></use></svg>
+        <span>Copias de Seguridad & Disaster Recovery</span>
+      </h1>
+      <p class="backups-header__subtitle" data-ref="backups-subtitle">
+        Catálogo centralizado en S3 MinIO, restauración granular selectiva, verificación SHA-256 y persistencia multiplataforma.
+      </p>
+    </div>
+    <div class="backups-header__actions" data-ref="backups-header-actions">
+      <button type="button" class="component-button component-button--h40 component-button--secondary" data-ref="btn-sync-catalog" data-tooltip="Reconciliar catálogo con archivos en S3 MinIO" aria-label="Reconciliar con S3">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
+        <span>Sincronizar S3</span>
+      </button>
+      <button type="button" class="component-button component-button--h40 component-button--secondary" data-ref="btn-schedule-settings" data-tooltip="Configurar política de retención y respaldos programados" aria-label="Configuración de programación">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schedule"></use></svg>
+        <span>Programación</span>
+      </button>
+      <button type="button" class="component-button component-button--h40 component-button--primary" data-ref="btn-create-backup" data-tooltip="Crear nuevo respaldo completo o selectivo" aria-label="Crear nuevo respaldo">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
+        <span>Nuevo Respaldo</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="backups-stats-grid" data-ref="backups-kpis-grid">
+    <div class="backups-stat-card" data-ref="kpi-total-backups">
+      <div class="backups-stat-card__top">
+        <span class="backups-stat-card__label">Respaldos Catalogados</span>
+        <svg class="backups-stat-card__icon" aria-hidden="true"><use href="/icons.svg#cloud_done"></use></svg>
+      </div>
+      <div class="backups-stat-card__value" data-ref="kpi-val-total-backups">-</div>
+      <div class="backups-stat-card__subtext" data-ref="kpi-sub-total-backups">Completados sin fallas</div>
+    </div>
+
+    <div class="backups-stat-card" data-ref="kpi-storage-size">
+      <div class="backups-stat-card__top">
+        <span class="backups-stat-card__label">Almacenamiento en S3</span>
+        <svg class="backups-stat-card__icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
+      </div>
+      <div class="backups-stat-card__value" data-ref="kpi-val-storage-size">-</div>
+      <div class="backups-stat-card__subtext" data-ref="kpi-sub-storage-size">Comprimido en MinIO</div>
+    </div>
+
+    <div class="backups-stat-card" data-ref="kpi-records-archived">
+      <div class="backups-stat-card__top">
+        <span class="backups-stat-card__label">Registros & Objetos</span>
+        <svg class="backups-stat-card__icon" aria-hidden="true"><use href="/icons.svg#schema"></use></svg>
+      </div>
+      <div class="backups-stat-card__value" data-ref="kpi-val-records-archived">-</div>
+      <div class="backups-stat-card__subtext" data-ref="kpi-sub-records-archived">Filas BD y archivos S3</div>
+    </div>
+
+    <div class="backups-stat-card" data-ref="kpi-restores-count">
+      <div class="backups-stat-card__top">
+        <span class="backups-stat-card__label">Restauraciones Exitosas</span>
+        <svg class="backups-stat-card__icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+      </div>
+      <div class="backups-stat-card__value" data-ref="kpi-val-restores-count">-</div>
+      <div class="backups-stat-card__subtext" data-ref="kpi-sub-restores-count">Operaciones registradas</div>
+    </div>
+  </div>
+
+  <div class="backups-tabs" data-ref="backups-tabs">
+    <button type="button" class="backups-tab-btn is-active" data-ref="tab-btn-catalog">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cloud"></use></svg>
+      <span>Catálogo de Respaldos</span>
+    </button>
+    <button type="button" class="backups-tab-btn" data-ref="tab-btn-restores">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+      <span>Historial de Restauraciones</span>
+    </button>
+    <button type="button" class="backups-tab-btn" data-ref="tab-btn-inventory">
+      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#schema"></use></svg>
+      <span>Inventario en Vivo de Motores</span>
+    </button>
+  </div>
+
+  <div class="backups-tab-content" data-ref="backups-tab-content">
+    <div class="tab-pane" data-ref="pane-catalog">
+      <div class="backups-toolbar" data-ref="catalog-toolbar">
+        <div class="backups-toolbar__filters" data-ref="catalog-filters">
+          <div class="field field--search" data-ref="field-search-backup">
+            <svg class="component-icon field__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+            <input class="field__input" data-ref="input-search-backup" type="text" placeholder="Buscar por nombre, UUID o autor..." />
+          </div>
+          <div class="field field--select" data-ref="field-status-filter">
+            <select class="field__input" data-ref="select-status-filter">
+              <option value="all">Todos los estados</option>
+              <option value="completed">Completados</option>
+              <option value="in_progress">En progreso</option>
+              <option value="failed">Fallidos</option>
+            </select>
+          </div>
+          <div class="field field--select" data-ref="field-engine-filter">
+            <select class="field__input" data-ref="select-engine-filter">
+              <option value="all">Todos los motores</option>
+              <option value="mysql">MySQL</option>
+              <option value="cassandra">Cassandra</option>
+              <option value="s3">S3 MinIO</option>
+              <option value="redis">Redis</option>
+            </select>
+          </div>
+        </div>
+        <div class="backups-toolbar__actions" data-ref="catalog-quick-actions">
+          <button type="button" class="component-button component-button--h36 component-button--ghost" data-ref="btn-refresh-catalog" data-tooltip="Recargar listado" aria-label="Recargar listado">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
+            <span>Actualizar</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="backups-table-container" data-ref="catalog-table-container">
+        <table class="backups-table" data-ref="catalog-table">
+          <thead>
+            <tr>
+              <th>Respaldo & Identificador</th>
+              <th>Tipo</th>
+              <th>Motores</th>
+              <th>Tamaño S3</th>
+              <th>Registros / Archivos</th>
+              <th>Integridad SHA-256</th>
+              <th>Fecha de Creación</th>
+              <th>Retención</th>
+              <th style="text-align: right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody data-ref="catalog-table-body">
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 32px; color: var(--text-secondary);">
+                Cargando catálogo de copias de seguridad...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination-container" data-ref="catalog-pagination">
+        <span class="pagination-info" data-ref="catalog-pagination-info">Mostrando 0 registros</span>
+        <div class="pagination-buttons" data-ref="catalog-pagination-buttons">
+          <button type="button" class="component-button component-button--h32 component-button--secondary" data-ref="btn-catalog-prev" disabled>
+            <span>Anterior</span>
+          </button>
+          <button type="button" class="component-button component-button--h32 component-button--secondary" data-ref="btn-catalog-next" disabled>
+            <span>Siguiente</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-pane is-hidden" data-ref="pane-restores">
+      <div class="backups-toolbar" data-ref="restores-toolbar">
+        <span style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">
+          Historial y Auditoría de Restauraciones Selectivas Ejecutadas
+        </span>
+        <button type="button" class="component-button component-button--h36 component-button--ghost" data-ref="btn-refresh-restores">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
+          <span>Actualizar</span>
+        </button>
+      </div>
+
+      <div class="backups-table-container" data-ref="restores-table-container">
+        <table class="backups-table" data-ref="restores-table">
+          <thead>
+            <tr>
+              <th>Operación UUID</th>
+              <th>Respaldo Origen</th>
+              <th>Modo</th>
+              <th>Motores Seleccionados</th>
+              <th>Estado</th>
+              <th>Duración</th>
+              <th>Fecha</th>
+              <th>Ejecutado Por</th>
+              <th style="text-align: right;">Reporte</th>
+            </tr>
+          </thead>
+          <tbody data-ref="restores-table-body">
+            <tr>
+              <td colspan="9" style="text-align: center; padding: 32px; color: var(--text-secondary);">
+                No hay operaciones de restauración registradas.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-pane is-hidden" data-ref="pane-inventory">
+      <div class="backups-toolbar" data-ref="inventory-toolbar">
+        <span style="font-size: 0.875rem; font-weight: 600; color: var(--text-secondary);">
+          Estado de Motores de Almacenamiento en Vivo y Volumetría
+        </span>
+        <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-refresh-inventory">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
+          <span>Actualizar Inventario en Vivo</span>
+        </button>
+      </div>
+
+      <div class="inventory-grid" data-ref="inventory-cards-grid">
+        <div class="inventory-card" data-ref="card-inventory-mysql">
+          <div class="inventory-card__header">
+            <span class="inventory-card__title">
+              <span class="engine-tag engine-tag--mysql">MySQL</span>
+              <span>db_lottery</span>
+            </span>
+            <span class="badge-status badge-status--completed" data-ref="status-mysql-live">En línea</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Total de tablas:</span>
+            <span class="inventory-card__meta-value" data-ref="mysql-tables-count">-</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Total de registros:</span>
+            <span class="inventory-card__meta-value" data-ref="mysql-rows-count">-</span>
+          </div>
+          <div class="inventory-item-list" data-ref="mysql-tables-list"></div>
+        </div>
+
+        <div class="inventory-card" data-ref="card-inventory-cassandra">
+          <div class="inventory-card__header">
+            <span class="inventory-card__title">
+              <span class="engine-tag engine-tag--cassandra">Cassandra</span>
+              <span>boreal_audit</span>
+            </span>
+            <span class="badge-status badge-status--completed" data-ref="status-cassandra-live">En línea</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Total de tablas CQL:</span>
+            <span class="inventory-card__meta-value" data-ref="cassandra-tables-count">-</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Eventos de auditoría:</span>
+            <span class="inventory-card__meta-value" data-ref="cassandra-rows-count">-</span>
+          </div>
+          <div class="inventory-item-list" data-ref="cassandra-tables-list"></div>
+        </div>
+
+        <div class="inventory-card" data-ref="card-inventory-s3">
+          <div class="inventory-card__header">
+            <span class="inventory-card__title">
+              <span class="engine-tag engine-tag--s3">S3 MinIO</span>
+              <span>boreal-storage</span>
+            </span>
+            <span class="badge-status badge-status--completed" data-ref="status-s3-live">En línea</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Objetos almacenados:</span>
+            <span class="inventory-card__meta-value" data-ref="s3-objects-count">-</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Volumen total:</span>
+            <span class="inventory-card__meta-value" data-ref="s3-size-count">-</span>
+          </div>
+          <div class="inventory-item-list" data-ref="s3-prefixes-list"></div>
+        </div>
+
+        <div class="inventory-card" data-ref="card-inventory-redis">
+          <div class="inventory-card__header">
+            <span class="inventory-card__title">
+              <span class="engine-tag engine-tag--redis">Redis</span>
+              <span>Caché & Sesiones</span>
+            </span>
+            <span class="badge-status badge-status--completed" data-ref="status-redis-live">En línea</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Llaves activas:</span>
+            <span class="inventory-card__meta-value" data-ref="redis-keys-count">-</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Memoria utilizada:</span>
+            <span class="inventory-card__meta-value" data-ref="redis-memory-count">-</span>
+          </div>
+          <div class="inventory-card__meta-row">
+            <span class="inventory-card__meta-label">Clientes conectados:</span>
+            <span class="inventory-card__meta-value" data-ref="redis-clients-count">-</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal is-hidden" data-ref="modal-create-backup">
+    <div class="modal__overlay" data-ref="modal-create-overlay"></div>
+    <div class="modal__dialog modal__dialog--lg" data-ref="modal-create-dialog">
+      <div class="modal__header">
+        <h2 class="modal__title" data-ref="modal-create-title">Generar Copia de Seguridad</h2>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-create" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="modal__body" data-ref="modal-create-body">
+        <form class="modal-form" data-ref="form-create-backup">
+          <div class="field" data-ref="field-backup-name">
+            <input class="field__input" data-ref="input-backup-name" type="text" placeholder=" " />
+            <label class="field__label">Nombre descriptivo del respaldo (opcional)</label>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="field field--select" data-ref="field-backup-type">
+              <select class="field__input" data-ref="select-backup-type">
+                <option value="full">Respaldo Integral (Full Dump)</option>
+                <option value="selective">Respaldo Selectivo Personalizado</option>
+              </select>
+              <label class="field__label">Modalidad de Respaldo</label>
+            </div>
+            <div class="field" data-ref="field-retention-days">
+              <input class="field__input" data-ref="input-retention-days" type="number" value="30" min="1" max="3650" />
+              <label class="field__label">Días de Retención en S3</label>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0 12px 0;">
+            <input type="checkbox" data-ref="check-is-pinned" />
+            <span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-primary);">
+              Fijar y Proteger Respaldo (Evita purgas automáticas por retención)
+            </span>
+          </div>
+
+          <div class="selective-engines-box" data-ref="selective-engines-box">
+            <span style="font-size: 0.8125rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; display: block;">
+              Motores de Almacenamiento a Incluir
+            </span>
+            <div style="display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600;">
+                <input type="checkbox" data-ref="engine-check-mysql" checked />
+                <span class="engine-tag engine-tag--mysql">MySQL</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600;">
+                <input type="checkbox" data-ref="engine-check-cassandra" checked />
+                <span class="engine-tag engine-tag--cassandra">Cassandra</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600;">
+                <input type="checkbox" data-ref="engine-check-s3" checked />
+                <span class="engine-tag engine-tag--s3">S3 MinIO</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; font-weight: 600;">
+                <input type="checkbox" data-ref="engine-check-redis" checked />
+                <span class="engine-tag engine-tag--redis">Redis</span>
+              </label>
+            </div>
+
+            <div class="selective-details is-hidden" data-ref="selective-details-mysql">
+              <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">
+                Tablas MySQL (db_lottery)
+              </span>
+              <div class="backup-selection-box" data-ref="mysql-tables-selection-box"></div>
+            </div>
+
+            <div class="selective-details is-hidden" data-ref="selective-details-s3" style="margin-top: 10px;">
+              <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">
+                Prefijos de Almacenamiento S3
+              </span>
+              <div class="backup-selection-box" data-ref="s3-prefixes-selection-box"></div>
+            </div>
+          </div>
+
+          <div class="modal__actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="component-button component-button--secondary" data-ref="btn-cancel-modal-create">
+              <span>Cancelar</span>
+            </button>
+            <button type="submit" class="component-button component-button--primary" data-ref="btn-submit-create-backup">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
+              <span>Ejecutar Respaldo</span>
+            </button>
+          </div>
+
+          <div class="banner banner--danger is-hidden" data-ref="banner-create-error" style="margin-top: 12px;">
+            <span data-ref="text-create-error"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal is-hidden" data-ref="modal-restore-backup">
+    <div class="modal__overlay" data-ref="modal-restore-overlay"></div>
+    <div class="modal__dialog modal__dialog--lg" data-ref="modal-restore-dialog">
+      <div class="modal__header">
+        <h2 class="modal__title" data-ref="modal-restore-title">Restauración Granular Selectiva</h2>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-restore" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="modal__body" data-ref="modal-restore-body">
+        <form class="modal-form" data-ref="form-restore-backup">
+          <div style="background: var(--bg-sunken); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
+            <div style="font-size: 0.875rem; font-weight: 700; color: var(--text-primary);" data-ref="restore-target-name">-</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px;" data-ref="restore-target-uuid">-</div>
+          </div>
+
+          <span style="font-size: 0.8125rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; display: block;">
+            Modo de Aplicación de la Restauración
+          </span>
+          <div class="restore-mode-picker" data-ref="restore-mode-picker">
+            <div class="restore-mode-option is-selected" data-ref="opt-restore-merge">
+              <span class="restore-mode-option__title">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#call_merge"></use></svg>
+                <span>Fusión / Upsert (Recomendado)</span>
+              </span>
+              <span class="restore-mode-option__desc">
+                Preserva los registros existentes no coincidentes e inserta o actualiza por clave primaria. Operación segura y no destructiva.
+              </span>
+            </div>
+            <div class="restore-mode-option" data-ref="opt-restore-replace">
+              <span class="restore-mode-option__title" style="color: #d32f2f;">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
+                <span>Sobrescritura Total (Replace)</span>
+              </span>
+              <span class="restore-mode-option__desc">
+                Vacía las tablas seleccionadas antes de restaurar para replicar exactamente el estado del respaldo. Destructivo sobre datos nuevos.
+              </span>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <span style="font-size: 0.8125rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; display: block;">
+              Selección Granular de Componentes a Restaurar
+            </span>
+
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary);">Tablas MySQL</span>
+                  <button type="button" class="component-button component-button--link" data-ref="btn-toggle-all-restore-mysql" style="font-size: 0.6875rem;">Seleccionar todas</button>
+                </div>
+                <div class="backup-selection-box" data-ref="restore-mysql-selection-box"></div>
+              </div>
+
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary);">Tablas Cassandra (boreal_audit)</span>
+                  <button type="button" class="component-button component-button--link" data-ref="btn-toggle-all-restore-cass" style="font-size: 0.6875rem;">Seleccionar todas</button>
+                </div>
+                <div class="backup-selection-box" data-ref="restore-cass-selection-box"></div>
+              </div>
+
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary);">Prefijos de Archivos S3 (MinIO)</span>
+                  <button type="button" class="component-button component-button--link" data-ref="btn-toggle-all-restore-s3" style="font-size: 0.6875rem;">Seleccionar todos</button>
+                </div>
+                <div class="backup-selection-box" data-ref="restore-s3-selection-box"></div>
+              </div>
+
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 600; padding: 6px 0;">
+                <input type="checkbox" data-ref="restore-check-redis" />
+                <span>Restaurar estado y llaves Redis</span>
+              </label>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0; background: rgba(255, 152, 0, 0.08); padding: 12px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 152, 0, 0.25);">
+            <input type="checkbox" data-ref="check-pre-restore-snapshot" checked />
+            <span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-primary);">
+              Crear snapshot automático de seguridad antes de ejecutar la restauración (Recomendado)
+            </span>
+          </div>
+
+          <div class="modal__actions" style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="component-button component-button--secondary" data-ref="btn-cancel-modal-restore">
+              <span>Cancelar</span>
+            </button>
+            <button type="submit" class="component-button component-button--primary" data-ref="btn-submit-restore-backup">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+              <span>Iniciar Restauración</span>
+            </button>
+          </div>
+
+          <div class="banner banner--danger is-hidden" data-ref="banner-restore-error" style="margin-top: 12px;">
+            <span data-ref="text-restore-error"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal is-hidden" data-ref="modal-details-backup">
+    <div class="modal__overlay" data-ref="modal-details-overlay"></div>
+    <div class="modal__dialog modal__dialog--lg" data-ref="modal-details-dialog">
+      <div class="modal__header">
+        <h2 class="modal__title" data-ref="modal-details-title">Manifiesto & Verificación de Integridad</h2>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-details" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="modal__body" data-ref="modal-details-body">
+        <div class="forensic-report-viewer" data-ref="details-manifest-content">
+          Cargando manifiesto forense...
+        </div>
+        <div class="modal__actions" style="margin-top: 16px; display: flex; justify-content: flex-end;">
+          <button type="button" class="component-button component-button--secondary" data-ref="btn-close-details-view">
+            <span>Cerrar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal is-hidden" data-ref="modal-schedule-settings">
+    <div class="modal__overlay" data-ref="modal-schedule-overlay"></div>
+    <div class="modal__dialog modal__dialog--md" data-ref="modal-schedule-dialog">
+      <div class="modal__header">
+        <h2 class="modal__title">Política de Retención y Programación</h2>
+        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-schedule" aria-label="Cerrar modal">
+          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+        </button>
+      </div>
+      <div class="modal__body" data-ref="modal-schedule-body">
+        <form class="modal-form" data-ref="form-schedule-settings">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 600; margin-bottom: 16px;">
+            <input type="checkbox" data-ref="schedule-check-enabled" />
+            <span>Ejecutar respaldos automáticos programados hacia S3 MinIO</span>
+          </label>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="field field--select" data-ref="field-schedule-frequency">
+              <select class="field__input" data-ref="select-schedule-frequency">
+                <option value="daily">Diario (Cada 24 horas)</option>
+                <option value="every_12h">Cada 12 horas</option>
+                <option value="every_6h">Cada 6 horas</option>
+                <option value="weekly">Semanal</option>
+              </select>
+              <label class="field__label">Frecuencia</label>
+            </div>
+            <div class="field" data-ref="field-schedule-time">
+              <input class="field__input" data-ref="input-schedule-time" type="time" value="03:00" />
+              <label class="field__label">Hora Programada (24h)</label>
+            </div>
+          </div>
+
+          <div class="field" data-ref="field-default-retention" style="margin-top: 12px;">
+            <input class="field__input" data-ref="input-default-retention" type="number" min="1" max="3650" value="30" />
+            <label class="field__label">Días Predeterminados de Retención en S3</label>
+          </div>
+
+          <div class="modal__actions" style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="component-button component-button--secondary" data-ref="btn-cancel-modal-schedule">
+              <span>Cancelar</span>
+            </button>
+            <button type="submit" class="component-button component-button--primary" data-ref="btn-submit-schedule-settings">
+              <span>Guardar Política</span>
+            </button>
+          </div>
+
+          <div class="banner banner--danger is-hidden" data-ref="banner-schedule-error" style="margin-top: 12px;">
+            <span data-ref="text-schedule-error"></span>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
