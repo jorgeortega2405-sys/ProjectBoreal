@@ -1,154 +1,35 @@
-import { navigate } from '../app-router.js';
-import { login } from '../services/auth.service.js';
-import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
+import { login } from '../services/api.service.js';
+import { navigate } from '../app-router.js';
 import { ViewController } from '../types/common.types.js';
 
-export class LoginController implements ViewController {
+class LoginViewController implements ViewController {
   private abortController: AbortController | null = null;
-  private container: HTMLElement;
-  private isSubmitting = false;
+  private boundHandleSubmit: (e: Event) => void;
+  private boundTogglePassword: () => void;
+  private element: HTMLElement;
 
-  constructor(container: HTMLElement) {
-    this.container = container;
+  constructor(element: HTMLElement) {
+    this.element = element;
+    this.boundHandleSubmit = this.handleSubmit.bind(this);
+    this.boundTogglePassword = this.handleTogglePassword.bind(this);
   }
 
   init(): void {
     this.abortController = new AbortController();
     this.bindEvents();
-    renderIcons(this.container);
-
-    const emailInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-email"]');
-    if (emailInput) {
-      setTimeout(() => emailInput.focus(), 80);
-    }
   }
 
   bindEvents(): void {
-    const signal = this.abortController?.signal;
+    const { signal } = this.abortController!;
 
-    const form = this.container.querySelector<HTMLFormElement>('[data-ref="form-login"]');
-    const togglePasswordBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-password"]');
-    const passwordInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-password"]');
+    const form = this.element.querySelector<HTMLFormElement>('[data-ref="login-form"]');
+    const submitBtn = this.element.querySelector<HTMLButtonElement>('[data-ref="btn-submit-login"]');
+    const toggleBtn = this.element.querySelector<HTMLButtonElement>('[data-ref="toggle-login-password"]');
 
-    togglePasswordBtn?.addEventListener(
-      'click',
-      (e) => {
-        e.preventDefault();
-        if (!passwordInput) return;
-
-        const isPassword = passwordInput.type === 'password';
-        passwordInput.type = isPassword ? 'text' : 'password';
-
-        const iconUse = togglePasswordBtn.querySelector<SVGUseElement>('use');
-        if (iconUse) {
-          iconUse.setAttribute('href', isPassword ? '/icons.svg#visibility_off' : '/icons.svg#visibility');
-        }
-
-        const label = isPassword ? 'Ocultar contraseña' : 'Mostrar contraseña';
-        togglePasswordBtn.setAttribute('data-tooltip', label);
-        togglePasswordBtn.setAttribute('aria-label', label);
-      },
-      { signal }
-    );
-
-    form?.addEventListener(
-      'submit',
-      (e) => {
-        e.preventDefault();
-        void this.handleSubmit();
-      },
-      { signal }
-    );
-
-    const inputs = this.container.querySelectorAll<HTMLInputElement>('input');
-    inputs.forEach((input) => {
-      input.addEventListener(
-        'input',
-        () => {
-          this.hideError();
-        },
-        { signal }
-      );
-    });
-  }
-
-  private showError(message: string): void {
-    const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="login-error"]');
-    if (errorBanner) {
-      errorBanner.textContent = message;
-      errorBanner.classList.remove('is-hidden');
-    }
-  }
-
-  private hideError(): void {
-    const errorBanner = this.container.querySelector<HTMLElement>('[data-ref="login-error"]');
-    if (errorBanner) {
-      errorBanner.textContent = '';
-      errorBanner.classList.add('is-hidden');
-    }
-  }
-
-  private setButtonLoading(isLoading: boolean): void {
-    this.isSubmitting = isLoading;
-    const submitBtn = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-login"]');
-    const btnText = submitBtn?.querySelector<HTMLElement>('.component-button__text');
-    if (submitBtn && btnText) {
-      submitBtn.disabled = isLoading;
-      if (isLoading) {
-        btnText.textContent = 'Verificando...';
-        submitBtn.style.opacity = '0.75';
-      } else {
-        btnText.textContent = 'Iniciar Sesión';
-        submitBtn.style.opacity = '';
-      }
-    }
-  }
-
-  private async handleSubmit(): Promise<void> {
-    if (this.isSubmitting) return;
-
-    this.hideError();
-
-    const emailInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-email"]');
-    const passwordInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-password"]');
-
-    const email = emailInput?.value.trim() || '';
-    const password = passwordInput?.value || '';
-
-    if (!email) {
-      this.showError('Por favor ingresa tu correo electrónico.');
-      emailInput?.focus();
-      return;
-    }
-
-    if (!email.includes('@') || !email.includes('.')) {
-      this.showError('Ingresa un formato de correo electrónico válido.');
-      emailInput?.focus();
-      return;
-    }
-
-    if (!password) {
-      this.showError('Por favor ingresa tu contraseña.');
-      passwordInput?.focus();
-      return;
-    }
-
-    this.setButtonLoading(true);
-
-    try {
-      const res = await login(email, password);
-      if (!res.success) {
-        this.showError(res.error || 'Correo o contraseña incorrectos.');
-        this.setButtonLoading(false);
-        return;
-      }
-
-      navigate('/');
-    } catch {
-      this.showError('Error de conexión al iniciar sesión. Por favor intenta más tarde.');
-      this.setButtonLoading(false);
-    }
+    form?.addEventListener('submit', this.boundHandleSubmit, { signal });
+    submitBtn?.addEventListener('click', this.boundHandleSubmit, { signal });
+    toggleBtn?.addEventListener('click', this.boundTogglePassword, { signal });
   }
 
   destroy(): void {
@@ -157,12 +38,73 @@ export class LoginController implements ViewController {
       this.abortController = null;
     }
   }
+
+  private handleTogglePassword(): void {
+    const passwordInput = this.element.querySelector<HTMLInputElement>('[data-ref="login-password"]');
+    if (!passwordInput) return;
+    const isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
+  }
+
+  private showError(message: string): void {
+    const errorBanner = this.element.querySelector<HTMLElement>('[data-ref="login-error"]');
+    if (errorBanner) {
+      errorBanner.textContent = message;
+      errorBanner.style.display = 'block';
+    }
+  }
+
+  private hideError(): void {
+    const errorBanner = this.element.querySelector<HTMLElement>('[data-ref="login-error"]');
+    if (errorBanner) {
+      errorBanner.textContent = '';
+      errorBanner.style.display = 'none';
+    }
+  }
+
+  private async handleSubmit(e: Event): Promise<void> {
+    e.preventDefault();
+    this.hideError();
+
+    const emailInput = this.element.querySelector<HTMLInputElement>('[data-ref="login-email"]');
+    const passwordInput = this.element.querySelector<HTMLInputElement>('[data-ref="login-password"]');
+    const submitBtn = this.element.querySelector<HTMLButtonElement>('[data-ref="btn-submit-login"]');
+
+    const email = emailInput?.value?.trim() || '';
+    const password = passwordInput?.value || '';
+
+    if (!email || !password) {
+      this.showError('Por favor ingresa tu correo y contraseña.');
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.classList.add('is-loading');
+    }
+
+    try {
+      const res = await login(email, password);
+      if (res.success) {
+        navigate('/');
+      } else {
+        this.showError(res.error || 'Credenciales inválidas.');
+      }
+    } catch {
+      this.showError('Ha ocurrido un error inesperado al procesar la solicitud.');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('is-loading');
+      }
+    }
+  }
 }
 
 export async function createLoginView(): Promise<HTMLElement> {
-  const container = await loadTemplate('/views/auth/login.html');
-  const controller = new LoginController(container);
+  const element = await loadTemplate('/views/auth/login.html');
+  const controller = new LoginViewController(element);
   controller.init();
-  (container as any).__controller = controller;
-  return container;
+  (element as any).__controller = controller;
+  return element;
 }

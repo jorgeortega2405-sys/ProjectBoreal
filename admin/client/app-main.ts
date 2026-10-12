@@ -1,56 +1,62 @@
 import { initRouter, navigate } from './app-router.js';
 import { setupLayoutScrollSync } from './components/layout.component.js';
-import { initI18n, translateElement } from './services/i18n.service.js';
 import { initTheme } from './services/theme.service.js';
-import { initTooltips } from './services/tooltip.service.js';
 
-let isSyncing = false;
+let isSyncingScroll = false;
+let scrollTicking = false;
 
 function handleScrollEvent(e: Event): void {
   const target = e.target as HTMLElement | null;
   if (!target || target.nodeType !== 1) return;
 
   if (target.classList.contains('layout-content')) {
-    if (!isSyncing) {
+    if (!isSyncingScroll) {
       const scrollableBody = target.querySelector<HTMLElement>(
-        '.view-scrollable, .dashboard-scrollable, .layout-body--scrollable, .layout-scrollable'
+        '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable'
       );
-      if (scrollableBody) {
-        const maxScrollLayout = target.scrollHeight - target.clientHeight;
-        const maxScrollBody = scrollableBody.scrollHeight - scrollableBody.clientHeight;
-
-        if (maxScrollLayout > 0 && maxScrollBody > 0) {
-          const ratio = Math.max(0, Math.min(1, target.scrollTop / maxScrollLayout));
-          const targetOffset = ratio * maxScrollBody;
-          if (Math.abs(scrollableBody.scrollTop - targetOffset) > 0.25) {
-            isSyncing = true;
-            scrollableBody.scrollTop = targetOffset;
-            isSyncing = false;
-          }
-        } else {
-          isSyncing = true;
-          scrollableBody.scrollTop = target.scrollTop;
-          isSyncing = false;
-        }
+      if (scrollableBody && Math.abs(scrollableBody.scrollTop - target.scrollTop) > 0.5) {
+        isSyncingScroll = true;
+        scrollableBody.scrollTop = target.scrollTop;
+        requestAnimationFrame(() => {
+          isSyncingScroll = false;
+        });
       }
     }
-
-    const isScrolled = target.scrollTop > 0;
-    const componentWrapper = target.querySelector<HTMLElement>('.component-wrapper');
-    const componentTop = componentWrapper
-      ? componentWrapper.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top')
-      : target.querySelector<HTMLElement>('.component-top, .view-header, .home-floating-top');
-
-    if (componentTop) {
-      componentTop.classList.toggle('shadow', isScrolled);
-      componentTop.classList.toggle('component-top--shadow', isScrolled);
+  } else if (
+    target.classList.contains('view-scrollable') ||
+    target.classList.contains('home-scrollable') ||
+    target.classList.contains('layout-scrollable') ||
+    target.classList.contains('layout-body--scrollable')
+  ) {
+    if (!isSyncingScroll) {
+      const layoutContent = target.closest<HTMLElement>('.layout-content:has(.layout-nav)');
+      if (layoutContent && Math.abs(layoutContent.scrollTop - target.scrollTop) > 0.5) {
+        isSyncingScroll = true;
+        layoutContent.scrollTop = target.scrollTop;
+        requestAnimationFrame(() => {
+          isSyncingScroll = false;
+        });
+      }
     }
   }
 }
 
 function initScrollShadow(): void {
   setupLayoutScrollSync();
-  document.addEventListener('scroll', handleScrollEvent, { capture: true, passive: true });
+
+  document.addEventListener(
+    'scroll',
+    (e: Event) => {
+      if (!scrollTicking) {
+        scrollTicking = true;
+        requestAnimationFrame(() => {
+          handleScrollEvent(e);
+          scrollTicking = false;
+        });
+      }
+    },
+    { capture: true, passive: true }
+  );
 }
 
 function setupGlobalLinks(): void {
@@ -83,20 +89,17 @@ function setupGlobalLinks(): void {
   });
 }
 
-async function initApp(): Promise<void> {
-  await initI18n();
+function initApp(): void {
   initTheme();
-  initTooltips();
   setupGlobalLinks();
   initScrollShadow();
-  translateElement(document.body);
   initRouter();
 }
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    void initApp();
+    initApp();
   });
 } else {
-  void initApp();
+  initApp();
 }

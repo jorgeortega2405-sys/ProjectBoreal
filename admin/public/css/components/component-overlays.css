@@ -50,12 +50,6 @@
   max-width: 285px;
 }
 
-.menu-panel--w-295 {
-  width: 295px;
-  min-width: 295px;
-  max-width: 295px;
-}
-
 .menu-panel--w-265 {
   width: 265px;
   min-width: 265px;
@@ -814,6 +808,8 @@ body.modal-open {
   inset: 0;
   z-index: 2000;
   background-color: var(--overlay-dark);
+  backdrop-filter: var(--overlay-blur);
+  -webkit-backdrop-filter: var(--overlay-blur);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -828,17 +824,6 @@ body.modal-open {
 .modal-backdrop.is-visible {
   opacity: 1;
   visibility: visible;
-}
-
-.modal-backdrop.is-closing {
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity var(--sl-transition-fast), visibility var(--sl-transition-fast);
-}
-
-.modal-backdrop.is-closing .modal-card {
-  transform: scale(0.94);
-  transition: transform var(--sl-transition-fast);
 }
 
 /* Contenedor relativo del Modal */
@@ -890,13 +875,21 @@ body.modal-open {
   transform: scale(0.92);
 }
 
-/* Zona de Arrastre (Drag & Drop) en Modales - Oculta por defecto en Desktop */
+@media (max-width: 1140px) {
+  .modal-close-btn {
+    left: auto;
+    right: 0;
+    top: -46px;
+  }
+}
+
+/* Zona de Arrastre (Drag & Drop) en Modales */
 .modal-card__drag-zone {
   width: 100%;
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 12px 0 10px 0;
+  padding: 12px 0 6px;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -906,19 +899,24 @@ body.modal-open {
 }
 
 .modal-card__drag-handle {
-  display: block;
-  width: 40px;
-  height: 5px;
+  width: 36px;
+  height: 4px;
   border-radius: 9999px;
-  background-color: var(--border-color-hover);
-  pointer-events: none;
-  transition: background-color var(--sl-transition-fast), transform var(--sl-transition-fast);
+  background-color: var(--text-tertiary);
+  opacity: 0.5;
+  transition: opacity var(--sl-transition-fast), background-color var(--sl-transition-fast);
 }
 
-/* Tarjeta del Modal (Desktop Base) */
+@media (max-width: 768px) {
+  .modal-card__drag-zone {
+    display: flex;
+  }
+}
+
+/* Tarjeta del Modal */
 .modal-card {
   background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle-translucent);
+  border: 1px solid var(--border-color);
   border-radius: 24px;
   width: 100%;
   max-width: 440px;
@@ -939,43 +937,8 @@ body.modal-open {
   transform: scale(1);
 }
 
-.modal-backdrop.is-closing .modal-card {
-  transform: scale(0.94);
-  transition: transform var(--sl-transition-fast);
-}
-
-.modal-card.is-dragging {
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-}
-
-.modal-card.is-dragging .modal-card__drag-handle,
-.modal-card__drag-zone:active .modal-card__drag-handle {
-  background-color: var(--border-color-focus);
-  transform: scale(0.96);
-}
-
 .modal-card--sm {
   max-width: 440px;
-}
-
-.modal-card--md {
-  width: 560px;
-  max-width: calc(100vw - 32px);
-  box-sizing: border-box;
-}
-
-.modal-card--lg {
-  width: 720px;
-  max-width: calc(100vw - 32px);
-  box-sizing: border-box;
-}
-
-.modal-card--xl {
-  width: 880px;
-  max-width: calc(100vw - 32px);
-  box-sizing: border-box;
 }
 
 /* Modal de Confirmación y Advertencia 825x225 px (Eliminar Cuenta) */
@@ -1024,6 +987,14 @@ body.modal-open {
   margin-top: auto;
 }
 
+@media (max-width: 860px) {
+  .modal-card--825x225 {
+    height: auto;
+    min-height: auto;
+    padding: 20px 18px;
+  }
+}
+
 .modal-card__header {
   display: flex;
   flex-direction: column;
@@ -1049,8 +1020,6 @@ body.modal-open {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-height: calc(85vh - 140px);
-  overflow-y: auto;
 }
 
 .modal-card__footer {
@@ -1076,121 +1045,17 @@ body.modal-open {
   white-space: nowrap;
 }
 
-@media (max-width: 1140px) {
-  .modal-close-btn {
-    left: auto;
-    right: 0;
-    top: -46px;
-  }
-}
-
-@media (max-width: 860px) {
-  .modal-card--825x225 {
-    height: auto;
-    min-height: auto;
-    padding: 20px 18px;
-  }
-}
-
-@media (max-width: 768px) {
-  .modal-backdrop {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: stretch;
-    padding: 0;
-    margin: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  .modal-container {
-    position: relative;
-    bottom: 0;
-    top: auto;
-    left: auto;
-    right: auto;
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    align-items: stretch;
-    margin: 0;
-    padding: 0;
-  }
-
+@media (max-width: 480px) {
   .modal-card {
-    position: relative;
-    bottom: 0;
-    top: auto;
-    left: auto;
-    right: auto;
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
-    border-radius: 20px 20px 0 0;
-    border: none;
-    border-top: 1px solid var(--border-color);
-    max-height: calc(100vh - 56px);
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 56px);
-    padding: 0 20px calc(20px + env(safe-area-inset-bottom, 0px)) 20px;
-    margin: 0;
-    box-shadow: none;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    transform: translateY(100%);
-    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), background-color var(--sl-transition-fast);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-
-  .modal-backdrop.is-open .modal-card,
-  .modal-backdrop.is-visible .modal-card {
-    transform: translateY(0);
-  }
-
-  .modal-backdrop.is-closing .modal-card,
-  .modal-backdrop.is-closing .modal-close-btn {
-    transform: translateY(100%);
-    transition: transform 0.22s ease-in;
-  }
-
-  .modal-card__header {
-    padding-right: 36px;
-  }
-
-  .modal-card__drag-zone {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 0 10px 0;
-    cursor: grab;
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-    flex-shrink: 0;
-  }
-
-  .modal-card__drag-zone:active {
-    cursor: grabbing;
+    padding: 20px 16px;
+    border-radius: 14px;
   }
 
   .modal-close-btn {
     top: 12px;
-    right: 16px;
-    left: auto;
-    width: 32px;
-    height: 32px;
-    background-color: var(--bg-hover);
-    border: 1px solid var(--border-subtle);
-    color: var(--text-secondary);
+    right: 12px;
+    width: 34px;
+    height: 34px;
   }
 
   .modal-close-btn .component-icon,
@@ -1211,26 +1076,6 @@ body.modal-open {
     flex: 1;
     min-width: 0;
     max-width: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .modal-card {
-    padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px)) 16px;
-  }
-
-  .modal-close-btn {
-    top: 10px;
-    right: 12px;
-    width: 30px;
-    height: 30px;
-  }
-
-  .modal-close-btn .component-icon,
-  .modal-close-btn .material-symbols-rounded {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
   }
 }
 
@@ -1536,21 +1381,6 @@ body.modal-open {
   }
 }
 
-@media (max-width: 768px) {
-  .modal-card--split {
-    width: 100%;
-    min-width: 100%;
-    max-width: 100%;
-    border-radius: 20px 20px 0 0;
-    border-bottom: none;
-    border-left: none;
-    border-right: none;
-    max-height: calc(100vh - 56px);
-    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 56px);
-    padding: 0 0 calc(20px + env(safe-area-inset-bottom, 0px)) 0;
-  }
-}
-
 /* ==========================================================================
    19. BARRA LATERAL DERECHA DE AYUDA Y CHAT (.chat-sidebar)
    Ubicada dentro de .layout-content, al mismo nivel que .menu-panel--sidebar,
@@ -1601,7 +1431,7 @@ body.modal-open {
   pointer-events: none;
   z-index: 0;
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  background: var(--theme-gradient, var(--hero-gradient, linear-gradient(315deg, #fff7ed 0%, #ffedd5 20%, #fed7aa 40%, #fb923c 60%, #ea580c 80%, #dc2626 100%)));
+  background: var(--theme-gradient, var(--hero-gradient, linear-gradient(315deg, #fff7ed 0%, #ffedd5 20%, #fed7aa 40%, #fdba74 60%, #fb923c 80%, #ea580c 100%)));
   -webkit-mask-image: linear-gradient(
     180deg,
     rgba(0, 0, 0, 1) 0%,

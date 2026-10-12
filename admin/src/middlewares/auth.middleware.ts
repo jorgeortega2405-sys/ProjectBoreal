@@ -1,142 +1,123 @@
-import { authService } from '../services/auth.service.js';
+import { NextFunction, Response } from 'express';
+import { RowDataPacket } from 'mysql2/promise';
+import { poolIdentity } from '../config/database.config.js';
+import { redis } from '../config/redis.config.js';
+import { ADMIN_COOKIE_NAME, isSessionRevoked, verifySessionToken } from '../services/auth.service.js';
 import { logger } from '../services/logger.service.js';
-import { SafeAdminUser } from '../types/auth.types.js';
-import { NextFunction, Request, Response } from 'express';
+import { AuthenticatedAdminRequest } from '../types/auth.types.js';
 
-declare global {
-  namespace Express {
-    interface Request {
-      adminUser?: SafeAdminUser;
+interface PermissionRow extends RowDataPacket {
+  slug: string;
+}
+
+export async function invalidateUserPermissionsCache(adminUserId?: number): Promise<void> {
+  try {
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      if (adminUserId) {
+        await redis.del(`boreal:admin_perms:${adminUserId}`);
+      } else {
+        const keys = await redis.keys('boreal:admin_perms:*');
+        if (keys.length > 0) {
+          await redis.del(...keys);
+        }
+      }
     }
+  } catch (err) {
+    logger.app.warn('Error al invalidar caché de permisos en Redis', err);
   }
 }
 
-export function parseCookies(header: string | undefined): Record<string, string> {
-  const list: Record<string, string> = {};
-  if (!header || typeof header !== 'string') return list;
-
-  header.split(';').forEach((cookie) => {
-    const parts = cookie.split('=');
-    const name = parts.shift()?.trim();
-    if (name) {
-      list[name] = decodeURIComponent(parts.join('=').trim());
+export async function getUserPermissions(adminUserId: number): Promise<string[]> {
+  const cacheKey = `boreal:admin_perms:${adminUserId}`;
+  try {
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached) as string[];
+      }
     }
-  });
+  } catch {}
 
-  return list;
+  const [rows] = await poolIdentity.query<PermissionRow[]>(
+    `SELECT DISTINCT p.slug
+     FROM permissions p
+     INNER JOIN role_permissions rp ON rp.permission_id = p.id
+     INNER JOIN admin_user_roles aur ON aur.role_id = rp.role_id
+     WHERE aur.admin_user_id = ?`,
+    [adminUserId]
+  );
+
+  const permissions = rows.map((r) => r.slug);
+
+  try {
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      await redis.set(cacheKey, JSON.stringify(permissions), 'EX', 60);
+    }
+  } catch {}
+
+  return permissions;
 }
 
-export function extractSessionToken(req: Request): string | null {
-  const cookies = parseCookies(req.headers.cookie);
-  if (cookies['boreal_admin_session']) {
-    return cookies['boreal_admin_session'];
-  }
-
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7).trim();
-  }
-
-  return null;
-}
-
-export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const token = extractSessionToken(req);
-
+export async function requireAdminAuth(req: AuthenticatedAdminRequest, res: Response, next: NextFunction): Promise<void> {
+  const token = req.cookies?.[ADMIN_COOKIE_NAME];
   if (!token) {
-    res.status(401).json({
-      error: 'No autorizado. Se requiere iniciar sesión.',
-      success: false,
-    });
+    res.status(401).json({ error: 'No autorizado. Por favor inicia sesión.' });
     return;
   }
 
-  const user = await authService.verifySession(token);
-  if (!user) {
-    res.status(401).json({
-      error: 'Sesión inválida o expirada. Por favor inicia sesión nuevamente.',
-      success: false,
-    });
+  const payload = verifySessionToken(token);
+  if (!payload) {
+    res.status(401).json({ error: 'Sesión inválida o expirada.' });
     return;
   }
 
-  req.adminUser = user;
+  const revoked = await isSessionRevoked(token);
+  if (revoked) {
+    res.status(401).json({ error: 'La sesión ha sido revocada.' });
+    return;
+  }
+
+  const [userRows] = await poolIdentity.query<RowDataPacket[]>(
+    'SELECT is_active FROM admin_users WHERE id = ? LIMIT 1',
+    [payload.id]
+  );
+  if (userRows.length === 0 || !userRows[0].is_active) {
+    res.status(401).json({ error: 'La cuenta ha sido deshabilitada por el administrador.' });
+    return;
+  }
+
+  req.adminUser = {
+    email: payload.email,
+    id: payload.id,
+    name: payload.name,
+    uuid: payload.uuid,
+  };
+
   next();
 }
 
-export function hasPermission(user: SafeAdminUser | undefined, permission: string): boolean {
-  if (!user || !Array.isArray(user.permissions) || user.permissions.length === 0) return false;
-  return user.permissions.includes(permission) || user.permissions.includes('*');
-}
-
-export function hasAnyPermission(user: SafeAdminUser | undefined, permissions: string[]): boolean {
-  if (!user || !Array.isArray(user.permissions) || user.permissions.length === 0) return false;
-  if (user.permissions.includes('*')) return true;
-  return permissions.some((p) => user.permissions.includes(p));
-}
-
-export function hasAllPermissions(user: SafeAdminUser | undefined, permissions: string[]): boolean {
-  if (!user || !Array.isArray(user.permissions) || user.permissions.length === 0) return false;
-  if (user.permissions.includes('*')) return true;
-  return permissions.every((p) => user.permissions.includes(p));
-}
-
-export function requirePermission(...neededPerms: string[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = req.adminUser;
-    if (!user) {
-      res.status(401).json({
-        error: 'No autorizado. Se requiere iniciar sesión.',
-        success: false,
-      });
+export function requirePermission(permissionSlug: string) {
+  return async (req: AuthenticatedAdminRequest, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.adminUser?.id) {
+      res.status(401).json({ error: 'No autorizado. Por favor inicia sesión.' });
       return;
     }
 
-    if (!hasAnyPermission(user, neededPerms)) {
-      logger.security.warn('Acceso denegado por falta de permiso PBAC en Admin', {
-        adminId: user.id,
-        email: user.email,
-        method: req.method,
-        neededPerms,
-        path: req.originalUrl,
+    try {
+      const permissions = await getUserPermissions(req.adminUser.id);
+      req.adminUser.permissions = permissions;
+
+      if (!permissions.includes(permissionSlug)) {
+        res.status(403).json({ error: 'No cuentas con los permisos necesarios para realizar esta acción.' });
+        return;
+      }
+
+      next();
+    } catch (err) {
+      logger.security.error('Error al verificar permisos PBAC del administrador', err);
+      res.status(500).json({
+        error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
       });
-      res.status(403).json({
-        error: 'Acceso denegado: permisos insuficientes para realizar esta operación.',
-        success: false,
-      });
-      return;
     }
-
-    next();
-  };
-}
-
-export function requireAllPermissions(...neededPerms: string[]) {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    const user = req.adminUser;
-    if (!user) {
-      res.status(401).json({
-        error: 'No autorizado. Se requiere iniciar sesión.',
-        success: false,
-      });
-      return;
-    }
-
-    if (!hasAllPermissions(user, neededPerms)) {
-      logger.security.warn('Acceso denegado por falta de permisos compuestos PBAC en Admin', {
-        adminId: user.id,
-        email: user.email,
-        method: req.method,
-        neededPerms,
-        path: req.originalUrl,
-      });
-      res.status(403).json({
-        error: 'Acceso denegado: permisos insuficientes para realizar esta operación.',
-        success: false,
-      });
-      return;
-    }
-
-    next();
   };
 }

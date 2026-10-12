@@ -1,243 +1,227 @@
 import { navigate } from '../app-router.js';
-import { getCurrentUser, logout } from '../services/auth.service.js';
-import { translateElement } from '../services/i18n.service.js';
+import { logout } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
-import { getEffectiveTheme, getTheme, toggleTheme } from '../services/theme.service.js';
-import { generateAvatarDataUri, getAvatarUrl } from '../utils/avatar.util.js';
-import { canAccessModule } from '../utils/permission.util.js';
 
 export let isDrawerOpen = false;
+let drawerRemovalTimer: ReturnType<typeof setTimeout> | null = null;
 let sidebarInstance: HTMLElement | null = null;
 let sidebarInitPromise: Promise<HTMLElement> | null = null;
-let themeChangeHandler: (() => void) | null = null;
+let activeResizeObserver: ResizeObserver | null = null;
 
 export function getIsSidebarOpen(): boolean {
   return isDrawerOpen;
 }
 
-export function updateSidebarUserInfo(sidebar: HTMLElement): void {
-  const user = getCurrentUser();
-  const userName = user?.name || 'Administrador';
-  const userEmail = user?.email || 'admin@projectboreal.com';
-  const userRoles = user?.roles && user.roles.length > 0 ? user.roles.join(' • ') : 'SIN ROL';
-  const avatarSrc = generateAvatarDataUri(userName);
-
-  const railAvatarImg = sidebar.querySelector<HTMLImageElement>('[data-ref="rail-avatar-img"]');
-  if (railAvatarImg) {
-    railAvatarImg.src = avatarSrc;
-    railAvatarImg.alt = userName;
-    railAvatarImg.classList.add('image-loaded');
-  }
-
-  const activeAccountAvatar = sidebar.querySelector<HTMLImageElement>('[data-ref="active-account-avatar"]');
-  if (activeAccountAvatar) {
-    activeAccountAvatar.src = avatarSrc;
-    activeAccountAvatar.alt = userName;
-    activeAccountAvatar.classList.add('image-loaded');
-  }
-
-  const activeAccountName = sidebar.querySelector<HTMLElement>('[data-ref="active-account-name"]');
-  if (activeAccountName) {
-    activeAccountName.textContent = userName;
-  }
-
-  const activeAccountEmail = sidebar.querySelector<HTMLElement>('[data-ref="active-account-email"]');
-  if (activeAccountEmail) {
-    activeAccountEmail.textContent = userEmail;
-  }
-
-  const activeAccountRole = sidebar.querySelector<HTMLElement>('[data-ref="active-account-role"]');
-  if (activeAccountRole) {
-    activeAccountRole.textContent = userRoles;
-  }
-
-  const moduleRailMap: Array<{ moduleId: string; ref: string }> = [
-    { moduleId: 'dashboard', ref: 'rail-item-dashboard' },
-    { moduleId: 'giveaways', ref: 'rail-item-giveaways' },
-    { moduleId: 'payments', ref: 'rail-item-payments' },
-    { moduleId: 'bank-accounts', ref: 'rail-item-bank-accounts' },
-    { moduleId: 'customers', ref: 'rail-item-customers' },
-    { moduleId: 'winners', ref: 'rail-item-winners' },
-    { moduleId: 'hr', ref: 'rail-item-hr' },
-    { moduleId: 'admins', ref: 'rail-item-admins' },
-    { moduleId: 'audit', ref: 'rail-item-audit' },
-    { moduleId: 'backups', ref: 'rail-item-backups' },
-  ];
-
-  for (const item of moduleRailMap) {
-    const el = sidebar.querySelector<HTMLElement>(`[data-ref="${item.ref}"]`);
-    if (el) {
-      el.classList.toggle('is-hidden', !canAccessModule(item.moduleId));
-    }
-  }
-}
-
 export function updateSidebarActiveState(sidebar: HTMLElement, path = window.location.pathname): void {
-  const isGiveaways = path === '/giveaways' || path.startsWith('/giveaways') || path === '/sorteos' || path.startsWith('/sorteos');
-  const isPayments =
-    path === '/payments' ||
-    path.startsWith('/payments') ||
-    path === '/pagos' ||
-    path.startsWith('/pagos') ||
-    path === '/orders' ||
-    path.startsWith('/orders') ||
-    path === '/comprobantes' ||
-    path.startsWith('/comprobantes');
-  const isBankAccounts =
-    path === '/bank-accounts' ||
-    path.startsWith('/bank-accounts') ||
-    path === '/cuentas-bancarias' ||
-    path.startsWith('/cuentas-bancarias');
-  const isCustomers =
-    path === '/customers' ||
-    path.startsWith('/customers') ||
-    path === '/clientes' ||
-    path.startsWith('/clientes') ||
-    path === '/participantes' ||
-    path.startsWith('/participantes');
-  const isWinners =
-    path === '/winners' ||
-    path.startsWith('/winners') ||
-    path === '/ganadores' ||
-    path.startsWith('/ganadores') ||
-    path === '/premios' ||
-    path.startsWith('/premios');
-  const isHr =
-    path === '/hr' ||
-    path.startsWith('/hr') ||
-    path === '/recursos-humanos' ||
-    path.startsWith('/recursos-humanos') ||
-    path === '/empleados' ||
-    path.startsWith('/empleados') ||
-    path === '/personal' ||
-    path.startsWith('/personal');
-  const isAdmins =
-    path === '/admins' ||
-    path.startsWith('/admins') ||
-    path === '/administradores' ||
-    path.startsWith('/administradores');
-  const isAudit =
-    path === '/audit' ||
-    path.startsWith('/audit') ||
-    path === '/auditoria' ||
-    path.startsWith('/auditoria');
-  const isBackups =
-    path === '/backups' ||
-    path.startsWith('/backups') ||
-    path === '/copias-seguridad' ||
-    path.startsWith('/copias-seguridad') ||
-    path === '/respaldos' ||
-    path.startsWith('/respaldos');
-  const isSettings =
-    path === '/settings' ||
-    path.startsWith('/settings') ||
-    path === '/configuracion' ||
-    path.startsWith('/configuracion') ||
-    path === '/ajustes' ||
-    path.startsWith('/ajustes');
-  const isDashboard =
-    !isGiveaways &&
-    !isPayments &&
-    !isBankAccounts &&
-    !isCustomers &&
-    !isWinners &&
-    !isHr &&
-    !isAdmins &&
-    !isAudit &&
-    !isBackups &&
-    !isSettings &&
-    (path === '/' || path === '' || path === '/dashboard' || path.startsWith('/dashboard'));
+  const isDashboard = path === '/' || path === '' || path === '/dashboard';
+  const isOrders = path === '/ordenes' || path === '/pagos' || path === '/orders';
+  const isGiveaways = path === '/sorteos' || path === '/giveaways' || path.startsWith('/sorteo') || path.startsWith('/giveaway');
+  const isBankAccounts = path === '/cuentas-bancarias' || path === '/bancos' || path === '/cuentas';
+  const isAudit = path === '/auditoria' || path === '/logs' || path === '/audit';
 
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
   const btnDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-dashboard"]');
+  const itemOrders = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-orders"]');
+  const btnOrders = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-orders"]');
   const itemGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-giveaways"]');
   const btnGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-giveaways"]');
-  const itemPayments = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-payments"]');
-  const btnPayments = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-payments"]');
   const itemBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-bank-accounts"]');
   const btnBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-bank-accounts"]');
-  const itemCustomers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-customers"]');
-  const btnCustomers = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-customers"]');
-  const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
-  const btnWinners = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-winners"]');
-  const itemHr = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-hr"]');
-  const btnHr = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-hr"]');
-  const itemAdmins = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-admins"]');
-  const btnAdmins = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-admins"]');
   const itemAudit = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-audit"]');
   const btnAudit = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-audit"]');
-  const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
-  const btnBackups = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-backups"]');
-  const itemAvatar = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
-  const btnAvatar = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
-  const btnMenuSettings = sidebar.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
-  const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
 
   itemDashboard?.classList.toggle('is-active', isDashboard);
   btnDashboard?.classList.toggle('is-active', isDashboard);
+  itemOrders?.classList.toggle('is-active', isOrders);
+  btnOrders?.classList.toggle('is-active', isOrders);
   itemGiveaways?.classList.toggle('is-active', isGiveaways);
   btnGiveaways?.classList.toggle('is-active', isGiveaways);
-  itemPayments?.classList.toggle('is-active', isPayments);
-  btnPayments?.classList.toggle('is-active', isPayments);
   itemBankAccounts?.classList.toggle('is-active', isBankAccounts);
   btnBankAccounts?.classList.toggle('is-active', isBankAccounts);
-  itemCustomers?.classList.toggle('is-active', isCustomers);
-  btnCustomers?.classList.toggle('is-active', isCustomers);
-  itemWinners?.classList.toggle('is-active', isWinners);
-  btnWinners?.classList.toggle('is-active', isWinners);
-  itemHr?.classList.toggle('is-active', isHr);
-  btnHr?.classList.toggle('is-active', isHr);
-  itemAdmins?.classList.toggle('is-active', isAdmins);
-  btnAdmins?.classList.toggle('is-active', isAdmins);
   itemAudit?.classList.toggle('is-active', isAudit);
   btnAudit?.classList.toggle('is-active', isAudit);
-  itemBackups?.classList.toggle('is-active', isBackups);
-  btnBackups?.classList.toggle('is-active', isBackups);
-  itemAvatar?.classList.toggle('is-active', isSettings);
-  btnAvatar?.classList.toggle('is-active', isSettings);
-  btnMenuSettings?.classList.toggle('is-active', isSettings);
-  btnToggle?.classList.toggle('is-active', isDrawerOpen);
-  updateSidebarUserInfo(sidebar);
+
+  const btnDrawerDashboard = sidebar.querySelector<HTMLElement>('[data-ref="btn-drawer-dashboard"]');
+  const btnDrawerOrders = sidebar.querySelector<HTMLElement>('[data-ref="btn-drawer-orders"]');
+  const btnDrawerGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="btn-drawer-giveaways"]');
+  const btnDrawerBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="btn-drawer-bank-accounts"]');
+  const btnDrawerAudit = sidebar.querySelector<HTMLElement>('[data-ref="btn-drawer-audit"]');
+  btnDrawerDashboard?.classList.toggle('is-active', isDashboard);
+  btnDrawerOrders?.classList.toggle('is-active', isOrders);
+  btnDrawerGiveaways?.classList.toggle('is-active', isGiveaways);
+  btnDrawerBankAccounts?.classList.toggle('is-active', isBankAccounts);
+  btnDrawerAudit?.classList.toggle('is-active', isAudit);
 }
 
-export function updateThemeButtonState(sidebar: HTMLElement): void {
-  const btnTheme = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-theme"]');
-  const iconUse = btnTheme?.querySelector<SVGUseElement>('[data-ref="icon-theme"] use, use');
-  const effective = getEffectiveTheme(getTheme());
-  const isDark = effective === 'dark';
-  if (iconUse) {
-    iconUse.setAttribute('href', isDark ? '/icons.svg#light_mode' : '/icons.svg#dark_mode');
+function createDrawerElement(): HTMLElement {
+  const drawer = document.createElement('div');
+  drawer.className = 'layout-drawer';
+  drawer.setAttribute('data-ref', 'layout-drawer');
+
+  const drawerHeader = document.createElement('div');
+  drawerHeader.className = 'layout-drawer__header';
+  drawerHeader.setAttribute('data-ref', 'drawer-header');
+
+  const drawerBody = document.createElement('div');
+  drawerBody.className = 'layout-drawer__body';
+  drawerBody.setAttribute('data-ref', 'drawer-body');
+
+  const drawerFooter = document.createElement('div');
+  drawerFooter.className = 'layout-drawer__footer';
+  drawerFooter.setAttribute('data-ref', 'drawer-footer');
+
+  drawerBody.innerHTML = `
+    <button type="button" class="menu-item" data-ref="btn-drawer-dashboard">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#dashboard"></use></svg>
+      <span class="menu-item__text" data-ref="text-drawer-dashboard">Dashboard</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="btn-drawer-orders">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+      <span class="menu-item__text" data-ref="text-drawer-orders">Órdenes y Pagos</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="btn-drawer-giveaways">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#inventory_2"></use></svg>
+      <span class="menu-item__text" data-ref="text-drawer-giveaways">Gestionar Sorteos</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="btn-drawer-bank-accounts">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#account_balance_wallet"></use></svg>
+      <span class="menu-item__text" data-ref="text-drawer-bank-accounts">Cuentas Bancarias</span>
+    </button>
+    <button type="button" class="menu-item" data-ref="btn-drawer-audit">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+      <span class="menu-item__text" data-ref="text-drawer-audit">Auditoría</span>
+    </button>
+  `;
+
+  drawerFooter.innerHTML = `
+    <button type="button" class="menu-item menu-item--danger" data-ref="btn-drawer-logout">
+      <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
+      <span class="menu-item__text" data-ref="text-drawer-logout">Cerrar sesión</span>
+    </button>
+  `;
+
+  drawer.appendChild(drawerHeader);
+  drawer.appendChild(drawerBody);
+  drawer.appendChild(drawerFooter);
+
+  return drawer;
+}
+
+function bindDrawerEvents(drawer: HTMLElement): void {
+  const btnDashboard = drawer.querySelector<HTMLElement>('[data-ref="btn-drawer-dashboard"]');
+  const btnOrders = drawer.querySelector<HTMLElement>('[data-ref="btn-drawer-orders"]');
+  const btnGiveaways = drawer.querySelector<HTMLElement>('[data-ref="btn-drawer-giveaways"]');
+  const btnBankAccounts = drawer.querySelector<HTMLElement>('[data-ref="btn-drawer-bank-accounts"]');
+  const btnAudit = drawer.querySelector<HTMLElement>('[data-ref="btn-drawer-audit"]');
+  const btnLogout = drawer.querySelector<HTMLElement>('[data-ref="btn-drawer-logout"]');
+
+  btnDashboard?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate('/');
+  });
+
+  btnOrders?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate('/ordenes');
+  });
+
+  btnGiveaways?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate('/sorteos');
+  });
+
+  btnBankAccounts?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate('/cuentas-bancarias');
+  });
+
+  btnAudit?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (window.innerWidth <= 768) {
+      toggleDrawer(false);
+    }
+    navigate('/auditoria');
+  });
+
+  btnLogout?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await logout();
+    destroySidebar();
+    navigate('/login');
+  });
+}
+
+function openDynamicDrawer(sidebar: HTMLElement): void {
+  let drawer = sidebar.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+  if (!drawer) {
+    drawer = createDrawerElement();
+    bindDrawerEvents(drawer);
+    renderIcons(drawer);
+    sidebar.appendChild(drawer);
   }
-  const label = isDark ? 'Modo claro' : 'Modo oscuro';
-  btnTheme?.setAttribute('data-tooltip', label);
-  btnTheme?.setAttribute('aria-label', label);
+  updateSidebarActiveState(sidebar, window.location.pathname);
+  requestAnimationFrame(() => {
+    drawer?.classList.add('is-open', 'is-expanded');
+  });
+}
+
+function closeDynamicDrawer(): void {
+  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
+  const drawer = sidebar?.querySelector<HTMLElement>('[data-ref="layout-drawer"]');
+  if (drawer) {
+    drawer.classList.remove('is-open', 'is-expanded');
+    if (drawerRemovalTimer) {
+      clearTimeout(drawerRemovalTimer);
+    }
+    drawerRemovalTimer = setTimeout(() => {
+      drawer?.remove();
+      drawerRemovalTimer = null;
+    }, 280);
+  }
 }
 
 export function toggleDrawer(forceState?: boolean): void {
   const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"]');
   const btnToggle = sidebar?.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]') || document.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
-
   const nextOpen = forceState !== undefined ? forceState : !isDrawerOpen;
+
   isDrawerOpen = nextOpen;
   btnToggle?.classList.toggle('is-active', isDrawerOpen);
-  sidebar?.classList.toggle('is-expanded', isDrawerOpen);
+
+  if (isDrawerOpen) {
+    if (drawerRemovalTimer) {
+      clearTimeout(drawerRemovalTimer);
+      drawerRemovalTimer = null;
+    }
+    if (sidebar) {
+      openDynamicDrawer(sidebar);
+    }
+  } else {
+    closeDynamicDrawer();
+  }
 }
 
 function setupRailNavigation(sidebar: HTMLElement): void {
   const btnToggle = sidebar.querySelector<HTMLElement>('[data-ref="btn-toggle-drawer"]');
   const itemDashboard = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-dashboard"]');
+  const itemOrders = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-orders"]');
   const itemGiveaways = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-giveaways"]');
-  const itemPayments = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-payments"]');
   const itemBankAccounts = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-bank-accounts"]');
-  const itemCustomers = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-customers"]');
-  const itemWinners = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-winners"]');
-  const itemHr = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-hr"]');
-  const avatarContainer = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-avatar"]');
-  const btnAvatar = avatarContainer?.querySelector<HTMLElement>('[data-ref="btn-rail-avatar"]');
-  const avatarMenu = avatarContainer?.querySelector<HTMLElement>('[data-ref="avatar-menu"]');
-  const btnMenuSettings = avatarContainer?.querySelector<HTMLElement>('[data-ref="btn-menu-settings"]');
-  const btnMenuLogout = avatarContainer?.querySelector<HTMLElement>('[data-ref="btn-menu-logout"]');
+  const itemAudit = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-audit"]');
+  const btnLogout = sidebar.querySelector<HTMLElement>('[data-ref="btn-rail-logout"], [data-ref="logout-container"]');
 
   btnToggle?.addEventListener('click', (e) => {
     e.preventDefault();
@@ -249,150 +233,50 @@ function setupRailNavigation(sidebar: HTMLElement): void {
     navigate('/');
   });
 
-  itemGiveaways?.addEventListener('click', (e) => {
+  itemOrders?.addEventListener('click', (e) => {
     e.preventDefault();
-    navigate('/giveaways');
+    navigate('/ordenes');
   });
 
-  itemPayments?.addEventListener('click', (e) => {
+  itemGiveaways?.addEventListener('click', (e) => {
     e.preventDefault();
-    navigate('/payments');
+    navigate('/sorteos');
   });
 
   itemBankAccounts?.addEventListener('click', (e) => {
     e.preventDefault();
-    navigate('/bank-accounts');
+    navigate('/cuentas-bancarias');
   });
 
-  itemCustomers?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/customers');
-  });
-
-  itemWinners?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/winners');
-  });
-
-  itemHr?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/hr');
-  });
-
-  const itemBackups = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-backups"]');
-  itemBackups?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/backups');
-  });
-
-  const itemAdmins = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-admins"]');
-  itemAdmins?.addEventListener('click', (e) => {
-    e.preventDefault();
-    navigate('/admins');
-  });
-
-  const itemAudit = sidebar.querySelector<HTMLElement>('[data-ref="rail-item-audit"]');
   itemAudit?.addEventListener('click', (e) => {
     e.preventDefault();
-    navigate('/audit');
+    navigate('/auditoria');
   });
 
-  if (avatarContainer && btnAvatar && avatarMenu) {
-    let isMenuOpen = false;
-
-    const positionAvatarMenu = () => {
-      if (window.innerWidth > 768) {
-        const btnRect = btnAvatar.getBoundingClientRect();
-        avatarMenu.style.position = 'fixed';
-        avatarMenu.style.left = `${Math.round(btnRect.right + 10)}px`;
-        const menuHeight = avatarMenu.offsetHeight || 160;
-        if (btnRect.top + menuHeight > window.innerHeight - 16) {
-          avatarMenu.style.top = 'auto';
-          avatarMenu.style.bottom = `${Math.max(16, window.innerHeight - btnRect.bottom)}px`;
-        } else {
-          avatarMenu.style.top = `${Math.max(16, Math.round(btnRect.top - 6))}px`;
-          avatarMenu.style.bottom = 'auto';
-        }
-      } else {
-        avatarMenu.style.position = '';
-        avatarMenu.style.left = '';
-        avatarMenu.style.top = '';
-        avatarMenu.style.bottom = '';
-      }
-    };
-
-    const openAvatarMenu = () => {
-      isMenuOpen = true;
-      btnAvatar.classList.add('is-active');
-      avatarMenu.classList.add('is-open');
-      positionAvatarMenu();
-    };
-
-    const closeAvatarMenu = () => {
-      if (!isMenuOpen) return;
-      isMenuOpen = false;
-      const path = window.location.pathname;
-      const isSettings = path === '/settings' || path.startsWith('/settings') || path === '/configuracion' || path === '/ajustes';
-      btnAvatar.classList.toggle('is-active', isSettings);
-      avatarMenu.classList.remove('is-open');
-    };
-
-    const toggleAvatarMenu = (e: Event) => {
-      e.stopPropagation();
-      if (isMenuOpen) {
-        closeAvatarMenu();
-      } else {
-        openAvatarMenu();
-      }
-    };
-
-    btnAvatar.addEventListener('click', toggleAvatarMenu);
-
-    btnMenuSettings?.addEventListener('click', (e) => {
-      e.preventDefault();
-      closeAvatarMenu();
-      navigate('/settings');
-    });
-
-    btnMenuLogout?.addEventListener('click', async (e) => {
-      e.preventDefault();
-      closeAvatarMenu();
-      await logout();
-      unmountSidebar();
-      navigate('/login');
-    });
-
-    document.addEventListener('click', (e) => {
-      if (isMenuOpen && !avatarContainer.contains(e.target as Node)) {
-        closeAvatarMenu();
-      }
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isMenuOpen) {
-        closeAvatarMenu();
-      }
-    });
-  }
+  btnLogout?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await logout();
+    destroySidebar();
+    navigate('/login');
+  });
 }
 
-export function unmountSidebar(): void {
-  if (themeChangeHandler) {
-    window.removeEventListener('themechange', themeChangeHandler);
-    themeChangeHandler = null;
+export function destroySidebar(): void {
+  if (drawerRemovalTimer) {
+    clearTimeout(drawerRemovalTimer);
+    drawerRemovalTimer = null;
   }
+  isDrawerOpen = false;
   if (sidebarInstance) {
     sidebarInstance.remove();
     sidebarInstance = null;
+    sidebarInitPromise = null;
   }
-  sidebarInitPromise = null;
 }
 
 export async function createSidebar(): Promise<HTMLElement> {
   if (sidebarInstance) {
-    updateSidebarUserInfo(sidebarInstance);
     updateSidebarActiveState(sidebarInstance, window.location.pathname);
-    updateThemeButtonState(sidebarInstance);
     return sidebarInstance;
   }
   if (sidebarInitPromise) {
@@ -402,9 +286,7 @@ export async function createSidebar(): Promise<HTMLElement> {
   sidebarInitPromise = (async () => {
     const sidebar = await loadTemplate('/views/components/sidebar.html');
     setupRailNavigation(sidebar);
-    updateSidebarUserInfo(sidebar);
     updateSidebarActiveState(sidebar, window.location.pathname);
-    updateThemeButtonState(sidebar);
     renderIcons(sidebar);
     sidebarInstance = sidebar;
     return sidebar;
@@ -421,8 +303,6 @@ export async function ensureSidebarMounted(layoutContent: HTMLElement): Promise<
   return sidebar;
 }
 
-let activeResizeObserver: ResizeObserver | null = null;
-
 export function setupLayoutScrollSync(): void {
   const layoutContent = document.querySelector<HTMLElement>('.layout-content:has(.layout-nav)');
   if (activeResizeObserver) {
@@ -432,7 +312,7 @@ export function setupLayoutScrollSync(): void {
   if (!layoutContent) return;
 
   const scrollableBody = layoutContent.querySelector<HTMLElement>(
-    '.view-scrollable, .dashboard-scrollable, .layout-body--scrollable, .layout-scrollable'
+    '.view-scrollable, .home-scrollable, .layout-body--scrollable, .layout-scrollable'
   );
   if (!scrollableBody) {
     layoutContent.style.removeProperty('--layout-scroll-height');
@@ -440,7 +320,7 @@ export function setupLayoutScrollSync(): void {
   }
 
   const updateScrollHeight = () => {
-    const maxScroll = Math.max(0, Math.ceil(scrollableBody.scrollHeight - scrollableBody.clientHeight));
+    const maxScroll = Math.max(0, scrollableBody.scrollHeight - scrollableBody.clientHeight);
     if (maxScroll === 0) {
       layoutContent.style.removeProperty('--layout-scroll-height');
       return;
@@ -457,7 +337,8 @@ export function setupLayoutScrollSync(): void {
 
   activeResizeObserver.observe(scrollableBody);
   activeResizeObserver.observe(layoutContent);
-  for (const child of scrollableBody.children) {
-    activeResizeObserver.observe(child);
+  const firstChild = scrollableBody.firstElementChild;
+  if (firstChild) {
+    activeResizeObserver.observe(firstChild);
   }
 }

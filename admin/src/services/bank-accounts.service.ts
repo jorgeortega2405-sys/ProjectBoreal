@@ -1,503 +1,323 @@
-import { pool } from '../config/database.config.js';
-import { redis } from '../config/redis.config.js';
+import { AssignedGiveaway, BankAccount, CreateBankAccountInput, UpdateBankAccountInput } from '../types/bank-accounts.types.js';
+import { deleteCache, deleteCachePattern } from '../config/redis.config.js';
 import { logger } from './logger.service.js';
+import { pool } from '../config/database.config.js';
 import crypto from 'crypto';
 import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
-export interface BankAccountDetail {
+interface BankAccountRow extends RowDataPacket {
   account_holder: string;
   account_number: string | null;
   account_type: 'clabe' | 'card' | 'both';
-  active_giveaways_count: number;
   bank_name: string;
   card_number: string | null;
   clabe: string | null;
-  created_at: string;
+  created_at: Date | string;
   currency: string;
   id: number;
   is_active: number;
-  total_giveaways_count: number;
-  updated_at: string;
+  updated_at: Date | string;
   uuid: string;
 }
 
-export interface BankAccountGiveawayAssignment {
+interface GiveawayAssignRow extends RowDataPacket {
+  bank_account_id: number;
   giveaway_id: number;
-  giveaway_status: string;
   giveaway_title: string;
-  giveaway_type: string;
   giveaway_uuid: string;
-  is_active: boolean;
-  is_assigned: boolean;
+  is_active: number;
 }
 
-export interface BankAccountsKpis {
-  activeAccounts: number;
-  giveawaysWithCoverageCount: number;
-  inactiveAccounts: number;
-  totalAccounts: number;
-  uniqueBanksCount: number;
+interface GiveawayOptionRow extends RowDataPacket {
+  id: number;
+  slug: string;
+  status: string;
+  title: string;
+  uuid: string;
 }
 
-export interface CreateBankAccountInput {
-  account_holder: string;
-  account_number?: string | null;
-  account_type: 'clabe' | 'card' | 'both';
-  apply_to_all_active_giveaways?: boolean;
-  bank_name: string;
-  card_number?: string | null;
-  clabe?: string | null;
-  currency?: string;
-  giveaway_ids?: number[];
-  is_active?: boolean;
-}
-
-export interface UpdateBankAccountInput {
-  account_holder?: string;
-  account_number?: string | null;
-  account_type?: 'clabe' | 'card' | 'both';
-  bank_name?: string;
-  card_number?: string | null;
-  clabe?: string | null;
-  currency?: string;
-  is_active?: boolean;
-}
-
-export async function invalidateBankAccountsCache(): Promise<void> {
+export async function getAdminBankAccounts(): Promise<BankAccount[]> {
   try {
-    if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
-      const keys = await redis.keys('bank_accounts*');
-      const prefixedKeys = await redis.keys('boreal:cache:bank_accounts*');
-      const allKeys = [...keys, ...prefixedKeys, 'giveaways:active', 'boreal:cache:giveaways:active'];
-      if (allKeys.length > 0) {
-        await redis.del(...allKeys);
-      }
-    }
-  } catch (err) {
-    logger.db.warn('No se pudo invalidar la caché de bank_accounts en Redis:', err);
-  }
-}
-
-export async function getBankAccountsKpis(): Promise<BankAccountsKpis> {
-  try {
-    const [summaryRows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-        COUNT(*) as total_accounts,
-        SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) as active_accounts,
-        SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) as inactive_accounts,
-        COUNT(DISTINCT bank_name) as unique_banks
-       FROM bank_accounts`
+    const [accountRows] = await pool.query<BankAccountRow[]>(
+      `SELECT id, uuid, bank_name, account_holder, account_type, clabe,
+              account_number, card_number, currency, is_active, created_at, updated_at
+       FROM bank_accounts
+       ORDER BY id ASC`
     );
 
-    const [coverageRows] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(DISTINCT gba.giveaway_id) as coverage_count
+    const [giveawayRows] = await pool.query<GiveawayAssignRow[]>(
+      `SELECT gba.bank_account_id, gba.giveaway_id, gba.is_active,
+              g.uuid AS giveaway_uuid, g.title AS giveaway_title
        FROM giveaway_bank_accounts gba
        INNER JOIN giveaways g ON g.id = gba.giveaway_id
-       INNER JOIN bank_accounts ba ON ba.id = gba.bank_account_id
-       WHERE gba.is_active = 1 AND ba.is_active = 1 AND g.status IN ('active', 'paused', 'draft')`
+       ORDER BY gba.id ASC`
     );
 
-    const s = summaryRows[0] || {};
-    const c = coverageRows[0] || {};
-
-    return {
-      activeAccounts: Number(s.active_accounts || 0),
-      giveawaysWithCoverageCount: Number(c.coverage_count || 0),
-      inactiveAccounts: Number(s.inactive_accounts || 0),
-      totalAccounts: Number(s.total_accounts || 0),
-      uniqueBanksCount: Number(s.unique_banks || 0),
-    };
-  } catch (error) {
-    logger.db.error('Error al obtener KPIs de cuentas bancarias:', error);
-    return {
-      activeAccounts: 0,
-      giveawaysWithCoverageCount: 0,
-      inactiveAccounts: 0,
-      totalAccounts: 0,
-      uniqueBanksCount: 0,
-    };
-  }
-}
-
-export async function getAllBankAccounts(filters?: { search?: string; status?: string }): Promise<BankAccountDetail[]> {
-  try {
-    let whereClause = '1=1';
-    const params: unknown[] = [];
-
-    if (filters?.status === 'active') {
-      whereClause += ' AND ba.is_active = 1';
-    } else if (filters?.status === 'inactive') {
-      whereClause += ' AND ba.is_active = 0';
+    const map = new Map<number, AssignedGiveaway[]>();
+    for (const g of giveawayRows) {
+      if (!map.has(g.bank_account_id)) {
+        map.set(g.bank_account_id, []);
+      }
+      map.get(g.bank_account_id)!.push({
+        id: Number(g.giveaway_id),
+        is_active: Number(g.is_active),
+        title: g.giveaway_title,
+        uuid: g.giveaway_uuid,
+      });
     }
 
-    if (filters?.search && filters.search.trim()) {
-      const q = `%${filters.search.trim()}%`;
-      whereClause += ' AND (ba.bank_name LIKE ? OR ba.account_holder LIKE ? OR ba.clabe LIKE ? OR ba.card_number LIKE ?)';
-      params.push(q, q, q, q);
-    }
-
-    const query = `
-      SELECT
-        ba.id,
-        ba.uuid,
-        ba.bank_name,
-        ba.account_holder,
-        ba.account_type,
-        ba.clabe,
-        ba.card_number,
-        ba.account_number,
-        ba.currency,
-        ba.is_active,
-        ba.created_at,
-        ba.updated_at,
-        COUNT(CASE WHEN gba.is_active = 1 AND g.status IN ('active', 'paused') THEN 1 END) AS active_giveaways_count,
-        COUNT(DISTINCT gba.giveaway_id) AS total_giveaways_count
-      FROM bank_accounts ba
-      LEFT JOIN giveaway_bank_accounts gba ON gba.bank_account_id = ba.id
-      LEFT JOIN giveaways g ON g.id = gba.giveaway_id
-      WHERE ${whereClause}
-      GROUP BY ba.id
-      ORDER BY ba.is_active DESC, ba.id ASC
-    `;
-
-    const [rows] = await pool.query<RowDataPacket[]>(query, params);
-
-    return rows.map((r) => ({
+    return accountRows.map((r) => ({
       account_holder: r.account_holder,
       account_number: r.account_number,
       account_type: r.account_type,
-      active_giveaways_count: Number(r.active_giveaways_count || 0),
       bank_name: r.bank_name,
       card_number: r.card_number,
       clabe: r.clabe,
-      created_at: r.created_at,
-      currency: r.currency || 'MXN',
-      id: r.id,
+      created_at: new Date(r.created_at).toISOString(),
+      currency: r.currency,
+      giveaways: map.get(Number(r.id)) || [],
+      id: Number(r.id),
       is_active: Number(r.is_active),
-      total_giveaways_count: Number(r.total_giveaways_count || 0),
-      updated_at: r.updated_at,
+      updated_at: new Date(r.updated_at).toISOString(),
       uuid: r.uuid,
     }));
   } catch (error) {
-    logger.db.error('Error al listar cuentas bancarias:', error);
-    return [];
+    logger.db.error('Error al obtener cuentas bancarias en backend admin', error);
+    throw new Error('Error al consultar las cuentas bancarias.');
   }
 }
 
-export async function getBankAccountByUuid(uuid: string): Promise<{
-  account: BankAccountDetail;
-  giveaways: BankAccountGiveawayAssignment[];
-} | null> {
+export async function getGiveawaysForAssignment(): Promise<Array<{ id: number; slug: string; status: string; title: string; uuid: string }>> {
   try {
-    const [accountRows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-        ba.id,
-        ba.uuid,
-        ba.bank_name,
-        ba.account_holder,
-        ba.account_type,
-        ba.clabe,
-        ba.card_number,
-        ba.account_number,
-        ba.currency,
-        ba.is_active,
-        ba.created_at,
-        ba.updated_at,
-        COUNT(CASE WHEN gba.is_active = 1 AND g.status IN ('active', 'paused') THEN 1 END) AS active_giveaways_count,
-        COUNT(DISTINCT gba.giveaway_id) AS total_giveaways_count
-      FROM bank_accounts ba
-      LEFT JOIN giveaway_bank_accounts gba ON gba.bank_account_id = ba.id
-      LEFT JOIN giveaways g ON g.id = gba.giveaway_id
-      WHERE ba.uuid = ?
-      GROUP BY ba.id`,
+    const [rows] = await pool.query<GiveawayOptionRow[]>(
+      `SELECT id, uuid, title, slug, status
+       FROM giveaways
+       ORDER BY FIELD(status, 'active', 'draft', 'paused', 'completed', 'cancelled'), created_at DESC`
+    );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      slug: r.slug,
+      status: r.status,
+      title: r.title,
+      uuid: r.uuid,
+    }));
+  } catch (error) {
+    logger.db.error('Error al obtener sorteos para asignación de cuentas', error);
+    throw new Error('Error al consultar sorteos.');
+  }
+}
+
+export async function createAdminBankAccount(data: CreateBankAccountInput): Promise<BankAccount> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const uuid = crypto.randomUUID();
+    const isActive = data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1;
+    const currency = data.currency?.trim() || 'MXN';
+    const clabe = data.clabe?.trim() || null;
+    const cardNumber = data.card_number?.trim() || null;
+    const accountNumber = data.account_number?.trim() || null;
+
+    const [result] = await conn.query<ResultSetHeader>(
+      `INSERT INTO bank_accounts (
+        uuid, bank_name, account_holder, account_type, clabe, card_number,
+        account_number, currency, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        uuid,
+        data.bank_name.trim(),
+        data.account_holder.trim(),
+        data.account_type,
+        clabe,
+        cardNumber,
+        accountNumber,
+        currency,
+        isActive,
+      ]
+    );
+
+    const bankAccountId = result.insertId;
+
+    if (Array.isArray(data.giveaway_ids) && data.giveaway_ids.length > 0) {
+      for (const gId of data.giveaway_ids) {
+        await conn.query(
+          `INSERT INTO giveaway_bank_accounts (giveaway_id, bank_account_id, is_active)
+           VALUES (?, ?, 1)
+           ON DUPLICATE KEY UPDATE is_active = 1`,
+          [gId, bankAccountId]
+        );
+      }
+    }
+
+    await conn.commit();
+
+    await deleteCache('bank_accounts');
+    await deleteCachePattern('bank_accounts:*');
+
+    return {
+      account_holder: data.account_holder.trim(),
+      account_number: accountNumber,
+      account_type: data.account_type,
+      bank_name: data.bank_name.trim(),
+      card_number: cardNumber,
+      clabe,
+      created_at: new Date().toISOString(),
+      currency,
+      id: bankAccountId,
+      is_active: isActive,
+      updated_at: new Date().toISOString(),
+      uuid,
+    };
+  } catch (error) {
+    await conn.rollback();
+    logger.db.error('Error al crear cuenta bancaria en backend admin', error);
+    throw new Error('Error al registrar la cuenta bancaria.');
+  } finally {
+    conn.release();
+  }
+}
+
+export async function updateAdminBankAccount(uuid: string, data: UpdateBankAccountInput): Promise<boolean> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [existing] = await conn.query<RowDataPacket[]>(
+      `SELECT id FROM bank_accounts WHERE uuid = ? LIMIT 1 FOR UPDATE`,
       [uuid]
     );
 
-    if (accountRows.length === 0) return null;
+    if (existing.length === 0) {
+      await conn.rollback();
+      throw new Error('Cuenta bancaria no encontrada.');
+    }
 
-    const r = accountRows[0];
-    const account: BankAccountDetail = {
-      account_holder: r.account_holder,
-      account_number: r.account_number,
-      account_type: r.account_type,
-      active_giveaways_count: Number(r.active_giveaways_count || 0),
-      bank_name: r.bank_name,
-      card_number: r.card_number,
-      clabe: r.clabe,
-      created_at: r.created_at,
-      currency: r.currency || 'MXN',
-      id: r.id,
-      is_active: Number(r.is_active),
-      total_giveaways_count: Number(r.total_giveaways_count || 0),
-      updated_at: r.updated_at,
-      uuid: r.uuid,
-    };
+    const accountId = Number(existing[0].id);
 
-    const [giveawayRows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-        g.id AS giveaway_id,
-        g.uuid AS giveaway_uuid,
-        g.title AS giveaway_title,
-        g.status AS giveaway_status,
-        g.type AS giveaway_type,
-        CASE WHEN gba.id IS NOT NULL THEN 1 ELSE 0 END AS is_assigned,
-        COALESCE(gba.is_active, 0) AS is_active
-      FROM giveaways g
-      LEFT JOIN giveaway_bank_accounts gba ON gba.giveaway_id = g.id AND gba.bank_account_id = ?
-      ORDER BY FIELD(g.status, 'active', 'paused', 'draft', 'completed', 'cancelled'), g.id DESC`,
-      [account.id]
-    );
+    const updates: string[] = [];
+    const params: unknown[] = [];
 
-    const giveaways: BankAccountGiveawayAssignment[] = giveawayRows.map((g) => ({
-      giveaway_id: g.giveaway_id,
-      giveaway_status: g.giveaway_status,
-      giveaway_title: g.giveaway_title,
-      giveaway_type: g.giveaway_type,
-      giveaway_uuid: g.giveaway_uuid,
-      is_active: Boolean(g.is_active),
-      is_assigned: Boolean(g.is_assigned),
-    }));
+    if (data.bank_name !== undefined) {
+      updates.push('bank_name = ?');
+      params.push(data.bank_name.trim());
+    }
+    if (data.account_holder !== undefined) {
+      updates.push('account_holder = ?');
+      params.push(data.account_holder.trim());
+    }
+    if (data.account_type !== undefined) {
+      updates.push('account_type = ?');
+      params.push(data.account_type);
+    }
+    if (data.clabe !== undefined) {
+      updates.push('clabe = ?');
+      params.push(data.clabe?.trim() || null);
+    }
+    if (data.card_number !== undefined) {
+      updates.push('card_number = ?');
+      params.push(data.card_number?.trim() || null);
+    }
+    if (data.account_number !== undefined) {
+      updates.push('account_number = ?');
+      params.push(data.account_number?.trim() || null);
+    }
+    if (data.currency !== undefined) {
+      updates.push('currency = ?');
+      params.push(data.currency.trim());
+    }
+    if (data.is_active !== undefined) {
+      updates.push('is_active = ?');
+      params.push(data.is_active ? 1 : 0);
+    }
 
-    return { account, giveaways };
+    if (updates.length > 0) {
+      params.push(uuid);
+      await conn.query(
+        `UPDATE bank_accounts SET ${updates.join(', ')}, updated_at = NOW() WHERE uuid = ?`,
+        params
+      );
+    }
+
+    if (Array.isArray(data.giveaway_ids)) {
+      await conn.query(`DELETE FROM giveaway_bank_accounts WHERE bank_account_id = ?`, [accountId]);
+      for (const gId of data.giveaway_ids) {
+        await conn.query(
+          `INSERT INTO giveaway_bank_accounts (giveaway_id, bank_account_id, is_active)
+           VALUES (?, ?, 1)
+           ON DUPLICATE KEY UPDATE is_active = 1`,
+          [gId, accountId]
+        );
+      }
+    }
+
+    await conn.commit();
+
+    await deleteCache('bank_accounts');
+    await deleteCachePattern('bank_accounts:*');
+
+    return true;
   } catch (error) {
-    logger.db.error('Error al obtener detalle de cuenta bancaria:', error);
-    return null;
+    await conn.rollback();
+    logger.db.error(`Error al actualizar cuenta bancaria ${uuid}`, error);
+    throw error;
+  } finally {
+    conn.release();
   }
 }
 
-export async function createBankAccount(input: CreateBankAccountInput): Promise<BankAccountDetail> {
-  const bankName = (input.bank_name || '').trim();
-  const accountHolder = (input.account_holder || '').trim();
-  const accountType = input.account_type || 'clabe';
-  const rawClabe = (input.clabe || '').replace(/\s+/g, '').trim();
-  const rawCard = (input.card_number || '').replace(/\s+/g, '').trim();
-  const rawAccountNumber = (input.account_number || '').trim();
-  const currency = (input.currency || 'MXN').toUpperCase();
-  const isActive = input.is_active !== undefined ? (input.is_active ? 1 : 0) : 1;
-
-  if (!bankName) {
-    throw new Error('El nombre del banco o institución financiera es obligatorio.');
-  }
-  if (!accountHolder) {
-    throw new Error('El nombre del titular de la cuenta es obligatorio.');
-  }
-  if (!['clabe', 'card', 'both'].includes(accountType)) {
-    throw new Error('El tipo de cuenta no es válido. Opciones permitidas: clabe, card, both.');
-  }
-
-  if (accountType === 'clabe' || accountType === 'both') {
-    if (!rawClabe || rawClabe.length !== 18 || !/^\d{18}$/.test(rawClabe)) {
-      throw new Error('La CLABE interbancaria debe contener exactamente 18 dígitos numéricos.');
-    }
-  }
-
-  if (accountType === 'card' || accountType === 'both') {
-    if (rawCard && (!/^\d{15,16}$/.test(rawCard))) {
-      throw new Error('El número de tarjeta debe contener 15 o 16 dígitos numéricos.');
-    }
-  }
-
-  const accountUuid = crypto.randomUUID();
-
-  const connection = await pool.getConnection();
+export async function toggleAdminBankAccount(uuid: string, isActive: boolean): Promise<boolean> {
   try {
-    await connection.beginTransaction();
-
-    const [insertResult] = await connection.query<ResultSetHeader>(
-      `INSERT INTO bank_accounts (uuid, bank_name, account_holder, account_type, clabe, card_number, account_number, currency, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        accountUuid,
-        bankName,
-        accountHolder,
-        accountType,
-        rawClabe || null,
-        rawCard || null,
-        rawAccountNumber || null,
-        currency,
-        isActive,
-      ]
+    const [result] = await pool.query<ResultSetHeader>(
+      `UPDATE bank_accounts SET is_active = ?, updated_at = NOW() WHERE uuid = ?`,
+      [isActive ? 1 : 0, uuid]
     );
 
-    const newAccountId = insertResult.insertId;
-
-    if (input.apply_to_all_active_giveaways) {
-      await connection.query(
-        `INSERT INTO giveaway_bank_accounts (giveaway_id, bank_account_id, is_active)
-         SELECT id, ?, 1 FROM giveaways WHERE status IN ('active', 'paused', 'draft')
-         ON DUPLICATE KEY UPDATE is_active = 1`,
-        [newAccountId]
-      );
-    } else if (Array.isArray(input.giveaway_ids) && input.giveaway_ids.length > 0) {
-      const values = input.giveaway_ids.map((gId) => [gId, newAccountId, 1]);
-      await connection.query(
-        `INSERT INTO giveaway_bank_accounts (giveaway_id, bank_account_id, is_active)
-         VALUES ?
-         ON DUPLICATE KEY UPDATE is_active = 1`,
-        [values]
-      );
+    if (result.affectedRows === 0) {
+      throw new Error('Cuenta bancaria no encontrada.');
     }
 
-    await connection.commit();
-    await invalidateBankAccountsCache();
+    await deleteCache('bank_accounts');
+    await deleteCachePattern('bank_accounts:*');
 
-    const created = await getBankAccountByUuid(accountUuid);
-    if (!created) {
-      throw new Error('No se pudo recuperar la cuenta bancaria recién creada.');
-    }
-    return created.account;
-  } catch (err: any) {
-    await connection.rollback();
-    if (err.code === 'ER_DUP_ENTRY') {
-      throw new Error('Ya existe una cuenta registrada con esa misma CLABE interbancaria.');
-    }
-    logger.db.error('Error al insertar cuenta bancaria:', err);
-    throw err;
-  } finally {
-    connection.release();
+    return true;
+  } catch (error) {
+    logger.db.error(`Error al conmutar estado de cuenta bancaria ${uuid}`, error);
+    throw error;
   }
 }
 
-export async function updateBankAccount(uuid: string, input: UpdateBankAccountInput): Promise<BankAccountDetail> {
-  const existing = await getBankAccountByUuid(uuid);
-  if (!existing) {
-    throw new Error('La cuenta bancaria solicitada no existe.');
-  }
-
-  const bankName = input.bank_name !== undefined ? input.bank_name.trim() : existing.account.bank_name;
-  const accountHolder = input.account_holder !== undefined ? input.account_holder.trim() : existing.account.account_holder;
-  const accountType = input.account_type || existing.account.account_type;
-  const rawClabe = input.clabe !== undefined ? (input.clabe ? input.clabe.replace(/\s+/g, '').trim() : null) : existing.account.clabe;
-  const rawCard = input.card_number !== undefined ? (input.card_number ? input.card_number.replace(/\s+/g, '').trim() : null) : existing.account.card_number;
-  const rawAccountNumber = input.account_number !== undefined ? (input.account_number ? input.account_number.trim() : null) : existing.account.account_number;
-  const currency = (input.currency || existing.account.currency || 'MXN').toUpperCase();
-  const isActive = input.is_active !== undefined ? (input.is_active ? 1 : 0) : existing.account.is_active;
-
-  if (!bankName) {
-    throw new Error('El nombre del banco no puede estar vacío.');
-  }
-  if (!accountHolder) {
-    throw new Error('El titular de la cuenta no puede estar vacío.');
-  }
-
-  if (accountType === 'clabe' || accountType === 'both') {
-    if (!rawClabe || rawClabe.length !== 18 || !/^\d{18}$/.test(rawClabe)) {
-      throw new Error('La CLABE interbancaria debe contener 18 dígitos numéricos.');
-    }
-  }
-
-  if (accountType === 'card' || accountType === 'both') {
-    if (rawCard && !/^\d{15,16}$/.test(rawCard)) {
-      throw new Error('El número de tarjeta debe contener 15 o 16 dígitos.');
-    }
-  }
-
+export async function deleteAdminBankAccount(uuid: string): Promise<boolean> {
+  const conn = await pool.getConnection();
   try {
-    await pool.query(
-      `UPDATE bank_accounts
-       SET bank_name = ?, account_holder = ?, account_type = ?, clabe = ?, card_number = ?, account_number = ?, currency = ?, is_active = ?
-       WHERE uuid = ?`,
-      [
-        bankName,
-        accountHolder,
-        accountType,
-        rawClabe || null,
-        rawCard || null,
-        rawAccountNumber || null,
-        currency,
-        isActive,
-        uuid,
-      ]
+    await conn.beginTransaction();
+
+    const [existing] = await conn.query<RowDataPacket[]>(
+      `SELECT id FROM bank_accounts WHERE uuid = ? LIMIT 1 FOR UPDATE`,
+      [uuid]
     );
 
-    await invalidateBankAccountsCache();
-
-    const updated = await getBankAccountByUuid(uuid);
-    if (!updated) {
-      throw new Error('No se pudo recuperar la cuenta bancaria actualizada.');
-    }
-    return updated.account;
-  } catch (err: any) {
-    if (err.code === 'ER_DUP_ENTRY') {
-      throw new Error('Ya existe otra cuenta registrada con esa misma CLABE interbancaria.');
-    }
-    logger.db.error('Error al actualizar cuenta bancaria:', err);
-    throw err;
-  }
-}
-
-export async function toggleBankAccountStatus(uuid: string, isActive: boolean): Promise<BankAccountDetail> {
-  const existing = await getBankAccountByUuid(uuid);
-  if (!existing) {
-    throw new Error('La cuenta bancaria solicitada no existe.');
-  }
-
-  const nextStatus = isActive ? 1 : 0;
-  await pool.query(
-    `UPDATE bank_accounts SET is_active = ? WHERE uuid = ?`,
-    [nextStatus, uuid]
-  );
-
-  await invalidateBankAccountsCache();
-
-  const updated = await getBankAccountByUuid(uuid);
-  if (!updated) {
-    throw new Error('No se pudo recuperar la cuenta bancaria.');
-  }
-  return updated.account;
-}
-
-export async function updateBankAccountGiveaways(
-  uuid: string,
-  assignments: Array<{ giveawayId: number; isActive: boolean }>
-): Promise<BankAccountGiveawayAssignment[]> {
-  const existing = await getBankAccountByUuid(uuid);
-  if (!existing) {
-    throw new Error('La cuenta bancaria solicitada no existe.');
-  }
-
-  const accountId = existing.account.id;
-  const connection = await pool.getConnection();
-  try {
-    await connection.beginTransaction();
-
-    for (const item of assignments) {
-      const gId = Number(item.giveawayId);
-      const isAct = item.isActive ? 1 : 0;
-
-      await connection.query(
-        `INSERT INTO giveaway_bank_accounts (giveaway_id, bank_account_id, is_active)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE is_active = ?`,
-        [gId, accountId, isAct, isAct]
-      );
+    if (existing.length === 0) {
+      await conn.rollback();
+      throw new Error('Cuenta bancaria no encontrada.');
     }
 
-    await connection.commit();
-    await invalidateBankAccountsCache();
+    const accountId = Number(existing[0].id);
 
-    const fresh = await getBankAccountByUuid(uuid);
-    return fresh?.giveaways || [];
-  } catch (err) {
-    await connection.rollback();
-    logger.db.error('Error al actualizar asignaciones de cuenta bancaria a sorteos:', err);
-    throw err;
+    await conn.query(`DELETE FROM giveaway_bank_accounts WHERE bank_account_id = ?`, [accountId]);
+    await conn.query(`DELETE FROM bank_accounts WHERE id = ?`, [accountId]);
+
+    await conn.commit();
+
+    await deleteCache('bank_accounts');
+    await deleteCachePattern('bank_accounts:*');
+
+    return true;
+  } catch (error) {
+    await conn.rollback();
+    logger.db.error(`Error al eliminar cuenta bancaria ${uuid}`, error);
+    throw error;
   } finally {
-    connection.release();
-  }
-}
-
-export async function deleteBankAccount(uuid: string): Promise<void> {
-  const existing = await getBankAccountByUuid(uuid);
-  if (!existing) {
-    throw new Error('La cuenta bancaria solicitada no existe.');
-  }
-
-  try {
-    await pool.query(`DELETE FROM bank_accounts WHERE uuid = ?`, [uuid]);
-    await invalidateBankAccountsCache();
-  } catch (err) {
-    logger.db.error('Error al eliminar cuenta bancaria:', err);
-    throw err;
+    conn.release();
   }
 }

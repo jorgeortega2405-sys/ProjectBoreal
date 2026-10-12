@@ -1,320 +1,135 @@
-import { logger } from '../services/logger.service.js';
-import { ordersService } from '../services/orders.service.js';
-import { getS3Object } from '../services/s3.service.js';
-import { Request, Response } from 'express';
+import { Response } from 'express';
+import fs from 'fs';
 import path from 'path';
+import { logger } from '../services/logger.service.js';
+import { approveAdminOrder, cancelAdminOrder, getAdminOrderReceiptFilename, getAdminOrders, getAdminSpeiQueue, triggerSpeiValidationBatch } from '../services/orders.service.js';
+import { AuthenticatedAdminRequest } from '../types/auth.types.js';
 
-export async function getOrdersHandler(req: Request, res: Response): Promise<void> {
+export async function getOrdersHandler(req: AuthenticatedAdminRequest, res: Response): Promise<void> {
   try {
-    const { giveawayUuid, limit, page, search, status } = req.query;
+    const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
+    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 25;
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const search = typeof req.query.search === 'string' ? req.query.search : undefined;
 
-    const result = await ordersService.getOrdersList({
-      giveawayUuid: typeof giveawayUuid === 'string' ? giveawayUuid : undefined,
-      limit: typeof limit === 'string' ? Number(limit) : undefined,
-      page: typeof page === 'string' ? Number(page) : undefined,
-      search: typeof search === 'string' ? search : undefined,
-      status: typeof status === 'string' ? status : undefined,
-    });
-
-    res.status(200).json({
-      data: result.orders,
-      pagination: result.pagination,
-      success: true,
-    });
+    const result = await getAdminOrders({ limit, page, search, status });
+    res.status(200).json(result);
   } catch (error) {
-    logger.app.error('Error al obtener lista administrativa de órdenes', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
+    logger.app.error('Error en getOrdersHandler', error);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 
-export async function getPaymentKpisHandler(_req: Request, res: Response): Promise<void> {
+export async function approveOrderHandler(req: AuthenticatedAdminRequest, res: Response): Promise<void> {
+  const { uuid } = req.params;
+  if (!uuid) {
+    res.status(400).json({ error: 'Identificador de orden requerido.' });
+    return;
+  }
+
+  if (!req.adminUser) {
+    res.status(401).json({ error: 'No autorizado. Sesión de administrador requerida.' });
+    return;
+  }
+  const adminUser = req.adminUser;
+
   try {
-    const kpis = await ordersService.getPaymentKpis();
+    const result = await approveAdminOrder(uuid, adminUser);
     res.status(200).json({
-      data: kpis,
+      message: 'Pago aprobado y boletos confirmados exitosamente.',
+      result,
       success: true,
     });
   } catch (error) {
-    logger.app.error('Error al obtener KPIs de pagos', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
+    logger.app.error(`Error al aprobar orden ${uuid}`, error);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 
-export async function getOrderDetailHandler(req: Request, res: Response): Promise<void> {
+export async function cancelOrderHandler(req: AuthenticatedAdminRequest, res: Response): Promise<void> {
+  const { uuid } = req.params;
+  if (!uuid) {
+    res.status(400).json({ error: 'Identificador de orden requerido.' });
+    return;
+  }
+
+  if (!req.adminUser) {
+    res.status(401).json({ error: 'No autorizado. Sesión de administrador requerida.' });
+    return;
+  }
+  const adminUser = req.adminUser;
+
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason : undefined;
+
   try {
-    const { uuid } = req.params;
-    if (!uuid) {
-      res.status(400).json({
-        error: 'El identificador de la orden es requerido.',
-        success: false,
-      });
-      return;
-    }
-
-    const order = await ordersService.getOrderDetail(uuid);
-    if (!order) {
-      res.status(404).json({
-        error: 'La orden solicitada no fue encontrada.',
-        success: false,
-      });
-      return;
-    }
-
+    const result = await cancelAdminOrder(uuid, adminUser, reason);
     res.status(200).json({
-      data: order,
+      message: 'Orden cancelada y boletos liberados exitosamente.',
+      result,
       success: true,
     });
   } catch (error) {
-    logger.app.error('Error al obtener detalle administrativo de la orden', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
+    logger.app.error(`Error al cancelar orden ${uuid}`, error);
+    res.status(500).json({ error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.' });
   }
 }
 
-export async function approveOrderHandler(req: Request, res: Response): Promise<void> {
+export async function getSpeiQueueHandler(_req: AuthenticatedAdminRequest, res: Response): Promise<void> {
   try {
-    const { uuid } = req.params;
-    const { notes } = req.body || {};
+    const queue = await getAdminSpeiQueue();
+    res.status(200).json({ queue });
+  } catch (error) {
+    logger.app.error('Error en getSpeiQueueHandler', error);
+    res.status(500).json({ error: 'Ha ocurrido un error al consultar la cola SPEI.' });
+  }
+}
 
-    if (!uuid) {
-      res.status(400).json({
-        error: 'El identificador de la orden es requerido.',
-        success: false,
-      });
-      return;
-    }
-
-    const result = await ordersService.approveOrderManual(uuid, typeof notes === 'string' ? notes.trim() : undefined);
-    if (!result.success) {
-      res.status(400).json({
-        error: 'No fue posible aprobar la orden especificada. Verifica que pertenezca a un sorteo activo.',
-        success: false,
-      });
-      return;
-    }
-
+export async function triggerSpeiBatchHandler(_req: AuthenticatedAdminRequest, res: Response): Promise<void> {
+  try {
+    const result = await triggerSpeiValidationBatch();
     res.status(200).json({
-      data: result.order,
-      message: 'Pago aprobado y boletos liquidados exitosamente.',
+      message: `Procesamiento de cola SPEI finalizado (${result.processed} transferencias validadas).`,
+      processed: result.processed,
       success: true,
     });
   } catch (error) {
-    logger.app.error('Error al aprobar orden manualmente', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
+    logger.app.error('Error en triggerSpeiBatchHandler', error);
+    res.status(500).json({ error: 'Ha ocurrido un error al procesar el lote de validación SPEI.' });
   }
 }
 
-export async function rejectOrderHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const { uuid } = req.params;
-    const { reason } = req.body || {};
-
-    if (!uuid) {
-      res.status(400).json({
-        error: 'El identificador de la orden es requerido.',
-        success: false,
-      });
-      return;
-    }
-
-    if (!reason || typeof reason !== 'string' || reason.trim().length < 3) {
-      res.status(400).json({
-        error: 'Debes proporcionar un motivo válido para rechazar el comprobante (mínimo 3 caracteres).',
-        success: false,
-      });
-      return;
-    }
-
-    const result = await ordersService.rejectOrderManual(uuid, reason.trim());
-    if (!result.success) {
-      res.status(400).json({
-        error: 'No fue posible rechazar la orden especificada.',
-        success: false,
-      });
-      return;
-    }
-
-    res.status(200).json({
-      data: result.order,
-      message: 'Comprobante rechazado y boletos liberados exitosamente.',
-      success: true,
-    });
-  } catch (error) {
-    logger.app.error('Error al rechazar orden manualmente', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
+export async function getOrderReceiptHandler(req: AuthenticatedAdminRequest, res: Response): Promise<void> {
+  const { uuid } = req.params;
+  if (!uuid) {
+    res.status(400).json({ error: 'Identificador de orden requerido.' });
+    return;
   }
-}
 
-export async function updateTrackingKeyHandler(req: Request, res: Response): Promise<void> {
   try {
-    const { uuid } = req.params;
-    const { trackingKey } = req.body || {};
-
-    if (!uuid) {
-      res.status(400).json({
-        error: 'El identificador de la orden es requerido.',
-        success: false,
-      });
+    const filename = await getAdminOrderReceiptFilename(uuid);
+    if (!filename) {
+      res.status(404).json({ error: 'El comprobante solicitado no fue encontrado.' });
       return;
     }
 
-    if (!trackingKey || typeof trackingKey !== 'string' || trackingKey.trim().length < 5) {
-      res.status(400).json({
-        error: 'La clave de rastreo SPEI debe tener al menos 5 caracteres.',
-        success: false,
-      });
-      return;
-    }
-
-    const updated = await ordersService.updateTrackingKey(uuid, trackingKey);
-    if (!updated) {
-      res.status(400).json({
-        error: 'No fue posible actualizar la clave de rastreo.',
-        success: false,
-      });
-      return;
-    }
-
-    res.status(200).json({
-      data: updated,
-      message: 'Clave de rastreo actualizada y validación automática reprogramada.',
-      success: true,
-    });
-  } catch (error) {
-    logger.app.error('Error al actualizar clave de rastreo', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
-  }
-}
-
-export async function getOrderReceiptHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const { uuid } = req.params;
-    if (!uuid) {
-      res.status(400).json({
-        error: 'El identificador de la orden es requerido.',
-        success: false,
-      });
-      return;
-    }
-
-    const order = await ordersService.getOrderDetail(uuid);
-    if (!order || !order.receipt_filename) {
-      res.status(404).json({
-        error: 'El comprobante solicitado no fue encontrado.',
-        success: false,
-      });
-      return;
-    }
-
-    const cleanFilename = path.basename(order.receipt_filename);
-    const s3Obj = await getS3Object(`receipts/${cleanFilename}`);
-    if (s3Obj) {
-      res.setHeader('Content-Type', s3Obj.contentType);
+    const storageDir = path.join(process.cwd(), 'storage', 'receipts');
+    const directPath = path.join(storageDir, filename);
+    if (fs.existsSync(directPath)) {
       res.setHeader('Cache-Control', 'private, no-cache');
-      res.status(200).send(s3Obj.body);
+      res.sendFile(directPath);
       return;
     }
 
-    res.status(404).json({
-      error: 'El comprobante solicitado no existe en el almacenamiento S3.',
-      success: false,
-    });
-  } catch (error) {
-    logger.app.error('Error al transmitir comprobante en Admin', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
-  }
-}
-
-export async function retrySpeiHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const { uuid } = req.params;
-    if (!uuid) {
-      res.status(400).json({
-        error: 'El identificador de la orden es requerido.',
-        success: false,
-      });
+    const legacyPath = path.join(process.cwd(), 'public', 'uploads', 'receipts', filename);
+    if (fs.existsSync(legacyPath)) {
+      res.setHeader('Cache-Control', 'private, no-cache');
+      res.sendFile(legacyPath);
       return;
     }
 
-    const updated = await ordersService.retrySpeiVerification(uuid);
-    if (!updated) {
-      res.status(404).json({
-        error: 'La orden solicitada no fue encontrada.',
-        success: false,
-      });
-      return;
-    }
-
-    res.status(200).json({
-      data: updated,
-      message: 'Validación SPEI reenviada al procesador Banxico en segundo plano.',
-      success: true,
-    });
+    res.status(404).json({ error: 'El comprobante solicitado no existe en el almacenamiento.' });
   } catch (error) {
-    logger.app.error('Error al forzar reintento SPEI en Admin', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
+    logger.app.error(`Error al consultar comprobante de orden ${uuid}`, error);
+    res.status(500).json({ error: 'Error al obtener el comprobante de la orden.' });
   }
 }
-
-export async function getReconciliationHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : undefined;
-    const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : undefined;
-
-    const data = await ordersService.getCashReconciliation(startDate, endDate);
-    res.status(200).json({
-      data,
-      success: true,
-    });
-  } catch (error) {
-    logger.app.error('Error al consultar conciliación de caja', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
-  }
-}
-
-export async function exportReconciliationCsvHandler(req: Request, res: Response): Promise<void> {
-  try {
-    const startDate = typeof req.query.startDate === 'string' ? req.query.startDate : undefined;
-    const endDate = typeof req.query.endDate === 'string' ? req.query.endDate : undefined;
-
-    const csvData = await ordersService.exportReconciliationCsv(startDate, endDate);
-    const filename = `corte_caja_${new Date().toISOString().slice(0, 10)}.csv`;
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.status(200).send('\uFEFF' + csvData);
-  } catch (error) {
-    logger.app.error('Error al exportar conciliación de caja en CSV', error);
-    res.status(500).json({
-      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
-      success: false,
-    });
-  }
-}
-

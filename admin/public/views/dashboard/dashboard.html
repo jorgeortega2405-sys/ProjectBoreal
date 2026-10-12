@@ -1,197 +1,127 @@
-<div class="component-wrapper component-wrapper--full view-wrapper" data-ref="admin-dashboard-view">
+<div class="component-wrapper component-wrapper--full dashboard-wrapper view-wrapper" data-ref="dashboard-wrapper">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="dashboard-scrollable">
-      <div class="view-header" data-ref="dashboard-floating-top">
-        <div class="view-header__left" data-ref="dashboard-floating-left">
-          <h1 class="view-header__title" data-ref="dashboard-title" data-i18n="admin.title">Dashboard</h1>
+    <div class="view-body" data-ref="dashboard-body">
+      <div class="view-backdrop" data-ref="dashboard-gradient-backdrop"></div>
+
+      <div class="view-header" data-ref="dashboard-header">
+        <div class="view-header__left" data-ref="dashboard-header-left">
+          <h1 class="view-header__title" data-ref="dashboard-title">
+            <span class="view-header__title-name">Panel de Control & Rendimiento</span>
+          </h1>
         </div>
 
-        <div class="view-header__right" data-ref="dashboard-floating-right">
-          <div class="view-header__actions" data-ref="dashboard-default-actions">
-            <div class="settings-dropdown-wrapper" data-ref="period-dropdown-wrapper">
-              <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-period" data-tooltip="Rango de tiempo" aria-label="Rango de tiempo">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#calendar_today"></use></svg>
-              </button>
-
-              <div class="dropdown-backdrop" data-ref="period-dropdown-backdrop">
-                <div class="menu-panel menu-panel--dropdown menu-panel--w-200 menu-panel--h-auto" data-ref="period-dropdown-menu">
-                  <div class="avatar-menu__section-header">
-                    <span class="drawer-section__title" data-i18n="dashboard.period_title">Rango de tiempo</span>
-                  </div>
-                  <div class="menu-panel__list" data-ref="period-list">
-                    <button type="button" class="menu-item" data-ref="btn-period-7d" data-period="7d">
-                      <span class="menu-item__text" data-i18n="dashboard.period.d7">7 días</span>
-                    </button>
-                    <button type="button" class="menu-item is-active" data-ref="btn-period-30d" data-period="30d">
-                      <span class="menu-item__text" data-i18n="dashboard.period.d30">30 días</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="btn-period-90d" data-period="90d">
-                      <span class="menu-item__text" data-i18n="dashboard.period.d90">90 días</span>
-                    </button>
-                    <button type="button" class="menu-item" data-ref="btn-period-year" data-period="year">
-                      <span class="menu-item__text" data-i18n="dashboard.period.year">1 año</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div class="view-header__right" data-ref="dashboard-header-right">
+          <div class="view-header__actions" data-ref="dashboard-actions">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-dashboard" data-tooltip="Actualizar métricas" aria-label="Actualizar métricas">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            </button>
           </div>
         </div>
       </div>
 
-      <div class="view-body admin-view-body" data-ref="dashboard-content-container">
-
-        <div class="dashboard-stats-grid" data-ref="dashboard-stats-grid">
-          <div class="dashboard-stat-card" data-ref="card-stat-revenue">
-            <div class="dashboard-stat-card__header">
-              <span class="dashboard-stat-card__title" data-i18n="dashboard.kpi.revenue_title">Ingresos Totales</span>
-              <span class="stat-trend-badge" data-ref="stat-revenue-trend">+0% vs ant.</span>
+      <div class="admin-view-content" data-ref="dashboard-content">
+        <div class="dashboard-kpis-grid" data-ref="dashboard-kpis-grid">
+        <div class="dashboard-kpi-card" data-ref="kpi-revenue">
+          <div class="dashboard-kpi-card__header">
+            <span class="dashboard-kpi-card__title">Total Recaudado</span>
+            <div class="dashboard-kpi-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
             </div>
-            <div class="stat-card-value" data-ref="stat-revenue-value">$0.00 MXN</div>
-            <span class="dashboard-stat-card__desc" data-ref="stat-revenue-sub">Órdenes pagadas</span>
           </div>
-
-          <div class="dashboard-stat-card" data-ref="card-stat-tickets">
-            <div class="dashboard-stat-card__header">
-              <span class="dashboard-stat-card__title" data-i18n="dashboard.kpi.tickets_title">Boletos Vendidos</span>
-              <span class="stat-trend-badge" data-ref="stat-tickets-trend">+0% vs ant.</span>
-            </div>
-            <div class="stat-card-value" data-ref="stat-tickets-value">0</div>
-            <span class="dashboard-stat-card__desc" data-ref="stat-tickets-sub">Total emitidos</span>
-          </div>
-
-          <div class="dashboard-stat-card" data-ref="card-stat-giveaways">
-            <div class="dashboard-stat-card__header">
-              <span class="dashboard-stat-card__title" data-i18n="dashboard.kpi.giveaways_title">Sorteos Activos</span>
-              <span class="stat-trend-badge">Operativos</span>
-            </div>
-            <div class="stat-card-value" data-ref="stat-giveaways-value">0</div>
-            <span class="dashboard-stat-card__desc" data-ref="stat-giveaways-sub">En venta abierta</span>
-          </div>
-
-          <div class="dashboard-stat-card" data-ref="card-stat-pending">
-            <div class="dashboard-stat-card__header">
-              <span class="dashboard-stat-card__title" data-i18n="dashboard.kpi.pending_title">Órdenes en Revisión</span>
-              <span class="stat-trend-badge">En atención</span>
-            </div>
-            <div class="stat-card-value" data-ref="stat-pending-value">0</div>
-            <span class="dashboard-stat-card__desc" data-ref="stat-pending-sub">Comprobante / SPEI</span>
-          </div>
+          <div class="dashboard-kpi-card__value" data-ref="kpi-val-revenue">$0.00 MXN</div>
+          <div class="dashboard-kpi-card__sub" data-ref="kpi-sub-revenue">$0.00 USD</div>
         </div>
 
-        <div class="dashboard-charts-grid" data-ref="dashboard-charts-grid">
-
-          <div class="dashboard-chart-card" data-ref="chart-card-trends">
-            <div class="dashboard-chart-card__header">
-              <div>
-                <h3 class="dashboard-chart-card__title" data-i18n="dashboard.charts.timeline_title">Crecimiento y Actividad de Ventas</h3>
-                <p class="dashboard-chart-card__desc" data-i18n="dashboard.charts.timeline_desc">Ingresos recaudados ($ MXN) vs boletos vendidos en el tiempo.</p>
-              </div>
-              <div class="dashboard-chart-card__legend">
-                <div class="dashboard-chart-card__legend-item">
-                  <span class="dashboard-chart-dot dashboard-chart-dot--blue"></span>
-                  <span data-i18n="dashboard.charts.metric_revenue">Ingresos ($)</span>
-                </div>
-                <div class="dashboard-chart-card__legend-item">
-                  <span class="dashboard-chart-dot dashboard-chart-dot--orange"></span>
-                  <span data-i18n="dashboard.charts.metric_tickets">Boletos (#)</span>
-                </div>
-              </div>
-            </div>
-            <div class="dashboard-chart-wrapper dashboard-chart-wrapper--h280" data-ref="wrapper-chart-trends">
-              <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-trends"></canvas>
+        <div class="dashboard-kpi-card" data-ref="kpi-tickets">
+          <div class="dashboard-kpi-card__header">
+            <span class="dashboard-kpi-card__title">Boletos Vendidos</span>
+            <div class="dashboard-kpi-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified"></use></svg>
             </div>
           </div>
-
-          <div class="dashboard-grid-2col">
-
-            <div class="dashboard-chart-card dashboard-chart-card--flex-between" data-ref="chart-card-tiers">
-              <div>
-                <h3 class="dashboard-chart-card__title" data-i18n="dashboard.charts.status_title">Distribución de Órdenes</h3>
-                <p class="dashboard-chart-card__desc" data-i18n="dashboard.charts.status_desc">Distribución proporcional según el ciclo de compra.</p>
-              </div>
-              <div class="dashboard-chart-wrapper dashboard-chart-wrapper--h200" data-ref="wrapper-chart-tiers">
-                <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-tiers"></canvas>
-              </div>
-              <div class="dashboard-tier-legend" data-ref="dashboard-tier-legend">
-                <div class="dashboard-tier-legend__item">
-                  <div class="dashboard-tier-legend__header">
-                    <span class="dashboard-chart-dot dashboard-chart-dot--round dashboard-chart-dot--green"></span>
-                    <span>Pagadas</span>
-                  </div>
-                  <div class="dashboard-tier-legend__count" data-ref="status-count-completed">-</div>
-                </div>
-                <div class="dashboard-tier-legend__item">
-                  <div class="dashboard-tier-legend__header">
-                    <span class="dashboard-chart-dot dashboard-chart-dot--round dashboard-chart-dot--blue"></span>
-                    <span>En Revisión</span>
-                  </div>
-                  <div class="dashboard-tier-legend__count" data-ref="status-count-in-review">-</div>
-                </div>
-                <div class="dashboard-tier-legend__item">
-                  <div class="dashboard-tier-legend__header">
-                    <span class="dashboard-chart-dot dashboard-chart-dot--round dashboard-chart-dot--yellow"></span>
-                    <span>Pendientes</span>
-                  </div>
-                  <div class="dashboard-tier-legend__count" data-ref="status-count-pending">-</div>
-                </div>
-                <div class="dashboard-tier-legend__item">
-                  <div class="dashboard-tier-legend__header">
-                    <span class="dashboard-chart-dot dashboard-chart-dot--round dashboard-chart-dot--red"></span>
-                    <span>Canceladas</span>
-                  </div>
-                  <div class="dashboard-tier-legend__count" data-ref="status-count-cancelled">-</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="dashboard-chart-card dashboard-chart-card--flex-between" data-ref="chart-card-giveaways">
-              <div>
-                <h3 class="dashboard-chart-card__title" data-i18n="dashboard.charts.giveaways_title">Avance por Sorteo</h3>
-                <p class="dashboard-chart-card__desc" data-i18n="dashboard.charts.giveaways_desc">Boletos pagados contra el cupo total del sorteo.</p>
-              </div>
-              <div class="dashboard-chart-wrapper dashboard-chart-wrapper--h240" data-ref="wrapper-chart-giveaways">
-                <canvas class="dashboard-chart-canvas" data-ref="canvas-chart-giveaways"></canvas>
-              </div>
-            </div>
-          </div>
+          <div class="dashboard-kpi-card__value" data-ref="kpi-val-tickets">0</div>
+          <div class="dashboard-kpi-card__sub" data-ref="kpi-sub-tickets">Boletos pagados confirmados</div>
         </div>
 
-        <div class="dashboard-grid-cards">
-
-          <div class="dashboard-chart-card" data-ref="table-card-recent-orders">
-            <div>
-              <h3 class="dashboard-chart-card__title" data-i18n="dashboard.recent_orders.title">Órdenes Recientes</h3>
-              <p class="dashboard-chart-card__desc" data-i18n="dashboard.recent_orders.desc">Últimas compras registradas en la plataforma.</p>
-            </div>
-            <div class="component-table-wrapper component-table-wrapper--rounded is-hidden" data-ref="table-responsive-wrapper">
-              <table class="component-table" data-ref="table-recent-orders">
-                <thead>
-                  <tr>
-                    <th data-i18n="dashboard.recent_orders.col_order">Folio</th>
-                    <th data-i18n="dashboard.recent_orders.col_customer">Cliente</th>
-                    <th data-i18n="dashboard.recent_orders.col_giveaway">Sorteo</th>
-                    <th data-i18n="dashboard.recent_orders.col_tickets">Boletos</th>
-                    <th data-i18n="dashboard.recent_orders.col_amount">Monto</th>
-                    <th data-i18n="dashboard.recent_orders.col_status">Estado</th>
-                    <th data-i18n="dashboard.recent_orders.col_date">Fecha</th>
-                  </tr>
-                </thead>
-                <tbody data-ref="table-body-recent-orders">
-                </tbody>
-              </table>
+        <div class="dashboard-kpi-card" data-ref="kpi-giveaways">
+          <div class="dashboard-kpi-card__header">
+            <span class="dashboard-kpi-card__title">Sorteos Activos</span>
+            <div class="dashboard-kpi-card__icon-box">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#inventory_2"></use></svg>
             </div>
           </div>
-
-          <div class="dashboard-chart-card" data-ref="gateways-card">
-            <div>
-              <h3 class="dashboard-chart-card__title" data-i18n="dashboard.gateways.title">Estado de Pasarelas & SPEI</h3>
-              <p class="dashboard-chart-card__desc" data-i18n="dashboard.gateways.desc">Monitoreo de latencia y disponibilidad de pasarelas.</p>
-            </div>
-            <div class="dashboard-gateways-list" data-ref="gateway-status-list">
-            </div>
-          </div>
+          <div class="dashboard-kpi-card__value" data-ref="kpi-val-giveaways">0</div>
+          <div class="dashboard-kpi-card__sub" data-ref="kpi-sub-giveaways">Disponibles al público</div>
         </div>
 
+        <div class="dashboard-kpi-card dashboard-kpi-card--actionable" data-ref="kpi-reviews">
+          <div class="dashboard-kpi-card__header">
+            <span class="dashboard-kpi-card__title">Pagos por Revisar</span>
+            <div class="dashboard-kpi-card__icon-box dashboard-kpi-card__icon-box--warning">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+            </div>
+          </div>
+          <div class="dashboard-kpi-card__value" data-ref="kpi-val-reviews">0</div>
+          <div class="dashboard-kpi-card__sub" data-ref="kpi-sub-reviews">Comprobantes en espera de validación</div>
+        </div>
+      </div>
+
+      <div class="dashboard-alerts-section" data-ref="dashboard-alerts-section" style="display: none;">
+        <div class="dashboard-section-header" data-ref="alerts-section-header">
+          <h2 class="dashboard-section-title">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#notifications"></use></svg>
+            <span>Alertas y Umbrales Activos</span>
+          </h2>
+        </div>
+        <div class="dashboard-alerts-list" data-ref="dashboard-alerts-list"></div>
+      </div>
+
+      <div class="dashboard-recent-section" data-ref="dashboard-recent-section">
+        <div class="dashboard-section-header" data-ref="recent-section-header">
+          <div class="dashboard-section-header__titles">
+            <h2 class="dashboard-section-title">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+              <span>Órdenes Recientes</span>
+            </h2>
+            <span class="dashboard-section-subtitle">Últimas solicitudes y comprobantes subidos</span>
+          </div>
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-view-all-orders">
+            <span>Ver todas las órdenes</span>
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#arrow_forward"></use></svg>
+          </button>
+        </div>
+
+        <div class="orders-skeleton" data-ref="dashboard-skeleton">
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+        </div>
+
+        <div class="dashboard-recent-table-wrapper" data-ref="dashboard-recent-table-wrapper" style="display: none;">
+          <table class="orders-table" data-ref="dashboard-recent-table">
+            <thead>
+              <tr>
+                <th>Referencia</th>
+                <th>Cliente</th>
+                <th>Sorteo</th>
+                <th>Boletos</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th class="orders-col-actions">Acción</th>
+              </tr>
+            </thead>
+            <tbody data-ref="dashboard-recent-body"></tbody>
+          </table>
+        </div>
+
+        <div class="orders-empty" data-ref="dashboard-recent-empty" style="display: none;">
+          <svg class="component-icon orders-empty__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          <p class="orders-empty__title">No hay órdenes registradas</p>
+          <p class="orders-empty__subtitle">Las nuevas órdenes y pagos apartados aparecerán listados aquí.</p>
+        </div>
+      </div>
       </div>
     </div>
   </div>
+</div>

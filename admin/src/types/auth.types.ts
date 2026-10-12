@@ -1,104 +1,33 @@
-import { RowDataPacket } from 'mysql2';
-
-export type AdminRole =
-  | 'AUDITOR'
-  | 'BILLING_AGENT'
-  | 'BILLING_MANAGER'
-  | 'COMPLIANCE_ADMIN'
-  | 'CUSTOMER_SUCCESS'
-  | 'DATA_ANALYST'
-  | 'FINANCE_ADMIN'
-  | 'HR_MANAGER'
-  | 'HR_RECRUITER'
-  | 'OPERATIONS_AGENT'
-  | 'OPERATIONS_MANAGER'
-  | 'SECURITY_ADMIN'
-  | 'SUPER_ADMIN'
-  | 'SUPPORT_MANAGER';
-
-export type RoleCategory = 'data' | 'finance' | 'operations' | 'platform' | 'support';
-
-export interface PermissionDefinition {
-  description: string;
-  display_name: string;
-  id?: number;
-  module: string;
-  name: string;
-}
-
-export interface RoleRecord extends RowDataPacket {
-  category: RoleCategory;
-  created_at?: Date | string;
-  description: string | null;
-  display_name: string;
-  id: number;
-  name: AdminRole;
-  updated_at?: Date | string;
-  user_count?: number;
-}
-
-export interface RoleMatrixItem {
-  category: RoleCategory;
-  description: string;
-  display_name: string;
-  id: number;
-  name: AdminRole;
-  permissions: string[];
-  user_count: number;
-}
-
-export interface AdminUserWithRoles {
-  created_at: Date | string;
-  email: string;
-  id: number;
-  is_active: number;
-  last_login_at: Date | string | null;
-  name: string;
-  permissions: string[];
-  roles: string[];
-  uuid: string;
-}
+import { Request } from 'express';
 
 export interface AdminUser {
-  created_at?: Date | string;
+  created_at?: Date;
   email: string;
   id: number;
   is_active: number;
-  last_login_at?: Date | string | null;
-  name: string;
-  updated_at?: Date | string;
-  uuid: string;
-}
-
-export interface AdminUserRow extends RowDataPacket {
-  created_at: Date;
-  email: string;
-  id: number;
-  is_active: number;
-  last_login_at: Date | null;
   name: string;
   password_hash: string;
-  updated_at: Date;
+  updated_at?: Date;
   uuid: string;
 }
 
-export interface AdminSession {
-  createdAt: number;
+export interface AdminSafeUser {
   email: string;
   id: number;
-  ip: string;
   name: string;
   permissions?: string[];
-  roles?: string[];
-  userAgent: string;
   uuid: string;
 }
 
-export interface SafeAdminUser {
+export interface AdminSessionPayload {
   email: string;
+  exp: number;
+  iat: number;
   id: number;
   name: string;
-  permissions: string[];
-  roles: string[];
   uuid: string;
+}
+
+export interface AuthenticatedAdminRequest extends Request {
+  adminUser?: AdminSafeUser;
 }

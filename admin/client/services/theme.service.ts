@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'boreal_admin_theme';
+const STORAGE_KEY = 'boreal_theme';
 let currentThemeSetting = 'system';
 
 export function getEffectiveTheme(setting = currentThemeSetting): 'dark' | 'light' {
@@ -12,7 +12,7 @@ export function getEffectiveTheme(setting = currentThemeSetting): 'dark' | 'ligh
 
 export function getTheme(): string {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('boreal_theme');
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved && ['system', 'light', 'dark'].includes(saved)) {
       return saved;
     }

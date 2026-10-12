@@ -2,11 +2,13 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  publicDir: path.resolve(import.meta.dirname, 'public'),
+  root: path.resolve(import.meta.dirname),
   build: {
     copyPublicDir: false,
     cssCodeSplit: true,
     emptyOutDir: true,
-    outDir: 'dist/client',
+    outDir: path.resolve(import.meta.dirname, 'dist/client'),
     rollupOptions: {
       output: {
         assetFileNames: 'assets/[name]-[hash][extname]',
@@ -15,25 +17,9 @@ export default defineConfig({
       },
     },
   },
-  publicDir: 'public',
   resolve: {
     alias: {
       '@client': path.resolve(import.meta.dirname, 'client'),
-    },
-  },
-  server: {
-    port: 5175,
-    watch: {
-      binaryInterval: 2000,
-      ignored: [
-        '**/node_modules/**',
-        '**/dist/**',
-        '**/logs/**',
-        '**/.git/**',
-        '**/public/**',
-      ],
-      interval: 2000,
-      usePolling: true,
     },
   },
 });

@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const LOGS_ROOT_DIR = path.resolve(__dirname, '../../logs');
+const LOGS_ROOT_DIR = path.resolve(import.meta.dirname, '../../logs');
 
 export type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
 export type LogCategory = 'app' | 'database' | 'security';
@@ -70,7 +67,7 @@ function sanitize(obj: unknown): unknown {
       if (SENSITIVE_KEYS.has(normalizedKey) || SENSITIVE_PATTERN.test(key)) {
         sanitized[key] = '[REDACTED]';
       } else if (typeof value === 'object' && value !== null) {
-        errorDetailsKey(sanitized, key, sanitize(value));
+        sanitized[key] = sanitize(value);
       } else {
         sanitized[key] = value;
       }
@@ -79,10 +76,6 @@ function sanitize(obj: unknown): unknown {
   }
 
   return obj;
-}
-
-function errorDetailsKey(target: Record<string, unknown>, key: string, val: unknown): void {
-  target[key] = val;
 }
 
 class CategoryLogger {

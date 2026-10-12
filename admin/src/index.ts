@@ -1,45 +1,17 @@
+import apiRoutes from './routes/api.routes.js';
 import { checkCassandraConnection, closeCassandraConnection } from './config/cassandra.config.js';
 import { checkDbConnection, closeDbConnections } from './config/database.config.js';
-import { config, isAllowedOrigin } from './config/env.config.js';
 import { checkRedisConnection, closeRedisConnection } from './config/redis.config.js';
-import { handleAvatarRequest } from './controllers/avatar.controller.js';
-import { requireAuth } from './middlewares/auth.middleware.js';
-import { requestLogger } from './middlewares/request-logger.middleware.js';
-import adminsRoutes from './routes/admins.routes.js';
-import auditRoutes from './routes/audit.routes.js';
-import authRoutes from './routes/auth.routes.js';
-import backupsRoutes from './routes/backups.routes.js';
-import bankAccountsRoutes from './routes/bank-accounts.routes.js';
-import customersRoutes from './routes/customers.routes.js';
-import dashboardRoutes from './routes/dashboard.routes.js';
-import giveawaysRoutes from './routes/giveaways.routes.js';
-import healthRoutes from './routes/health.routes.js';
-import hrRoutes from './routes/hr.routes.js';
-import ordersRoutes from './routes/orders.routes.js';
-import settingsRoutes from './routes/settings.routes.js';
-import winnersRoutes from './routes/winners.routes.js';
-import { logger } from './services/logger.service.js';
-import { checkS3Connection, getS3Object } from './services/s3.service.js';
+import { config } from './config/env.config.js';
+import cookieParser from 'cookie-parser';
 import express, { NextFunction, Request, Response } from 'express';
 import fs from 'fs';
 import http from 'http';
+import { logger } from './services/logger.service.js';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ADMIN_ROOT_DIR = path.resolve(__dirname, '..');
-
-process.on('uncaughtException', (err: Error) => {
-  logger.app.error('Excepción no controlada capturada en proceso Node.js Admin', err);
-});
-
-process.on('unhandledRejection', (reason: unknown) => {
-  logger.app.error('Promesa rechazada no controlada en proceso Node.js Admin', reason);
-});
 
 async function setupClient(app: express.Express, server: http.Server): Promise<void> {
-  const adminRoot = ADMIN_ROOT_DIR;
+  const adminRoot = path.resolve(import.meta.dirname, '..');
 
   if (config.nodeEnv !== 'production') {
     const { createServer } = await import('vite');
@@ -64,18 +36,14 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
         ws: { server },
       },
     });
+
     app.use(vite.middlewares);
+
     app.use('*', async (req: Request, res: Response, next: NextFunction) => {
       const url = req.originalUrl;
-      if (url.startsWith('/api') || req.path.startsWith('/api')) {
-        res.status(404).json({
-          error: 'Endpoint de API no encontrado.',
-          success: false,
-        });
-        return;
-      }
       try {
-        const template = fs.readFileSync(path.resolve(adminRoot, 'index.html'), 'utf-8');
+        const indexPath = path.resolve(adminRoot, 'index.html');
+        const template = fs.readFileSync(indexPath, 'utf-8');
         const html = await vite.transformIndexHtml(url, template);
         res.status(200).set({ 'Content-Type': 'text/html' }).end(html);
       } catch (e) {
@@ -97,21 +65,13 @@ async function setupClient(app: express.Express, server: http.Server): Promise<v
         },
       })
     );
-    app.get('*', (req: Request, res: Response) => {
-      const url = req.originalUrl;
-      if (url.startsWith('/api') || req.path.startsWith('/api')) {
-        res.status(404).json({
-          error: 'Endpoint de API no encontrado.',
-          success: false,
-        });
-        return;
-      }
+    app.get('*', (_req: Request, res: Response) => {
       res.sendFile(path.join(clientDist, 'index.html'));
     });
   }
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    logger.app.error('Error no controlado en middleware o ruta Admin', err);
+    logger.app.error('Error no controlado en middleware o ruta de Admin', err);
     if (res.headersSent) {
       return next(err);
     }
@@ -126,7 +86,6 @@ function createExpressApp(): express.Express {
   const app = express();
 
   app.set('trust proxy', 1);
-  app.set('etag', false);
   app.disable('x-powered-by');
 
   app.use((_req: Request, res: Response, next: NextFunction) => {
@@ -145,85 +104,30 @@ function createExpressApp(): express.Express {
       return next();
     }
     const origin = (req.headers['origin'] || req.headers['referer']) as string | undefined;
-    if (origin && typeof origin === 'string' && !isAllowedOrigin(origin)) {
-      res.status(403).json({ error: 'Acceso denegado por verificación de origen (CSRF).' });
-      return;
+    if (origin && typeof origin === 'string') {
+      const isAllowed = origin.startsWith('http://localhost:')
+        || origin.startsWith('https://localhost:')
+        || origin.startsWith('http://127.0.0.1:')
+        || origin.endsWith('.projectboreal.internal')
+        || origin.includes('projectboreal.com');
+      if (!isAllowed) {
+        res.status(403).json({ error: 'Acceso denegado por verificación de origen (CSRF).' });
+        return;
+      }
     }
     next();
   });
 
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-  app.use(requestLogger);
+  app.use(cookieParser());
 
-  app.use('/api', (_req: Request, res: Response, next: NextFunction) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    next();
-  });
+  app.use('/api', apiRoutes);
 
-  app.get('/api/avatar', handleAvatarRequest);
-  app.get('/api/avatar.svg', handleAvatarRequest);
-  app.use('/api/admins', requireAuth, adminsRoutes);
-  app.use('/api/audit', requireAuth, auditRoutes);
-  app.use('/api/auth', authRoutes);
-  app.use('/api/health', healthRoutes);
-  app.use('/api/backups', requireAuth, backupsRoutes);
-  app.use('/api/bank-accounts', requireAuth, bankAccountsRoutes);
-  app.use('/api/customers', requireAuth, customersRoutes);
-  app.use('/api/dashboard', requireAuth, dashboardRoutes);
-  app.use('/api/giveaways', requireAuth, giveawaysRoutes);
-  app.use('/api/hr', requireAuth, hrRoutes);
-  app.use('/api/orders', requireAuth, ordersRoutes);
-  app.use('/api/settings', requireAuth, settingsRoutes);
-  app.use('/api/winners', requireAuth, winnersRoutes);
-
-  const adminPublicDir = path.resolve(ADMIN_ROOT_DIR, 'public');
-  const rootPublicDir = path.resolve(ADMIN_ROOT_DIR, '..', 'public');
-
-  app.get('/uploads/hr/:filename', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const filename = path.basename(req.params.filename || '');
-      if (!filename) return next();
-      const s3Obj = await getS3Object(`hr/${filename}`);
-      if (s3Obj) {
-        res.setHeader('Content-Type', s3Obj.contentType);
-        res.setHeader('Cache-Control', 'private, no-cache');
-        res.status(200).send(s3Obj.body);
-        return;
-      }
-      next();
-    } catch (_) {
-      next();
-    }
-  });
-
-  app.get('/uploads/:category/:filename', async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const category = path.basename(req.params.category || '');
-      const filename = path.basename(req.params.filename || '');
-      if (!['giveaways', 'winners'].includes(category) || !filename) {
-        return next();
-      }
-      const s3Obj = await getS3Object(`${category}/${filename}`);
-      if (s3Obj) {
-        res.setHeader('Content-Type', s3Obj.contentType);
-        res.setHeader('Cache-Control', 'public, max-age=86400');
-        res.status(200).send(s3Obj.body);
-        return;
-      }
-      next();
-    } catch (_) {
-      next();
-    }
-  });
-
-  app.use('/images', express.static(path.join(adminPublicDir, 'images')));
-  app.use('/images', express.static(path.join(rootPublicDir, 'images')));
+  const adminRoot = path.resolve(import.meta.dirname, '..');
 
   app.use(
-    express.static(adminPublicDir, {
+    express.static(path.join(adminRoot, 'public'), {
       index: false,
       maxAge: config.nodeEnv === 'production' ? '7d' : '1h',
       setHeaders: (res, filePath) => {
@@ -240,46 +144,50 @@ function createExpressApp(): express.Express {
 }
 
 async function startServer(): Promise<void> {
-  const app = createExpressApp();
-  const PORT = config.port;
+  try {
+    await checkDbConnection();
+    await checkRedisConnection();
+    await checkCassandraConnection();
 
-  const server = http.createServer(app);
-  await setupClient(app, server);
+    const app = createExpressApp();
+    const server = http.createServer(app);
 
-  server.listen(PORT, '0.0.0.0', () => {
-    logger.app.info(`Servidor Admin [PID ${process.pid}] escuchando en puerto ${PORT}`);
-  });
+    await setupClient(app, server);
 
-  void checkDbConnection();
-  void checkRedisConnection();
-  void checkCassandraConnection();
-  void checkS3Connection();
-
-  const handleShutdown = async (signal: string) => {
-    logger.app.info(`Servidor Admin [PID ${process.pid}] recibió ${signal}. Drenando conexiones...`);
-    server.close(async () => {
-      try {
-        await Promise.allSettled([
-          closeDbConnections(),
-          closeRedisConnection(),
-          closeCassandraConnection(),
-        ]);
-        logger.app.info(`Servidor Admin [PID ${process.pid}] finalizado exitosamente.`);
-        process.exit(0);
-      } catch (err) {
-        logger.app.error('Error al cerrar conexiones en shutdown de Admin', err);
-        process.exit(1);
-      }
+    const PORT = config.port;
+    server.listen(PORT, () => {
+      logger.app.info(`Servidor Administrativo iniciado exitosamente en http://localhost:${PORT}`);
     });
 
-    setTimeout(() => {
-      logger.app.error('Forzando apagado por timeout en shutdown de Admin.');
-      process.exit(1);
-    }, 10000).unref();
-  };
+    const handleShutdown = (signal: string) => {
+      logger.app.info(`Recibida señal ${signal}. Drenando conexiones del servidor administrativo...`);
+      server.close(async () => {
+        try {
+          await Promise.allSettled([
+            closeDbConnections(),
+            closeRedisConnection(),
+            closeCassandraConnection(),
+          ]);
+          logger.app.info('Servidor administrativo cerrado limpiamente.');
+          process.exit(0);
+        } catch (err) {
+          logger.app.error('Error al cerrar recursos en shutdown de admin', err);
+          process.exit(1);
+        }
+      });
 
-  process.on('SIGTERM', () => void handleShutdown('SIGTERM'));
-  process.on('SIGINT', () => void handleShutdown('SIGINT'));
+      setTimeout(() => {
+        logger.app.error('Forzando cierre de admin por timeout de shutdown.');
+        process.exit(1);
+      }, 10000).unref();
+    };
+
+    process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+    process.on('SIGINT', () => handleShutdown('SIGINT'));
+  } catch (error) {
+    logger.app.error('Fallo crítico al iniciar el servidor administrativo', error);
+    process.exit(1);
+  }
 }
 
 void startServer();

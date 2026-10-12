@@ -1,246 +1,196 @@
-import { pool } from '../config/database.config.js';
-import { redis } from '../config/redis.config.js';
-import { AdminSession, AdminUserRow, SafeAdminUser } from '../types/auth.types.js';
-import { generateSessionToken, verifyPassword } from '../utils/crypto.util.js';
+import bcrypt from 'bcryptjs';
+import cassandra, { types } from 'cassandra-driver';
+import crypto from 'crypto';
+import { AdminSafeUser, AdminSessionPayload } from '../types/auth.types.js';
+import { cassandraClient, isCassandraConnected } from '../config/cassandra.config.js';
+import { config } from '../config/env.config.js';
 import { logger } from './logger.service.js';
-import { getAdminEffectivePermissions, getAdminRoles } from './roles.service.js';
+import { redis } from '../config/redis.config.js';
 
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-const RATE_LIMIT_MAX_ATTEMPTS = 5;
-const RATE_LIMIT_WINDOW_SECONDS = 60 * 15;
-const memorySessions = new Map<string, { expiresAt: number; session: AdminSession }>();
-const memoryRateLimits = new Map<string, { count: number; resetAt: number }>();
+export const ADMIN_COOKIE_NAME = 'boreal_admin_session';
+export const SESSION_TTL_SECONDS = 24 * 60 * 60;
+const SESSION_PREFIX = 'boreal:admin_session:';
+const REVOCATION_PREFIX = 'boreal:admin_revoked:';
 
-export class AuthService {
-  private getSessionKey(token: string): string {
-    return `admin:session:${token}`;
+export async function hashPassword(password: string): Promise<string> {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(password, salt);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
+export function createSessionToken(user: AdminSafeUser): string {
+  if (!config.sessionSecret) {
+    throw new Error('SESSION_SECRET no está configurado.');
   }
+  const now = Math.floor(Date.now() / 1000);
+  const payload: AdminSessionPayload = {
+    email: user.email,
+    exp: now + SESSION_TTL_SECONDS,
+    iat: now,
+    id: user.id,
+    name: user.name,
+    uuid: user.uuid,
+  };
+  const payloadStr = JSON.stringify(payload);
+  const payloadBase64 = Buffer.from(payloadStr, 'utf-8').toString('base64url');
+  const signature = crypto.createHmac('sha256', config.sessionSecret).update(payloadBase64).digest('base64url');
+  return `${payloadBase64}.${signature}`;
+}
 
-  private getRateLimitKey(ip: string, email: string): string {
-    const cleanIp = (ip || 'unknown').replace(/[^a-zA-Z0-9:.]/g, '');
-    const cleanEmail = (email || 'unknown').toLowerCase().trim();
-    return `admin:login_limit:${cleanIp}:${cleanEmail}`;
-  }
+export function verifySessionToken(token: string): AdminSessionPayload | null {
+  try {
+    if (!config.sessionSecret) return null;
+    const parts = token.split('.');
+    if (parts.length !== 2) return null;
+    const [payloadBase64, signature] = parts;
+    const expectedSignature = crypto.createHmac('sha256', config.sessionSecret).update(payloadBase64).digest('base64url');
 
-  private async checkRateLimit(ip: string, email: string): Promise<boolean> {
-    const key = this.getRateLimitKey(ip, email);
-    try {
-      if (redis.status === 'ready') {
-        const attempts = await redis.get(key);
-        if (attempts && parseInt(attempts, 10) >= RATE_LIMIT_MAX_ATTEMPTS) {
-          return false;
-        }
-        return true;
-      }
-    } catch {}
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSignature);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) return null;
 
-    const now = Date.now();
-    const mem = memoryRateLimits.get(key);
-    if (mem) {
-      if (now > mem.resetAt) {
-        memoryRateLimits.delete(key);
-        return true;
-      }
-      if (mem.count >= RATE_LIMIT_MAX_ATTEMPTS) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private async recordFailedAttempt(ip: string, email: string): Promise<void> {
-    const key = this.getRateLimitKey(ip, email);
-    try {
-      if (redis.status === 'ready') {
-        const current = await redis.incr(key);
-        if (current === 1) {
-          await redis.expire(key, RATE_LIMIT_WINDOW_SECONDS);
-        }
-        return;
-      }
-    } catch {}
-
-    const now = Date.now();
-    const mem = memoryRateLimits.get(key);
-    if (!mem || now > mem.resetAt) {
-      memoryRateLimits.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_SECONDS * 1000 });
-    } else {
-      mem.count += 1;
-    }
-  }
-
-  private async clearRateLimit(ip: string, email: string): Promise<void> {
-    const key = this.getRateLimitKey(ip, email);
-    try {
-      if (redis.status === 'ready') {
-        await redis.del(key);
-      }
-    } catch {}
-    memoryRateLimits.delete(key);
-  }
-
-  async login(
-    email: string,
-    password: string,
-    ip: string,
-    userAgent: string
-  ): Promise<{ sessionToken: string; user: SafeAdminUser }> {
-    const normalizedEmail = (email || '').trim().toLowerCase();
-    if (!normalizedEmail || !password) {
-      throw new Error('Credenciales inválidas.');
-    }
-
-    const isAllowed = await this.checkRateLimit(ip, normalizedEmail);
-    if (!isAllowed) {
-      logger.security.warn(`Bloqueo por exceso de intentos de login para IP [${ip}] y usuario [${normalizedEmail}]`);
-      throw new Error('Demasiados intentos fallidos. Por favor espera 15 minutos antes de volver a intentar.');
-    }
-
-    const [rows] = await pool.query<AdminUserRow[]>(
-      'SELECT id, uuid, name, email, password_hash, is_active FROM admin_users WHERE email = ? LIMIT 1',
-      [normalizedEmail]
-    );
-
-    if (rows.length === 0) {
-      await this.recordFailedAttempt(ip, normalizedEmail);
-      logger.security.warn(`Intento de login fallido (usuario no existe): [${normalizedEmail}] desde IP [${ip}]`);
-      throw new Error('Correo electrónico o contraseña incorrectos.');
-    }
-
-    const admin = rows[0];
-
-    if (!admin.is_active) {
-      logger.security.warn(`Intento de login en cuenta inactiva: [${normalizedEmail}] ID [${admin.id}]`);
-      throw new Error('Esta cuenta de administrador se encuentra desactivada.');
-    }
-
-    const isPasswordValid = await verifyPassword(password, admin.password_hash);
-    if (!isPasswordValid) {
-      await this.recordFailedAttempt(ip, normalizedEmail);
-      logger.security.warn(`Intento de login fallido (contraseña incorrecta): [${normalizedEmail}] desde IP [${ip}]`);
-      throw new Error('Correo electrónico o contraseña incorrectos.');
-    }
-
-    await this.clearRateLimit(ip, normalizedEmail);
-
-    const [roles, permissions] = await Promise.all([
-      getAdminRoles(admin.id),
-      getAdminEffectivePermissions(admin.id),
-    ]);
-
-    const sessionToken = generateSessionToken();
-    const sessionData: AdminSession = {
-      createdAt: Date.now(),
-      email: admin.email,
-      id: admin.id,
-      ip,
-      name: admin.name,
-      permissions,
-      roles,
-      userAgent,
-      uuid: admin.uuid,
-    };
-
-    const redisKey = this.getSessionKey(sessionToken);
-    try {
-      if (redis.status === 'ready') {
-        await redis.set(redisKey, JSON.stringify(sessionData), 'EX', SESSION_TTL_SECONDS);
-      }
-    } catch (err) {
-      logger.db.warn('Fallo al persistir sesión admin en Redis. Almacenando en memoria.', err);
-    }
-
-    memorySessions.set(sessionToken, {
-      expiresAt: Date.now() + SESSION_TTL_SECONDS * 1000,
-      session: sessionData,
-    });
-
-    void pool
-      .query('UPDATE admin_users SET last_login_at = NOW() WHERE id = ?', [admin.id])
-      .catch((err) => {
-        logger.db.warn('No se pudo actualizar last_login_at para admin', err);
-      });
-
-    logger.security.info(`Login exitoso de administrador: [${admin.email}] ID [${admin.id}] desde IP [${ip}]`, {
-      permissionsCount: permissions.length,
-      roles,
-    });
-
-    return {
-      sessionToken,
-      user: {
-        email: admin.email,
-        id: admin.id,
-        name: admin.name,
-        permissions,
-        roles,
-        uuid: admin.uuid,
-      },
-    };
-  }
-
-  async verifySession(sessionToken: string): Promise<SafeAdminUser | null> {
-    if (!sessionToken || typeof sessionToken !== 'string') {
-      return null;
-    }
-
-    let baseSession: AdminSession | null = null;
-    const redisKey = this.getSessionKey(sessionToken);
-
-    try {
-      if (redis.status === 'ready') {
-        const raw = await redis.get(redisKey);
-        if (raw) {
-          baseSession = JSON.parse(raw) as AdminSession;
-        }
-      }
-    } catch {}
-
-    if (!baseSession) {
-      const mem = memorySessions.get(sessionToken);
-      if (mem) {
-        if (Date.now() > mem.expiresAt) {
-          memorySessions.delete(sessionToken);
-          return null;
-        }
-        baseSession = mem.session;
-      }
-    }
-
-    if (!baseSession) {
-      return null;
-    }
-
-    const [roles, permissions] = await Promise.all([
-      getAdminRoles(baseSession.id),
-      getAdminEffectivePermissions(baseSession.id),
-    ]);
-
-    return {
-      email: baseSession.email,
-      id: baseSession.id,
-      name: baseSession.name,
-      permissions,
-      roles,
-      uuid: baseSession.uuid,
-    };
-  }
-
-  async logout(sessionToken: string): Promise<void> {
-    if (!sessionToken || typeof sessionToken !== 'string') {
-      return;
-    }
-
-    const redisKey = this.getSessionKey(sessionToken);
-    try {
-      if (redis.status === 'ready') {
-        await redis.del(redisKey);
-      }
-    } catch {}
-
-    memorySessions.delete(sessionToken);
+    const payloadStr = Buffer.from(payloadBase64, 'base64url').toString('utf-8');
+    const payload = JSON.parse(payloadStr) as AdminSessionPayload;
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp && payload.exp < now) return null;
+    return payload;
+  } catch {
+    return null;
   }
 }
 
-export const authService = new AuthService();
-export default authService;
+export async function storeSession(token: string, user: AdminSafeUser): Promise<void> {
+  try {
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      await redis.set(`${SESSION_PREFIX}${tokenHash}`, JSON.stringify(user), 'EX', SESSION_TTL_SECONDS);
+    }
+  } catch (err) {
+    logger.security.warn('Error al guardar sesión en Redis para Admin', err);
+  }
+}
+
+export async function isSessionRevoked(token: string): Promise<boolean> {
+  try {
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const revoked = await redis.get(`${REVOCATION_PREFIX}${tokenHash}`);
+      return revoked === '1';
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export async function revokeSession(token: string): Promise<void> {
+  try {
+    if (redis.status === 'ready' || redis.status === 'connect') {
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      await redis.del(`${SESSION_PREFIX}${tokenHash}`);
+      await redis.set(`${REVOCATION_PREFIX}${tokenHash}`, '1', 'EX', SESSION_TTL_SECONDS);
+    }
+  } catch (err) {
+    logger.security.warn('Error al revocar sesión en Redis para Admin', err);
+  }
+}
+
+export async function logAdminAudit(params: {
+  action: string;
+  adminUser?: { email: string; id?: number; name?: string; uuid?: string } | null;
+  amount?: number | null;
+  currency?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  details?: Record<string, unknown>;
+  ipAddress?: string;
+  newStatus?: string | null;
+  orderId?: number | null;
+  orderUuid?: string | null;
+  previousStatus?: string | null;
+  userAgent?: string;
+}): Promise<void> {
+  const auditUuid = crypto.randomUUID();
+  const timeId = types.TimeUuid.now();
+  const now = new Date();
+  const bucketMonth = now.toISOString().slice(0, 7);
+  const adminName = params.adminUser?.name || params.adminUser?.email || 'Admin';
+  const detailsJson = params.details ? JSON.stringify(params.details) : null;
+  const ip = (params.ipAddress || '127.0.0.1').slice(0, 45);
+  const ua = (params.userAgent || 'ProjectBoreal/Admin').slice(0, 500);
+
+  try {
+    if (isCassandraConnected) {
+      const orderIdVal = params.orderId ? types.Long.fromNumber(params.orderId) : null;
+      const amountVal = params.amount !== null && params.amount !== undefined ? types.BigDecimal.fromString(String(params.amount)) : null;
+
+      const queries = [
+        {
+          params: [
+            auditUuid,
+            timeId,
+            orderIdVal,
+            params.orderUuid ?? null,
+            params.customerPhone ?? null,
+            params.customerName ?? null,
+            params.action,
+            'admin',
+            ip,
+            ua,
+            params.previousStatus ?? null,
+            params.newStatus ?? null,
+            amountVal,
+            params.currency ?? null,
+            detailsJson,
+            now,
+          ],
+          query: `INSERT INTO audit_logs (
+            uuid, id, order_id, order_uuid, customer_phone, customer_name,
+            action, actor_type, ip_address, user_agent,
+            previous_status, new_status, amount, currency, details, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        },
+        {
+          params: [
+            bucketMonth,
+            now,
+            timeId,
+            auditUuid,
+            orderIdVal,
+            params.orderUuid ?? null,
+            params.customerPhone ?? null,
+            params.customerName ?? null,
+            params.action,
+            'admin',
+            ip,
+            ua,
+            params.previousStatus ?? null,
+            params.newStatus ?? null,
+            amountVal,
+            params.currency ?? null,
+            detailsJson,
+          ],
+          query: `INSERT INTO audit_logs_timeline (
+            bucket_month, created_at, id, uuid, order_id, order_uuid,
+            customer_phone, customer_name, action, actor_type, ip_address, user_agent,
+            previous_status, new_status, amount, currency, details
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        },
+      ];
+      await cassandraClient.batch(queries, { prepare: true });
+    }
+
+    logger.security.info(`ADMIN AUDIT: [${params.action}] User: ${adminName}`, {
+      action: params.action,
+      adminUser: params.adminUser?.email,
+      details: params.details,
+      ipAddress: ip,
+      uuid: auditUuid,
+    });
+  } catch (err) {
+    logger.security.error('Fallo al registrar log de auditoría para Admin en Cassandra', err);
+  }
+}

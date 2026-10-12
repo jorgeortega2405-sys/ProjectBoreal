@@ -1,53 +1,23 @@
-import { ensureSidebarMounted, setupLayoutScrollSync, unmountSidebar, updateSidebarActiveState } from './components/layout.component.js';
-import { closeAllModals } from './components/modal.component.js';
+import { checkAuth, getCurrentUser } from './services/api.service.js';
+import { destroySidebar, ensureSidebarMounted, setupLayoutScrollSync, updateSidebarActiveState } from './components/layout.component.js';
 import { findRoute } from './config/routes.config.js';
-import { createAdminSkeletonElement } from './config/skeleton-routes.js';
-import { checkAuth, clearAuthState } from './services/auth.service.js';
-import { translateElement } from './services/i18n.service.js';
-import { showToast } from './services/toast.service.js';
-import { hideTooltip } from './services/tooltip.service.js';
 import { ViewController } from './types/common.types.js';
-import { canAccessRoute, getDefaultLandingRoute } from './utils/permission.util.js';
 
 let activeViewElement: HTMLElement | null = null;
 let currentNavigation = 0;
 let previousPath = '';
-let targetRedirectPath = '';
 
 function normalizePath(rawPath: string): string {
   if (!rawPath || rawPath === '/' || rawPath === '') return '/';
-  const clean = rawPath.replace(/\/+$/, '');
-  return clean === '' ? '/' : clean;
-}
-
-function parseRouteUrl(rawUrl: string): { fullUrl: string; pathname: string; query: URLSearchParams } {
-  try {
-    const urlObj = new URL(rawUrl, window.location.origin);
-    const pathname = normalizePath(urlObj.pathname);
-    return {
-      fullUrl: `${pathname}${urlObj.search}${urlObj.hash}`,
-      pathname,
-      query: urlObj.searchParams,
-    };
-  } catch {
-    const [pathAndQuery] = (rawUrl || '').split('#');
-    const [pathPart, queryPart = ''] = pathAndQuery.split('?');
-    const pathname = normalizePath(pathPart);
-    return {
-      fullUrl: rawUrl,
-      pathname,
-      query: new URLSearchParams(queryPart),
-    };
-  }
+  return rawPath.replace(/\/+$/, '');
 }
 
 export function navigate(url: string, replace = false): void {
-  const { fullUrl, pathname } = parseRouteUrl(url);
+  const cleanPath = normalizePath(url);
 
-  const currentFull = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  if (currentFull === fullUrl && !replace) {
+  if (window.location.pathname === cleanPath && !replace) {
     const scrollable = document.querySelector<HTMLElement>(
-      '.view-scrollable, .dashboard-scrollable, .layout-scrollable, .layout-body--scrollable, .layout-content'
+      '.view-scrollable, .home-scrollable, .layout-scrollable, .layout-body--scrollable, .layout-content'
     );
     if (scrollable) {
       scrollable.scrollTo({ behavior: 'smooth', top: 0 });
@@ -58,48 +28,39 @@ export function navigate(url: string, replace = false): void {
   previousPath = window.location.pathname;
 
   if (replace) {
-    window.history.replaceState({}, '', fullUrl);
+    window.history.replaceState({}, '', cleanPath);
   } else {
-    window.history.pushState({}, '', fullUrl);
+    window.history.pushState({}, '', cleanPath);
   }
 
-  const sidebar = document.querySelector<HTMLElement>('[data-ref="sidebar"], .layout-nav');
-  if (sidebar) {
-    updateSidebarActiveState(sidebar, pathname);
-  }
-
-  void render(pathname);
+  void render(cleanPath);
 }
 
 export async function render(rawPath = window.location.pathname): Promise<void> {
-  const { pathname: path } = parseRouteUrl(rawPath);
-  closeAllModals();
-  hideTooltip();
+  let path = normalizePath(rawPath);
+  const navId = ++currentNavigation;
 
   const appRoot = document.querySelector<HTMLElement>('[data-ref="app"]');
   if (!appRoot) return;
 
-  const user = await checkAuth();
+  const isAuth = getCurrentUser() !== null || (await checkAuth());
 
-  if (!user) {
-    if (path !== '/login' && path !== '/iniciar-sesion') {
-      targetRedirectPath = path !== '/' ? path : '';
-      window.history.replaceState({}, '', '/login');
+  if (!isAuth && path !== '/login') {
+    path = '/login';
+    window.history.replaceState({}, '', '/login');
+  } else if (isAuth && path === '/login') {
+    path = '/';
+    window.history.replaceState({}, '', '/');
+  }
+
+  if (navId !== currentNavigation) return;
+
+  if (path === '/login') {
+    destroySidebar();
+    const existingLayout = appRoot.querySelector<HTMLElement>('.layout-content');
+    if (existingLayout) {
+      existingLayout.remove();
     }
-
-    unmountSidebar();
-
-    let layoutContent = appRoot.querySelector<HTMLElement>('.layout-content');
-    if (!layoutContent) {
-      layoutContent = document.createElement('div');
-      layoutContent.className = 'layout-content layout-content--auth';
-      layoutContent.setAttribute('data-ref', 'app-layout');
-      appRoot.appendChild(layoutContent);
-    } else {
-      layoutContent.classList.add('layout-content--auth');
-    }
-
-    const navId = ++currentNavigation;
 
     if (activeViewElement) {
       const controller = (activeViewElement as any)?.__controller as ViewController | undefined;
@@ -111,89 +72,31 @@ export async function render(rawPath = window.location.pathname): Promise<void> 
       activeViewElement.remove();
       activeViewElement = null;
     }
-
-    const loginSkeleton = createAdminSkeletonElement('login');
-    activeViewElement = loginSkeleton;
-    layoutContent.appendChild(loginSkeleton);
-    layoutContent.scrollTop = 0;
 
     const { createLoginView } = await import('./views/login.view.js');
-    const loginViewElement = await createLoginView();
+    const loginEl = await createLoginView();
 
-    if (navId !== currentNavigation || !loginViewElement) {
-      return;
-    }
+    if (navId !== currentNavigation) return;
 
-    if (activeViewElement) {
-      const controller = (activeViewElement as any)?.__controller as ViewController | undefined;
-      if (controller && typeof controller.destroy === 'function') {
-        try {
-          controller.destroy();
-        } catch {}
-      }
-      activeViewElement.remove();
-      activeViewElement = null;
-    }
-
-    activeViewElement = loginViewElement;
-    translateElement(loginViewElement);
-    layoutContent.appendChild(loginViewElement);
+    activeViewElement = loginEl;
+    appRoot.appendChild(loginEl);
     previousPath = '/login';
     return;
   }
 
-  if (path === '/login' || path === '/iniciar-sesion') {
-    const fallbackRoute = getDefaultLandingRoute();
-    const destination = targetRedirectPath && canAccessRoute(targetRedirectPath) ? targetRedirectPath : fallbackRoute;
-    targetRedirectPath = '';
-    navigate(destination, true);
-    return;
-  }
-
-  if (!canAccessRoute(path)) {
-    const fallbackRoute = getDefaultLandingRoute();
-    if (path !== '/' && path !== '/dashboard') {
-      showToast('No cuentas con permisos para acceder a esa sección.', 'warning');
-    }
-    if (fallbackRoute !== path) {
-      navigate(fallbackRoute, true);
-      return;
-    }
-  }
-
   let layoutContent = appRoot.querySelector<HTMLElement>('.layout-content');
   if (!layoutContent) {
+    appRoot.innerHTML = '';
     layoutContent = document.createElement('div');
     layoutContent.className = 'layout-content';
     layoutContent.setAttribute('data-ref', 'app-layout');
     appRoot.appendChild(layoutContent);
-  } else {
-    layoutContent.classList.remove('layout-content--auth');
   }
 
   const sidebar = await ensureSidebarMounted(layoutContent);
   updateSidebarActiveState(sidebar, path);
 
-  const navId = ++currentNavigation;
   const matched = findRoute(path);
-  const routeId = matched ? matched.route.id : 'not-found';
-
-  if (activeViewElement) {
-    const controller = (activeViewElement as any)?.__controller as ViewController | undefined;
-    if (controller && typeof controller.destroy === 'function') {
-      try {
-        controller.destroy();
-      } catch {}
-    }
-    activeViewElement.remove();
-    activeViewElement = null;
-  }
-
-  const skeletonElement = createAdminSkeletonElement(routeId);
-  activeViewElement = skeletonElement;
-  layoutContent.appendChild(skeletonElement);
-  layoutContent.scrollTop = 0;
-
   let nextViewElement: HTMLElement | null = null;
 
   try {
@@ -205,12 +108,12 @@ export async function render(rawPath = window.location.pathname): Promise<void> 
         query: new URLSearchParams(window.location.search),
       });
     } else {
-      const { createNotFoundView } = await import('./views/not-found.view.js');
-      nextViewElement = await createNotFoundView();
+      const { createDashboardView } = await import('./views/dashboard.view.js');
+      nextViewElement = await createDashboardView();
     }
   } catch {
-    const { createNotFoundView } = await import('./views/not-found.view.js');
-    nextViewElement = await createNotFoundView();
+    const { createDashboardView } = await import('./views/dashboard.view.js');
+    nextViewElement = await createDashboardView();
   }
 
   if (navId !== currentNavigation || !nextViewElement) {
@@ -229,16 +132,13 @@ export async function render(rawPath = window.location.pathname): Promise<void> 
   }
 
   activeViewElement = nextViewElement;
-  translateElement(nextViewElement);
   layoutContent.appendChild(nextViewElement);
 
-  layoutContent.scrollTop = 0;
   const scrollable = nextViewElement.querySelector<HTMLElement>(
-    '.view-scrollable, .dashboard-scrollable, .layout-scrollable, .layout-body--scrollable'
-  );
-  if (scrollable) {
-    scrollable.scrollTop = 0;
-  }
+    '.view-scrollable, .home-scrollable, .layout-scrollable, .layout-body--scrollable'
+  ) || layoutContent;
+  scrollable.scrollTop = 0;
+
   setupLayoutScrollSync();
   previousPath = path;
 }
@@ -246,16 +146,6 @@ export async function render(rawPath = window.location.pathname): Promise<void> 
 export function initRouter(): void {
   window.addEventListener('popstate', () => {
     void render(window.location.pathname);
-  });
-
-  window.addEventListener('admin:auth-change', () => {
-    void render(window.location.pathname);
-  });
-
-  window.addEventListener('admin:unauthorized', () => {
-    clearAuthState();
-    unmountSidebar();
-    navigate('/login', true);
   });
 
   void render(window.location.pathname);

@@ -446,10 +446,9 @@
   --border-lighter: rgba(0, 0, 0, 0.05);
   --border-transparent-20: rgba(0, 0, 0, 0.12);
   --border-dynamic: 1px solid var(--border-color);
-  --border-subtle-translucent: #00000020;
 
   --overlay-dark: rgba(0, 0, 0, 0.45);
-  --overlay-blur: none;
+  --overlay-blur: blur(6px);
 
   /* Acciones Primarias */
   --action-primary: #111827;
@@ -480,18 +479,17 @@
 
   --accent-primary: var(--sl-color-neutral-900);
   --accent-color: var(--sl-color-neutral-900);
-  --color-primary: var(--sl-color-neutral-900);
   --accent-pink: #ea580c;
   --accent-pink-subtle: rgba(234, 88, 12, 0.14);
   --accent-pink-hover: rgba(234, 88, 12, 0.22);
   --accent-pink-border: rgba(234, 88, 12, 0.35);
-  --hero-gradient: linear-gradient(315deg, #fff7ed 0%, #ffedd5 20%, #fed7aa 40%, #fb923c 60%, #ea580c 80%, #dc2626 100%);
+  --hero-gradient: linear-gradient(315deg, #fff7ed 0%, #ffedd5 20%, #fed7aa 40%, #fdba74 60%, #fb923c 80%, #ea580c 100%);
   --theme-gradient: var(--hero-gradient);
   --theme-accent: var(--accent-pink);
   --theme-accent-subtle: var(--accent-pink-subtle);
   --theme-accent-hover: var(--accent-pink-hover);
   --theme-accent-border: var(--accent-pink-border);
-  --title-gradient: linear-gradient(135deg, #431407 0%, #7c2d12 25%, #9a3412 55%, #c2410c 80%, #dc2626 100%);
+  --title-gradient: linear-gradient(135deg, #7c2d12 0%, #9a3412 25%, #c2410c 55%, #ea580c 80%, #f97316 100%);
   --hero-title-gradient: var(--title-gradient);
 
   /* Toasts */
@@ -589,7 +587,6 @@ body.dark-theme {
   --border-lighter: rgba(255, 255, 255, 0.05);
   --border-transparent-20: rgba(255, 255, 255, 0.12);
   --border-dynamic: 1px solid var(--border-color);
-  --border-subtle-translucent: #ffffff20;
 
   --overlay-dark: rgba(0, 0, 0, 0.75);
 
@@ -620,11 +617,11 @@ body.dark-theme {
   --accent-primary: #f4f4f5;
   --accent-color: #f4f4f5;
   --color-primary: #f4f4f5;
-  --accent-pink: #fb923c;
-  --accent-pink-subtle: rgba(251, 146, 60, 0.18);
-  --accent-pink-hover: rgba(251, 146, 60, 0.26);
-  --accent-pink-border: rgba(251, 146, 60, 0.35);
-  --hero-gradient: linear-gradient(315deg, #450a0a 0%, #7c2d12 30%, #9a3412 60%, #ea580c 100%);
+  --accent-pink: #f97316;
+  --accent-pink-subtle: rgba(249, 115, 22, 0.18);
+  --accent-pink-hover: rgba(249, 115, 22, 0.26);
+  --accent-pink-border: rgba(249, 115, 22, 0.35);
+  --hero-gradient: linear-gradient(315deg, #431407 0%, #7c2d12 30%, #9a3412 60%, #ea580c 100%);
   --theme-gradient: var(--hero-gradient);
   --theme-accent: var(--accent-pink);
   --theme-accent-subtle: var(--accent-pink-subtle);
@@ -711,7 +708,6 @@ body.dark-theme {
     --border-lighter: rgba(255, 255, 255, 0.05);
     --border-transparent-20: rgba(255, 255, 255, 0.12);
     --border-dynamic: 1px solid var(--border-color);
-    --border-subtle-translucent: #ffffff20;
 
     --overlay-dark: rgba(0, 0, 0, 0.75);
 
@@ -742,11 +738,11 @@ body.dark-theme {
     --accent-primary: #f4f4f5;
     --accent-color: #f4f4f5;
     --color-primary: #f4f4f5;
-    --accent-pink: #fb923c;
-    --accent-pink-subtle: rgba(251, 146, 60, 0.18);
-    --accent-pink-hover: rgba(251, 146, 60, 0.26);
-    --accent-pink-border: rgba(251, 146, 60, 0.35);
-    --hero-gradient: linear-gradient(315deg, #450a0a 0%, #7c2d12 30%, #9a3412 60%, #ea580c 100%);
+    --accent-pink: #f97316;
+    --accent-pink-subtle: rgba(249, 115, 22, 0.18);
+    --accent-pink-hover: rgba(249, 115, 22, 0.26);
+    --accent-pink-border: rgba(249, 115, 22, 0.35);
+    --hero-gradient: linear-gradient(315deg, #431407 0%, #7c2d12 30%, #9a3412 60%, #ea580c 100%);
     --theme-gradient: var(--hero-gradient);
     --theme-accent: var(--accent-pink);
     --theme-accent-subtle: var(--accent-pink-subtle);
@@ -844,9 +840,4 @@ html.reduce-motion {
     scroll-behavior: auto !important;
   }
 }
-
-.is-hidden {
-  display: none !important;
-}
-
 

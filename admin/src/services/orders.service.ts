@@ -1,62 +1,57 @@
-import { pool } from '../config/database.config.js';
-import { redis } from '../config/redis.config.js';
-import { logger } from './logger.service.js';
+import crypto from 'crypto';
 import { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import { pool } from '../config/database.config.js';
+import { config } from '../config/env.config.js';
+import { deleteCache, deleteCachePattern, publishGiveawayEvent } from '../config/redis.config.js';
+import { AdminOrder, OrderStatus, SpeiQueueItem } from '../types/order.types.js';
+import { logAdminAudit } from './auth.service.js';
+import { logger } from './logger.service.js';
 
-export interface AdminOrderSummary {
+interface OrderRow extends RowDataPacket {
   bank_reference: string | null;
   concept_reference: string;
-  created_at: string;
+  created_at: Date | string;
   currency: string;
   customer_name: string;
   customer_phone: string;
-  customer_state: string | null;
-  expires_at: string;
+  expires_at: Date | string;
   giveaway_id: number;
+  giveaway_slug: string;
   giveaway_title: string;
   giveaway_uuid: string;
   id: number;
   is_winner: number;
   receipt_filename: string | null;
   receipt_url: string | null;
-  spei_attempts: number;
-  spei_last_checked_at: string | null;
-  spei_status: 'pending' | 'verifying' | 'matched' | 'failed' | 'expired' | 'manual_review' | null;
-  status: 'pending_payment' | 'in_review' | 'completed' | 'expired' | 'cancelled';
+  status: OrderStatus;
   ticket_count: number;
-  ticket_numbers: number[];
+  ticket_numbers: string | number[];
   total_amount: number;
   tracking_key: string | null;
-  updated_at: string;
+  updated_at: Date | string;
   uuid: string;
 }
 
-export interface AdminOrderDetail extends AdminOrderSummary {
-  banxico_response: any;
-  giveaway_price: number;
-  giveaway_status: string;
-  giveaway_total_tickets: number;
-  raw_receipt_url?: string;
+interface SpeiRow extends RowDataPacket {
+  attempts: number;
+  banxico_response: string | Record<string, unknown> | null;
+  created_at: Date | string;
+  customer_name: string;
+  customer_phone: string;
+  expected_amount: number;
+  giveaway_title: string;
+  id: number;
+  last_checked_at: Date | string | null;
+  max_attempts: number;
+  next_retry_at: Date | string;
+  order_id: number;
+  order_status: OrderStatus;
+  order_uuid: string;
+  status: 'pending' | 'verifying' | 'matched' | 'failed' | 'expired';
+  tracking_key: string;
 }
 
-export interface CashReconciliationItem {
-  bank_name: string;
-  order_count: number;
-  ticket_count: number;
-  total_amount: number;
-}
-
-export interface CashReconciliationSummary {
-  breakdown: CashReconciliationItem[];
-  endDate: string;
-  startDate: string;
-  totalAmount: number;
-  totalOrders: number;
-  totalTickets: number;
-}
-
-export interface OrdersFilterParams {
-  giveawayUuid?: string;
+export interface GetOrdersOptions {
   limit?: number;
   page?: number;
   search?: string;
@@ -64,757 +59,529 @@ export interface OrdersFilterParams {
 }
 
 export interface OrdersListResult {
-  orders: AdminOrderSummary[];
-  pagination: {
-    currentPage: number;
-    limit: number;
-    totalCount: number;
-    totalPages: number;
-  };
+  orders: AdminOrder[];
+  page: number;
+  total: number;
+  totalPages: number;
 }
 
-export interface PaymentKpis {
-  cancelledCount: number;
-  completedAmount: number;
-  completedCount: number;
-  expiredCount: number;
-  inReviewAmount: number;
-  inReviewCount: number;
-  manualReviewCount: number;
-  pendingPaymentAmount: number;
-  pendingPaymentCount: number;
-  totalOrdersCount: number;
-}
+export async function getAdminOrders(options: GetOrdersOptions = {}): Promise<OrdersListResult> {
+  const page = Math.max(1, Number(options.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(options.limit) || 25));
+  const offset = (page - 1) * limit;
 
-export class OrdersService {
-  async getOrdersList(params: OrdersFilterParams): Promise<OrdersListResult> {
-    const page = Math.max(1, Number(params.page) || 1);
-    const limit = Math.min(100, Math.max(5, Number(params.limit) || 20));
-    const offset = (page - 1) * limit;
+  const whereConditions: string[] = [];
+  const params: unknown[] = [];
 
-    const whereConditions: string[] = [];
-    const queryParams: unknown[] = [];
-
-    if (params.status && params.status !== 'all') {
-      if (params.status === 'manual_review') {
-        whereConditions.push("(o.status = 'in_review' AND q.status = 'manual_review')");
-      } else {
-        whereConditions.push('o.status = ?');
-        queryParams.push(params.status);
-      }
-    }
-
-    if (params.giveawayUuid && params.giveawayUuid !== 'all') {
-      whereConditions.push('g.uuid = ?');
-      queryParams.push(params.giveawayUuid);
-    }
-
-    if (params.search && params.search.trim().length > 0) {
-      const q = `%${params.search.trim().toLowerCase()}%`;
-      whereConditions.push(
-        '(LOWER(o.customer_name) LIKE ? OR o.customer_phone LIKE ? OR LOWER(o.uuid) LIKE ? OR LOWER(COALESCE(o.tracking_key, "")) LIKE ? OR LOWER(COALESCE(o.bank_reference, "")) LIKE ? OR LOWER(COALESCE(o.concept_reference, "")) LIKE ?)'
-      );
-      queryParams.push(q, q, q, q, q, q);
-    }
-
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-    const countQuery = `
-      SELECT COUNT(*) AS total
-      FROM orders o
-      INNER JOIN giveaways g ON o.giveaway_id = g.id
-      LEFT JOIN spei_validation_queue q ON q.order_id = o.id
-      ${whereClause}
-    `;
-
-    const [countRows] = await pool.query<RowDataPacket[]>(countQuery, queryParams);
-    const totalCount = Number(countRows[0]?.total || 0);
-    const totalPages = Math.ceil(totalCount / limit) || 1;
-
-    const selectQuery = `
-      SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
-             o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) AS total_amount,
-             o.currency, o.concept_reference, o.status, o.expires_at, o.receipt_url, o.receipt_filename,
-             o.tracking_key, o.bank_reference, o.is_winner, o.created_at, o.updated_at,
-             g.title AS giveaway_title, g.uuid AS giveaway_uuid,
-             q.status AS spei_status, q.attempts AS spei_attempts, q.last_checked_at AS spei_last_checked_at
-      FROM orders o
-      INNER JOIN giveaways g ON o.giveaway_id = g.id
-      LEFT JOIN spei_validation_queue q ON q.order_id = o.id
-      ${whereClause}
-      ORDER BY
-        CASE
-          WHEN o.status = 'in_review' THEN 1
-          WHEN o.status = 'pending_payment' THEN 2
-          WHEN o.status = 'completed' THEN 3
-          ELSE 4
-        END ASC,
-        o.created_at DESC
-      LIMIT ? OFFSET ?
-    `;
-
-    const [rows] = await pool.query<RowDataPacket[]>(selectQuery, [...queryParams, limit, offset]);
-
-    const orders: AdminOrderSummary[] = rows.map((r) => {
-      let tickets: number[] = [];
-      if (typeof r.ticket_numbers === 'string') {
-        try {
-          tickets = JSON.parse(r.ticket_numbers);
-        } catch {
-          tickets = [];
-        }
-      } else if (Array.isArray(r.ticket_numbers)) {
-        tickets = r.ticket_numbers;
-      }
-
-      return {
-        bank_reference: r.bank_reference || null,
-        concept_reference: r.concept_reference,
-        created_at: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
-        currency: r.currency || 'MXN',
-        customer_name: r.customer_name,
-        customer_phone: r.customer_phone,
-        customer_state: r.customer_state || null,
-        expires_at: r.expires_at instanceof Date ? r.expires_at.toISOString() : String(r.expires_at),
-        giveaway_id: Number(r.giveaway_id),
-        giveaway_title: r.giveaway_title,
-        giveaway_uuid: r.giveaway_uuid,
-        id: Number(r.id),
-        is_winner: Number(r.is_winner || 0),
-        receipt_filename: r.receipt_filename || null,
-        receipt_url: r.receipt_filename ? `/api/orders/${r.uuid}/receipt` : null,
-        spei_attempts: Number(r.spei_attempts || 0),
-        spei_last_checked_at: r.spei_last_checked_at ? (r.spei_last_checked_at instanceof Date ? r.spei_last_checked_at.toISOString() : String(r.spei_last_checked_at)) : null,
-        spei_status: r.spei_status || null,
-        status: r.status,
-        ticket_count: Number(r.ticket_count || 1),
-        ticket_numbers: tickets,
-        total_amount: Number(r.total_amount || 0),
-        tracking_key: r.tracking_key || null,
-        updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at),
-        uuid: r.uuid,
-      };
-    });
-
-    return {
-      orders,
-      pagination: {
-        currentPage: page,
-        limit,
-        totalCount,
-        totalPages,
-      },
-    };
+  if (options.status && options.status !== 'all') {
+    whereConditions.push('o.status = ?');
+    params.push(options.status);
   }
 
-  async getPaymentKpis(): Promise<PaymentKpis> {
-    const [rows] = await pool.query<RowDataPacket[]>(`
-      SELECT
-        COUNT(CASE WHEN o.status = 'in_review' THEN 1 END) AS inReviewCount,
-        COALESCE(SUM(CASE WHEN o.status = 'in_review' THEN o.total_amount ELSE 0 END), 0) AS inReviewAmount,
-        COUNT(CASE WHEN o.status = 'pending_payment' AND o.expires_at > NOW() THEN 1 END) AS pendingPaymentCount,
-        COALESCE(SUM(CASE WHEN o.status = 'pending_payment' AND o.expires_at > NOW() THEN o.total_amount ELSE 0 END), 0) AS pendingPaymentAmount,
-        COUNT(CASE WHEN o.status = 'completed' THEN 1 END) AS completedCount,
-        COALESCE(SUM(CASE WHEN o.status = 'completed' THEN o.total_amount ELSE 0 END), 0) AS completedAmount,
-        COUNT(CASE WHEN o.status = 'cancelled' THEN 1 END) AS cancelledCount,
-        COUNT(CASE WHEN o.status = 'expired' THEN 1 END) AS expiredCount,
-        COUNT(CASE WHEN q.status = 'manual_review' AND o.status = 'in_review' THEN 1 END) AS manualReviewCount,
-        COUNT(*) AS totalOrdersCount
-      FROM orders o
-      LEFT JOIN spei_validation_queue q ON q.order_id = o.id
-    `);
-
-    const r = rows[0] || {};
-    return {
-      cancelledCount: Number(r.cancelledCount || 0),
-      completedAmount: Number(r.completedAmount || 0),
-      completedCount: Number(r.completedCount || 0),
-      expiredCount: Number(r.expiredCount || 0),
-      inReviewAmount: Number(r.inReviewAmount || 0),
-      inReviewCount: Number(r.inReviewCount || 0),
-      manualReviewCount: Number(r.manualReviewCount || 0),
-      pendingPaymentAmount: Number(r.pendingPaymentAmount || 0),
-      pendingPaymentCount: Number(r.pendingPaymentCount || 0),
-      totalOrdersCount: Number(r.totalOrdersCount || 0),
-    };
+  if (options.search && options.search.trim()) {
+    const term = `%${options.search.trim()}%`;
+    whereConditions.push(
+      '(o.concept_reference LIKE ? OR o.customer_name LIKE ? OR o.customer_phone LIKE ? OR o.tracking_key LIKE ?)'
+    );
+    params.push(term, term, term, term);
   }
 
-  async getOrderDetail(orderUuid: string): Promise<AdminOrderDetail | null> {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone, o.customer_state,
-              o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) AS total_amount,
-              o.currency, o.concept_reference, o.status, o.expires_at, o.receipt_url, o.receipt_filename,
-              o.tracking_key, o.bank_reference, o.is_winner, o.created_at, o.updated_at,
-              g.title AS giveaway_title, g.uuid AS giveaway_uuid, g.status AS giveaway_status,
-              CAST(g.ticket_price AS DOUBLE) AS giveaway_price, g.total_tickets AS giveaway_total_tickets,
-              q.status AS spei_status, q.attempts AS spei_attempts, q.last_checked_at AS spei_last_checked_at,
-              q.banxico_response
+  const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+
+  try {
+    const [countRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS total
        FROM orders o
        INNER JOIN giveaways g ON o.giveaway_id = g.id
-       LEFT JOIN spei_validation_queue q ON q.order_id = o.id
-       WHERE o.uuid = ?
-       LIMIT 1`,
-      [orderUuid]
+       ${whereClause}`,
+      params
     );
 
-    if (rows.length === 0) return null;
-    const r = rows[0];
+    const total = Number(countRows[0]?.total || 0);
+    const totalPages = Math.ceil(total / limit) || 1;
 
-    let tickets: number[] = [];
-    if (typeof r.ticket_numbers === 'string') {
-      try {
-        tickets = JSON.parse(r.ticket_numbers);
-      } catch {
-        tickets = [];
-      }
-    } else if (Array.isArray(r.ticket_numbers)) {
-      tickets = r.ticket_numbers;
-    }
+    const [rows] = await pool.query<OrderRow[]>(
+      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone,
+              o.ticket_count, o.ticket_numbers,
+              CAST(o.total_amount AS DOUBLE) AS total_amount,
+              o.currency, o.concept_reference, o.status, o.expires_at,
+              o.receipt_url, o.receipt_filename, o.tracking_key, o.bank_reference, o.is_winner,
+              o.created_at, o.updated_at,
+              g.title AS giveaway_title, g.uuid AS giveaway_uuid, g.slug AS giveaway_slug
+       FROM orders o
+       INNER JOIN giveaways g ON o.giveaway_id = g.id
+       ${whereClause}
+       ORDER BY FIELD(o.status, 'in_review', 'pending_payment', 'completed', 'cancelled', 'expired'), o.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
 
-    let parsedBanxico: any = null;
-    if (r.banxico_response) {
-      if (typeof r.banxico_response === 'string') {
-        try {
-          parsedBanxico = JSON.parse(r.banxico_response);
-        } catch {
-          parsedBanxico = { raw: r.banxico_response };
-        }
-      } else {
-        parsedBanxico = r.banxico_response;
-      }
-    }
-
-    return {
-      bank_reference: r.bank_reference || null,
-      banxico_response: parsedBanxico,
+    const orders: AdminOrder[] = rows.map((r) => ({
+      bank_reference: r.bank_reference,
       concept_reference: r.concept_reference,
-      created_at: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
-      currency: r.currency || 'MXN',
+      created_at: new Date(r.created_at).toISOString(),
+      currency: r.currency,
       customer_name: r.customer_name,
       customer_phone: r.customer_phone,
-      customer_state: r.customer_state || null,
-      expires_at: r.expires_at instanceof Date ? r.expires_at.toISOString() : String(r.expires_at),
+      expires_at: new Date(r.expires_at).toISOString(),
       giveaway_id: Number(r.giveaway_id),
-      giveaway_price: Number(r.giveaway_price || 0),
-      giveaway_status: r.giveaway_status,
+      giveaway_slug: r.giveaway_slug,
       giveaway_title: r.giveaway_title,
-      giveaway_total_tickets: Number(r.giveaway_total_tickets || 100),
       giveaway_uuid: r.giveaway_uuid,
       id: Number(r.id),
       is_winner: Number(r.is_winner || 0),
-      receipt_filename: r.receipt_filename || null,
-      receipt_url: r.receipt_filename ? `/api/orders/${r.uuid}/receipt` : null,
-      spei_attempts: Number(r.spei_attempts || 0),
-      spei_last_checked_at: r.spei_last_checked_at ? (r.spei_last_checked_at instanceof Date ? r.spei_last_checked_at.toISOString() : String(r.spei_last_checked_at)) : null,
-      spei_status: r.spei_status || null,
+      receipt_filename: r.receipt_filename,
+      receipt_url: r.receipt_url,
       status: r.status,
-      ticket_count: Number(r.ticket_count || 1),
-      ticket_numbers: tickets,
-      total_amount: Number(r.total_amount || 0),
-      tracking_key: r.tracking_key || null,
-      updated_at: r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at),
+      ticket_count: Number(r.ticket_count),
+      ticket_numbers: typeof r.ticket_numbers === 'string' ? JSON.parse(r.ticket_numbers) : r.ticket_numbers,
+      total_amount: Number(r.total_amount),
+      tracking_key: r.tracking_key,
+      updated_at: new Date(r.updated_at).toISOString(),
       uuid: r.uuid,
-    };
+    }));
+
+    return { orders, page, total, totalPages };
+  } catch (error) {
+    logger.db.error('Error al consultar órdenes en panel de administración', error);
+    throw new Error('Error al consultar el listado de órdenes.');
   }
+}
 
-  async approveOrderManual(orderUuid: string, adminNotes?: string): Promise<{ order?: AdminOrderDetail; success: boolean }> {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+export async function approveAdminOrder(
+  orderUuid: string,
+  adminUser: { email: string; id: number; name: string }
+): Promise<{ giveawayTitle: string; success: boolean; ticketCount: number }> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
 
-      const [orderRows] = await conn.query<RowDataPacket[]>(
-        `SELECT o.id, o.uuid, o.giveaway_id, o.status, o.ticket_count, o.ticket_numbers, o.total_amount,
-                g.uuid AS giveaway_uuid, g.status AS giveaway_status, g.min_threshold_pct, g.countdown_hours, g.threshold_reached_at, g.total_tickets
-         FROM orders o
-         INNER JOIN giveaways g ON o.giveaway_id = g.id
-         WHERE o.uuid = ?
-         LIMIT 1
-         FOR UPDATE`,
-        [orderUuid]
-      );
+    const [orders] = await conn.query<RowDataPacket[]>(
+      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone,
+              o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) AS total_amount,
+              o.currency, o.status, o.concept_reference, o.tracking_key,
+              g.id AS g_id, g.uuid AS giveaway_uuid, g.title AS giveaway_title,
+              g.total_tickets, g.min_threshold_pct, g.countdown_hours, g.threshold_reached_at
+       FROM orders o
+       INNER JOIN giveaways g ON o.giveaway_id = g.id
+       WHERE o.uuid = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [orderUuid]
+    );
 
-      if (orderRows.length === 0) {
-        await conn.rollback();
-        return { success: false };
-      }
+    if (orders.length === 0) {
+      await conn.rollback();
+      throw new Error('Orden no encontrada.');
+    }
 
-      const order = orderRows[0];
-      if (order.status === 'completed') {
-        await conn.rollback();
-        const detail = await this.getOrderDetail(orderUuid);
-        return { order: detail || undefined, success: true };
-      }
+    const order = orders[0];
 
-      if (order.giveaway_status !== 'active') {
-        await conn.rollback();
-        throw new Error('GIVEAWAY_NOT_ACTIVE');
-      }
+    if (order.status === 'completed') {
+      await conn.rollback();
+      return { giveawayTitle: order.giveaway_title, success: true, ticketCount: order.ticket_count };
+    }
 
-      let tickets: number[] = [];
-      if (typeof order.ticket_numbers === 'string') {
-        try {
-          tickets = JSON.parse(order.ticket_numbers);
-        } catch {
-          tickets = [];
-        }
-      } else if (Array.isArray(order.ticket_numbers)) {
-        tickets = order.ticket_numbers;
-      }
+    if (order.status === 'expired') {
+      await conn.rollback();
+      throw new Error('No se puede aprobar una orden expirada. Los boletos ya fueron liberados.');
+    }
 
+    if (order.status === 'cancelled') {
+      await conn.rollback();
+      throw new Error('No se puede aprobar una orden cancelada.');
+    }
+
+    const tickets: number[] =
+      typeof order.ticket_numbers === 'string' ? JSON.parse(order.ticket_numbers) : order.ticket_numbers;
+
+    await conn.query(
+      `UPDATE orders
+       SET status = 'completed', updated_at = NOW()
+       WHERE id = ?`,
+      [order.id]
+    );
+
+    if (tickets.length > 0) {
       await conn.query(
-        `UPDATE orders
-         SET status = 'completed', updated_at = NOW()
-         WHERE id = ?`,
-        [order.id]
+        `UPDATE giveaway_tickets
+         SET status = 'paid', reserved_until = NULL
+         WHERE order_id = ? AND ticket_number IN (?)`,
+        [order.id, tickets]
       );
+    }
 
-      if (tickets.length > 0) {
-        await conn.query(
-          `UPDATE giveaway_tickets
-           SET status = 'paid', reserved_until = NULL, updated_at = NOW()
-           WHERE order_id = ? AND ticket_number IN (?)`,
-          [order.id, tickets]
-        );
-      }
+    await conn.query(
+      `UPDATE spei_validation_queue
+       SET status = 'matched', last_checked_at = NOW()
+       WHERE order_id = ?`,
+      [order.id]
+    );
 
-      const banxicoPayload = JSON.stringify({
-        approved_by: 'admin_manual',
-        approved_date: new Date().toISOString(),
-        notes: adminNotes || 'Aprobado manualmente por el administrador tras revisión documental.',
-      });
+    const auditUuid = crypto.randomUUID();
+    await conn.query(
+      `INSERT INTO user_audit_logs (
+        uuid, order_id, order_uuid, customer_phone, customer_name,
+        action, actor_type, ip_address, user_agent,
+        previous_status, new_status, amount, currency, details
+      ) VALUES (?, ?, ?, ?, ?, 'ORDER_APPROVED_MANUALLY', 'admin', '127.0.0.1', 'ProjectBoreal/Admin', ?, 'completed', ?, ?, ?)`,
+      [
+        auditUuid,
+        order.id,
+        order.uuid,
+        order.customer_phone,
+        order.customer_name,
+        order.status,
+        order.total_amount,
+        order.currency,
+        JSON.stringify({
+          admin_email: adminUser.email,
+          admin_id: adminUser.id,
+          admin_name: adminUser.name,
+          ticket_count: order.ticket_count,
+          ticket_numbers: tickets,
+        }),
+      ]
+    );
 
-      await conn.query(
-        `INSERT INTO spei_validation_queue (order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, last_checked_at, status, banxico_response)
-         VALUES (?, COALESCE(?, 'MANUAL_APPROVAL'), ?, 1, 6, NOW(), NOW(), 'matched', ?)
-         ON DUPLICATE KEY UPDATE status = 'matched', last_checked_at = NOW(), banxico_response = VALUES(banxico_response)`,
-        [order.id, order.tracking_key, order.total_amount, banxicoPayload]
-      );
+    await conn.commit();
 
-      let thresholdEventPayload: any = null;
-      if (order.min_threshold_pct > 0 && !order.threshold_reached_at) {
-        const [paidRows] = await conn.query<RowDataPacket[]>(
-          'SELECT COUNT(*) AS paid_count FROM giveaway_tickets WHERE giveaway_id = ? AND status = "paid"',
+    await logAdminAudit({
+      action: 'ORDER_APPROVED_MANUALLY',
+      adminUser,
+      amount: order.total_amount,
+      currency: order.currency,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      details: {
+        admin_email: adminUser.email,
+        admin_id: adminUser.id,
+        admin_name: adminUser.name,
+        ticket_count: order.ticket_count,
+        ticket_numbers: tickets,
+      },
+      newStatus: 'completed',
+      orderId: order.id,
+      orderUuid: order.uuid,
+      previousStatus: order.status,
+    });
+
+    await deleteCache(`giveaway:${order.giveaway_uuid}:tickets`);
+    await deleteCache(`giveaway:${order.giveaway_uuid}`);
+    await deleteCache('giveaways:active');
+    await deleteCachePattern('giveaway:*');
+
+    await publishGiveawayEvent('boreal:giveaways', {
+      giveaway_id: order.giveaway_id,
+      giveaway_uuid: order.giveaway_uuid,
+      ticket_count: order.ticket_count,
+      ticket_numbers: tickets,
+      type: 'TICKETS_PAID',
+    });
+
+    if (Number(order.min_threshold_pct || 0) > 0 && !order.threshold_reached_at) {
+      try {
+        const [paidRows] = await pool.query<RowDataPacket[]>(
+          `SELECT COUNT(*) AS paid_count FROM giveaway_tickets WHERE giveaway_id = ? AND status = 'paid'`,
           [order.giveaway_id]
         );
-        const paidCnt = Number(paidRows[0]?.paid_count || 0);
-        const totalTkts = Number(order.total_tickets || 100);
-        const pctSold = (paidCnt / totalTkts) * 100;
+        const paidCount = Number(paidRows[0]?.paid_count || 0);
+        const totalTickets = Number(order.total_tickets || 100);
+        const pctSold = (paidCount / totalTickets) * 100;
 
-        if (pctSold >= order.min_threshold_pct) {
-          const cdHours = Number(order.countdown_hours || 72);
-          await conn.query(
-            'UPDATE giveaways SET threshold_reached_at = NOW(), end_date = DATE_ADD(NOW(), INTERVAL ? HOUR) WHERE id = ? AND threshold_reached_at IS NULL',
-            [cdHours, order.giveaway_id]
+        if (pctSold >= Number(order.min_threshold_pct)) {
+          const countdownHours = Number(order.countdown_hours || 48);
+          const computedEndDate = new Date(Date.now() + countdownHours * 3600 * 1000);
+
+          await pool.query(
+            `UPDATE giveaways
+             SET threshold_reached_at = NOW(), end_date = ?
+             WHERE id = ? AND threshold_reached_at IS NULL`,
+            [computedEndDate, order.giveaway_id]
           );
-          thresholdEventPayload = {
-            countdown_hours: cdHours,
+
+          await deleteCache(`giveaway:${order.giveaway_uuid}`);
+          await deleteCache('giveaways:active');
+
+          await publishGiveawayEvent('boreal:giveaways', {
+            countdown_hours: countdownHours,
+            end_date: computedEndDate.toISOString(),
             giveaway_uuid: order.giveaway_uuid,
+            threshold_reached_at: new Date().toISOString(),
             type: 'GIVEAWAY_THRESHOLD_REACHED',
-          };
+          });
+
+          logger.app.info(
+            `Umbral de sorteo ${order.giveaway_uuid} alcanzado tras aprobación manual (${pctSold.toFixed(1)}%). Cronómetro iniciado.`
+          );
         }
+      } catch (err) {
+        logger.app.warn('Error al evaluar umbral tras aprobación de orden', err);
       }
-
-      await conn.commit();
-
-      try {
-        const gUuid = order.giveaway_uuid;
-        await redis.del(
-          'boreal:cache:giveaways:active',
-          'boreal:cache:giveaways:winners',
-          'giveaways:active',
-          'giveaways:winners',
-          `boreal:cache:giveaway:${gUuid}`,
-          `boreal:cache:giveaway:${gUuid}:tickets`,
-          `giveaway:${gUuid}`,
-          `giveaway:${gUuid}:tickets`
-        );
-
-        await redis.publish(
-          'boreal:giveaways',
-          JSON.stringify({
-            giveaway_id: order.giveaway_id,
-            giveaway_uuid: order.giveaway_uuid,
-            ticket_count: order.ticket_count,
-            ticket_numbers: tickets,
-            type: 'TICKETS_PAID',
-          })
-        );
-
-        if (thresholdEventPayload) {
-          await redis.publish('boreal:giveaways', JSON.stringify(thresholdEventPayload));
-        }
-
-        await redis.publish(
-          'boreal:orders',
-          JSON.stringify({
-            order_id: order.id,
-            order_uuid: order.uuid,
-            ticket_count: order.ticket_count,
-            ticket_numbers: tickets,
-            type: 'ORDER_APPROVED',
-          })
-        );
-      } catch (redisErr) {
-        logger.app.warn('Advertencia al notificar eventos Redis tras aprobación manual:', redisErr);
-      }
-
-      logger.app.info(`Orden ${orderUuid} aprobada y liquidada manualmente por el administrador.`);
-      const updatedDetail = await this.getOrderDetail(orderUuid);
-      return { order: updatedDetail || undefined, success: true };
-    } catch (error) {
-      await conn.rollback();
-      logger.db.error(`Error al aprobar manualmente orden ${orderUuid}`, error);
-      throw error;
-    } finally {
-      conn.release();
     }
+
+    return {
+      giveawayTitle: order.giveaway_title,
+      success: true,
+      ticketCount: order.ticket_count,
+    };
+  } catch (error) {
+    await conn.rollback();
+    logger.db.error('Error al aprobar orden manualmente en panel de administración', error);
+    throw error;
+  } finally {
+    conn.release();
   }
+}
 
-  async rejectOrderManual(orderUuid: string, rejectionReason: string): Promise<{ order?: AdminOrderDetail; success: boolean }> {
-    const conn = await pool.getConnection();
-    try {
-      await conn.beginTransaction();
+export async function cancelAdminOrder(
+  orderUuid: string,
+  adminUser: { email: string; id: number; name: string },
+  reason?: string
+): Promise<{ giveawayTitle: string; success: boolean; ticketCount: number }> {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
 
-      const [orderRows] = await conn.query<RowDataPacket[]>(
-        `SELECT o.id, o.uuid, o.giveaway_id, o.status, o.ticket_count, o.ticket_numbers, o.total_amount,
-                g.uuid AS giveaway_uuid
-         FROM orders o
-         INNER JOIN giveaways g ON o.giveaway_id = g.id
-         WHERE o.uuid = ?
-         LIMIT 1
-         FOR UPDATE`,
-        [orderUuid]
-      );
+    const [orders] = await conn.query<RowDataPacket[]>(
+      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone,
+              o.ticket_count, o.ticket_numbers, CAST(o.total_amount AS DOUBLE) AS total_amount,
+              o.currency, o.status,
+              g.id AS g_id, g.uuid AS giveaway_uuid, g.title AS giveaway_title, g.total_tickets
+       FROM orders o
+       INNER JOIN giveaways g ON o.giveaway_id = g.id
+       WHERE o.uuid = ?
+       LIMIT 1
+       FOR UPDATE`,
+      [orderUuid]
+    );
 
-      if (orderRows.length === 0) {
-        await conn.rollback();
-        return { success: false };
-      }
+    if (orders.length === 0) {
+      await conn.rollback();
+      throw new Error('Orden no encontrada.');
+    }
 
-      const order = orderRows[0];
-      if (order.status === 'cancelled') {
-        await conn.rollback();
-        const detail = await this.getOrderDetail(orderUuid);
-        return { order: detail || undefined, success: true };
-      }
+    const order = orders[0];
 
-      let tickets: number[] = [];
-      if (typeof order.ticket_numbers === 'string') {
-        try {
-          tickets = JSON.parse(order.ticket_numbers);
-        } catch {
-          tickets = [];
-        }
-      } else if (Array.isArray(order.ticket_numbers)) {
-        tickets = order.ticket_numbers;
-      }
+    if (order.status === 'cancelled') {
+      await conn.rollback();
+      return { giveawayTitle: order.giveaway_title, success: true, ticketCount: order.ticket_count };
+    }
 
-      await conn.query(
-        `UPDATE orders
-         SET status = 'cancelled', updated_at = NOW()
-         WHERE id = ?`,
-        [order.id]
-      );
+    if (order.status === 'completed') {
+      await conn.rollback();
+      throw new Error('No se puede cancelar directamente una orden que ya fue completada.');
+    }
 
-      if (tickets.length > 0) {
-        await conn.query(
-          `UPDATE giveaway_tickets
-           SET status = 'available', order_id = NULL, reserved_until = NULL, updated_at = NOW()
-           WHERE order_id = ? AND status = 'reserved'`,
-          [order.id]
-        );
-      }
+    const tickets: number[] =
+      typeof order.ticket_numbers === 'string' ? JSON.parse(order.ticket_numbers) : order.ticket_numbers;
 
+    await conn.query(
+      `UPDATE orders
+       SET status = 'cancelled', updated_at = NOW()
+       WHERE id = ?`,
+      [order.id]
+    );
+
+    await conn.query(
+      `UPDATE giveaway_tickets
+       SET status = 'available', order_id = NULL, reserved_until = NULL
+       WHERE order_id = ? AND status = 'reserved'`,
+      [order.id]
+    );
+
+    const shouldRestoreTickets = order.status === 'pending_payment' || order.status === 'in_review';
+    if (shouldRestoreTickets) {
       await conn.query(
         `UPDATE giveaways
          SET available_tickets = LEAST(total_tickets, available_tickets + ?)
          WHERE id = ?`,
         [order.ticket_count, order.giveaway_id]
       );
-
-      const banxicoPayload = JSON.stringify({
-        reason: rejectionReason || 'Comprobante rechazado por el administrador.',
-        rejected_by: 'admin_manual',
-        rejected_date: new Date().toISOString(),
-      });
-
-      await conn.query(
-        `INSERT INTO spei_validation_queue (order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, last_checked_at, status, banxico_response)
-         VALUES (?, COALESCE(?, 'REJECTED'), ?, 6, 6, NOW(), NOW(), 'failed', ?)
-         ON DUPLICATE KEY UPDATE status = 'failed', last_checked_at = NOW(), banxico_response = VALUES(banxico_response)`,
-        [order.id, order.tracking_key, order.total_amount, banxicoPayload]
-      );
-
-      await conn.commit();
-
-      try {
-        const gUuid = order.giveaway_uuid;
-        await redis.del(
-          'boreal:cache:giveaways:active',
-          'boreal:cache:giveaways:winners',
-          'giveaways:active',
-          'giveaways:winners',
-          `boreal:cache:giveaway:${gUuid}`,
-          `boreal:cache:giveaway:${gUuid}:tickets`,
-          `giveaway:${gUuid}`,
-          `giveaway:${gUuid}:tickets`
-        );
-
-        await redis.publish(
-          'boreal:giveaways',
-          JSON.stringify({
-            giveaway_id: order.giveaway_id,
-            giveaway_uuid: order.giveaway_uuid,
-            released_count: order.ticket_count,
-            ticket_count: order.ticket_count,
-            ticket_numbers: tickets,
-            type: 'TICKETS_RELEASED',
-          })
-        );
-
-        await redis.publish(
-          'boreal:orders',
-          JSON.stringify({
-            errors: [rejectionReason || 'Comprobante rechazado.'],
-            order_id: order.id,
-            order_uuid: order.uuid,
-            type: 'ORDER_REJECTED',
-          })
-        );
-      } catch (redisErr) {
-        logger.app.warn('Advertencia al notificar eventos Redis tras rechazo manual:', redisErr);
-      }
-
-      logger.app.info(`Orden ${orderUuid} rechazada manualmente. Motivo: ${rejectionReason}`);
-      const updatedDetail = await this.getOrderDetail(orderUuid);
-      return { order: updatedDetail || undefined, success: true };
-    } catch (error) {
-      await conn.rollback();
-      logger.db.error(`Error al rechazar orden ${orderUuid}`, error);
-      throw error;
-    } finally {
-      conn.release();
-    }
-  }
-
-  async updateTrackingKey(orderUuid: string, trackingKey: string): Promise<AdminOrderDetail | null> {
-    const cleanKey = trackingKey.trim().toUpperCase();
-    if (!cleanKey) return null;
-
-    const [orderRows] = await pool.query<RowDataPacket[]>(
-      'SELECT id FROM orders WHERE uuid = ? LIMIT 1',
-      [orderUuid]
-    );
-    if (orderRows.length === 0) return null;
-    const orderId = orderRows[0].id;
-
-    await pool.query(
-      'UPDATE orders SET tracking_key = ?, updated_at = NOW() WHERE id = ?',
-      [cleanKey, orderId]
-    );
-
-    await pool.query(
-      `INSERT INTO spei_validation_queue (order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status)
-       SELECT id, ?, total_amount, 0, 6, NOW(), 'pending' FROM orders WHERE id = ?
-       ON DUPLICATE KEY UPDATE tracking_key = VALUES(tracking_key), attempts = 0, status = 'pending', next_retry_at = NOW()`,
-      [cleanKey, orderId]
-    );
-
-    return await this.getOrderDetail(orderUuid);
-  }
-
-  async retrySpeiVerification(orderUuid: string): Promise<AdminOrderDetail | null> {
-    const [orderRows] = await pool.query<RowDataPacket[]>(
-      'SELECT id, tracking_key, total_amount FROM orders WHERE uuid = ? LIMIT 1',
-      [orderUuid]
-    );
-    if (orderRows.length === 0) return null;
-    const order = orderRows[0];
-
-    await pool.query(
-      `INSERT INTO spei_validation_queue (order_id, tracking_key, expected_amount, attempts, max_attempts, next_retry_at, status)
-       VALUES (?, ?, ?, 0, 6, NOW(), 'pending')
-       ON DUPLICATE KEY UPDATE attempts = 0, status = 'pending', next_retry_at = NOW(), last_checked_at = NULL`,
-      [order.id, order.tracking_key || 'PENDING_OCR', order.total_amount]
-    );
-
-    try {
-      await redis.lpush('boreal:queue:receipts', orderUuid);
-    } catch (err) {
-      logger.app.warn('Advertencia al encolar orden para reintento SPEI en Redis:', err);
     }
 
-    logger.app.info(`Reintento de validación SPEI programado manualmente para orden ${orderUuid}`);
-    return await this.getOrderDetail(orderUuid);
-  }
+    await conn.query(
+      `UPDATE spei_validation_queue
+       SET status = 'failed'
+       WHERE order_id = ?`,
+      [order.id]
+    );
 
-  async getCashReconciliation(startDate?: string, endDate?: string): Promise<CashReconciliationSummary> {
-    let dateCondition = '';
-    const params: any[] = [];
+    const auditUuid = crypto.randomUUID();
+    await conn.query(
+      `INSERT INTO user_audit_logs (
+        uuid, order_id, order_uuid, customer_phone, customer_name,
+        action, actor_type, ip_address, user_agent,
+        previous_status, new_status, amount, currency, details
+      ) VALUES (?, ?, ?, ?, ?, 'ORDER_CANCELLED_MANUALLY', 'admin', '127.0.0.1', 'ProjectBoreal/Admin', ?, 'cancelled', ?, ?, ?)`,
+      [
+        auditUuid,
+        order.id,
+        order.uuid,
+        order.customer_phone,
+        order.customer_name,
+        order.status,
+        order.total_amount,
+        order.currency,
+        JSON.stringify({
+          admin_email: adminUser.email,
+          admin_id: adminUser.id,
+          admin_name: adminUser.name,
+          reason: reason || 'Cancelado por el administrador',
+          ticket_count: order.ticket_count,
+          ticket_numbers: tickets,
+        }),
+      ]
+    );
+    await conn.commit();
 
-    if (startDate) {
-      dateCondition += ' AND o.created_at >= ?';
-      params.push(`${startDate} 00:00:00`);
-    }
-    if (endDate) {
-      dateCondition += ' AND o.created_at <= ?';
-      params.push(`${endDate} 23:59:59`);
-    }
+    await logAdminAudit({
+      action: 'ORDER_CANCELLED_MANUALLY',
+      adminUser,
+      amount: order.total_amount,
+      currency: order.currency,
+      customerName: order.customer_name,
+      customerPhone: order.customer_phone,
+      details: {
+        admin_email: adminUser.email,
+        admin_id: adminUser.id,
+        admin_name: adminUser.name,
+        reason: reason || 'Cancelado por el administrador',
+        ticket_count: order.ticket_count,
+        ticket_numbers: tickets,
+      },
+      newStatus: 'cancelled',
+      orderId: order.id,
+      orderUuid: order.uuid,
+      previousStatus: order.status,
+    });
 
-    const query = `
-      SELECT o.id, o.uuid, o.total_amount, o.ticket_count, o.bank_reference, o.tracking_key, o.created_at,
-             ba.bank_name as designated_bank_name
-      FROM orders o
-      LEFT JOIN giveaway_bank_accounts gba ON gba.giveaway_id = o.giveaway_id AND gba.is_active = 1
-      LEFT JOIN bank_accounts ba ON ba.id = gba.bank_account_id
-      WHERE o.status = 'completed' ${dateCondition}
-      GROUP BY o.id
-      ORDER BY o.created_at DESC
-    `;
+    await deleteCache(`giveaway:${order.giveaway_uuid}:tickets`);
+    await deleteCache(`giveaway:${order.giveaway_uuid}`);
+    await deleteCache('giveaways:active');
+    await deleteCachePattern('giveaway:*');
 
-    const [rows] = await pool.query<RowDataPacket[]>(query, params);
-
-    const breakdownMap: Record<string, { order_count: number; ticket_count: number; total_amount: number }> = {};
-    let totalAmount = 0;
-    let totalOrders = 0;
-    let totalTickets = 0;
-
-    for (const r of rows) {
-      const amount = Number(r.total_amount || 0);
-      const tickets = Number(r.ticket_count || 0);
-      totalAmount += amount;
-      totalOrders += 1;
-      totalTickets += tickets;
-
-      let bankName = 'Transferencia SPEI';
-      const ref = String(r.bank_reference || '').toUpperCase();
-      const tracking = String(r.tracking_key || '').toUpperCase();
-      const designated = String(r.designated_bank_name || '').trim();
-
-      if (ref.includes('BBVA') || tracking.startsWith('012')) {
-        bankName = 'BBVA México';
-      } else if (ref.includes('SANTANDER') || tracking.startsWith('014')) {
-        bankName = 'Santander México';
-      } else if (ref.includes('MERCADO') || tracking.startsWith('722') || tracking.startsWith('646')) {
-        bankName = 'Mercado Pago / STP';
-      } else if (designated) {
-        bankName = designated;
-      }
-
-      if (!breakdownMap[bankName]) {
-        breakdownMap[bankName] = { order_count: 0, ticket_count: 0, total_amount: 0 };
-      }
-      breakdownMap[bankName].order_count += 1;
-      breakdownMap[bankName].ticket_count += tickets;
-      breakdownMap[bankName].total_amount += amount;
-    }
-
-    const breakdown: CashReconciliationItem[] = Object.entries(breakdownMap).map(([bank_name, data]) => ({
-      bank_name,
-      order_count: data.order_count,
-      ticket_count: data.ticket_count,
-      total_amount: Math.round(data.total_amount * 100) / 100,
-    })).sort((a, b) => b.total_amount - a.total_amount);
+    await publishGiveawayEvent('boreal:giveaways', {
+      giveaway_id: order.giveaway_id,
+      giveaway_uuid: order.giveaway_uuid,
+      ticket_count: order.ticket_count,
+      ticket_numbers: tickets,
+      type: 'TICKETS_RELEASED',
+    });
 
     return {
-      breakdown,
-      endDate: endDate || new Date().toISOString().slice(0, 10),
-      startDate: startDate || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
-      totalAmount: Math.round(totalAmount * 100) / 100,
-      totalOrders,
-      totalTickets,
+      giveawayTitle: order.giveaway_title,
+      success: true,
+      ticketCount: order.ticket_count,
     };
-  }
-
-  async exportReconciliationCsv(startDate?: string, endDate?: string): Promise<string> {
-    let dateCondition = '';
-    const params: any[] = [];
-
-    if (startDate) {
-      dateCondition += ' AND o.created_at >= ?';
-      params.push(`${startDate} 00:00:00`);
-    }
-    if (endDate) {
-      dateCondition += ' AND o.created_at <= ?';
-      params.push(`${endDate} 23:59:59`);
-    }
-
-    const query = `
-      SELECT o.uuid, o.created_at, o.customer_name, o.customer_phone, g.title as giveaway_title,
-             o.ticket_count, o.total_amount, o.currency, o.bank_reference, o.tracking_key, o.status,
-             ba.bank_name as designated_bank_name
-      FROM orders o
-      INNER JOIN giveaways g ON g.id = o.giveaway_id
-      LEFT JOIN giveaway_bank_accounts gba ON gba.giveaway_id = o.giveaway_id AND gba.is_active = 1
-      LEFT JOIN bank_accounts ba ON ba.id = gba.bank_account_id
-      WHERE o.status = 'completed' ${dateCondition}
-      GROUP BY o.id
-      ORDER BY o.created_at DESC
-    `;
-
-    const [rows] = await pool.query<RowDataPacket[]>(query, params);
-
-    const headers = [
-      'Folio Orden',
-      'Fecha y Hora',
-      'Cliente',
-      'Telefono',
-      'Sorteo',
-      'Boletos',
-      'Monto',
-      'Moneda',
-      'Institucion / Banco Receptor',
-      'Clave Rastreo SPEI',
-      'Referencia Bancaria',
-      'Estado',
-    ];
-
-    const escapeCsv = (val: any): string => {
-      if (val === null || val === undefined) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
-    };
-
-    const csvLines = [headers.map(escapeCsv).join(',')];
-
-    for (const r of rows) {
-      let bankName = 'Transferencia SPEI';
-      const ref = String(r.bank_reference || '').toUpperCase();
-      const tracking = String(r.tracking_key || '').toUpperCase();
-      const designated = String(r.designated_bank_name || '').trim();
-
-      if (ref.includes('BBVA') || tracking.startsWith('012')) {
-        bankName = 'BBVA México';
-      } else if (ref.includes('SANTANDER') || tracking.startsWith('014')) {
-        bankName = 'Santander México';
-      } else if (ref.includes('MERCADO') || tracking.startsWith('722') || tracking.startsWith('646')) {
-        bankName = 'Mercado Pago / STP';
-      } else if (designated) {
-        bankName = designated;
-      }
-
-      const dateStr = r.created_at instanceof Date ? r.created_at.toISOString().replace('T', ' ').slice(0, 19) : String(r.created_at);
-
-      csvLines.push(
-        [
-          escapeCsv(r.uuid),
-          escapeCsv(dateStr),
-          escapeCsv(r.customer_name),
-          escapeCsv(r.customer_phone),
-          escapeCsv(r.giveaway_title),
-          escapeCsv(r.ticket_count),
-          escapeCsv(Number(r.total_amount).toFixed(2)),
-          escapeCsv(r.currency || 'MXN'),
-          escapeCsv(bankName),
-          escapeCsv(r.tracking_key || 'N/A'),
-          escapeCsv(r.bank_reference || 'N/A'),
-          escapeCsv('Liquidado / Pagado'),
-        ].join(',')
-      );
-    }
-
-    return csvLines.join('\r\n');
+  } catch (error) {
+    await conn.rollback();
+    logger.db.error('Error al cancelar orden manualmente en panel de administración', error);
+    throw error;
+  } finally {
+    conn.release();
   }
 }
 
-export const ordersService = new OrdersService();
+export async function getAdminSpeiQueue(limit = 50): Promise<SpeiQueueItem[]> {
+  try {
+    const [rows] = await pool.query<SpeiRow[]>(
+      `SELECT q.id, q.order_id, q.tracking_key,
+              CAST(q.expected_amount AS DOUBLE) AS expected_amount,
+              q.attempts, q.max_attempts, q.next_retry_at, q.last_checked_at,
+              q.banxico_response, q.status, q.created_at,
+              o.uuid AS order_uuid, o.customer_name, o.customer_phone, o.status AS order_status,
+              g.title AS giveaway_title
+       FROM spei_validation_queue q
+       INNER JOIN orders o ON q.order_id = o.id
+       INNER JOIN giveaways g ON o.giveaway_id = g.id
+       ORDER BY FIELD(q.status, 'verifying', 'pending', 'failed', 'matched', 'expired'), q.created_at DESC
+       LIMIT ?`,
+      [limit]
+    );
+
+    return rows.map((r) => ({
+      attempts: Number(r.attempts),
+      banxico_response:
+        typeof r.banxico_response === 'string' ? JSON.parse(r.banxico_response) : r.banxico_response,
+      created_at: new Date(r.created_at).toISOString(),
+      customer_name: r.customer_name,
+      customer_phone: r.customer_phone,
+      expected_amount: Number(r.expected_amount),
+      giveaway_title: r.giveaway_title,
+      id: Number(r.id),
+      last_checked_at: r.last_checked_at ? new Date(r.last_checked_at).toISOString() : null,
+      max_attempts: Number(r.max_attempts),
+      next_retry_at: new Date(r.next_retry_at).toISOString(),
+      order_id: Number(r.order_id),
+      order_status: r.order_status,
+      order_uuid: r.order_uuid,
+      status: r.status,
+      tracking_key: r.tracking_key,
+    }));
+  } catch (error) {
+    logger.db.error('Error al consultar cola de validación SPEI en panel de administración', error);
+    throw new Error('Error al consultar la cola de validación SPEI.');
+  }
+}
+
+export async function triggerSpeiValidationBatch(): Promise<{ processed: number }> {
+  try {
+    const [queueRows] = await pool.query<RowDataPacket[]>(
+      `SELECT q.id, q.order_id, q.tracking_key, CAST(q.expected_amount AS DOUBLE) AS expected_amount,
+              o.uuid AS order_uuid, o.status AS order_status
+       FROM spei_validation_queue q
+       INNER JOIN orders o ON q.order_id = o.id
+       WHERE q.status IN ('pending', 'verifying')
+       LIMIT 20`
+    );
+
+    if (queueRows.length === 0) {
+      return { processed: 0 };
+    }
+
+    let processed = 0;
+
+    for (const item of queueRows) {
+      const isSandbox = config.nodeEnv !== 'production' && process.env.BANXICO_SANDBOX === 'true';
+      const cleanKey = String(item.tracking_key || '').trim().toUpperCase();
+      const amount = Number(item.expected_amount || 0);
+
+      if (isSandbox && cleanKey.length >= 8 && amount > 0) {
+        await approveAdminOrder(item.order_uuid, {
+          email: 'spei-system@projectboreal.internal',
+          id: 0,
+          name: 'Banxico SPEI Monitor',
+        });
+        processed++;
+      } else {
+        await pool.query(
+          `UPDATE spei_validation_queue
+           SET attempts = attempts + 1, last_checked_at = NOW(),
+               status = IF(attempts + 1 >= max_attempts, 'failed', 'verifying')
+           WHERE id = ?`,
+          [item.id]
+        );
+      }
+    }
+
+    return { processed };
+  } catch (error) {
+    logger.db.error('Error al ejecutar validación de cola SPEI por lote', error);
+    throw new Error('Error al procesar la cola de validación SPEI.');
+  }
+}
+
+export async function getAdminOrderReceiptFilename(uuid: string): Promise<string | null> {
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      'SELECT receipt_filename FROM orders WHERE uuid = ? LIMIT 1',
+      [uuid]
+    );
+    if (!rows.length || !rows[0].receipt_filename) return null;
+    return rows[0].receipt_filename as string;
+  } catch (error) {
+    logger.db.error('Error al consultar archivo de comprobante de orden en Admin', error);
+    throw new Error('Error al consultar comprobante');
+  }
+}

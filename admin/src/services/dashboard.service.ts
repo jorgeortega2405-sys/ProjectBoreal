@@ -1,385 +1,160 @@
-import { pool } from '../config/database.config.js';
-import { redis } from '../config/redis.config.js';
+import { AdminOrder, DashboardAlert, DashboardMetrics, DashboardStatsResponse } from '../types/order.types.js';
 import { logger } from './logger.service.js';
-import { RowDataPacket } from 'mysql2';
+import { pool } from '../config/database.config.js';
+import { RowDataPacket } from 'mysql2/promise';
 
-export interface DashboardKpis {
-  activeGiveaways: number;
-  averageOrderValue: number;
-  averageOrderValueFormatted: string;
-  conversionChangePct: number;
-  conversionRatePct: number;
-  pendingOrdersCount: number;
-  revenueChangePct: number;
-  ticketsSold: number;
-  ticketsSoldChangePct: number;
-  totalRevenue: number;
-  totalRevenueFormatted: string;
-}
-
-export interface RevenueTimelineData {
-  labels: string[];
-  revenue: number[];
-  tickets: number[];
-}
-
-export interface OrderStatusDistributionData {
-  colors: string[];
-  counts: number[];
-  labels: string[];
-}
-
-export interface GiveawayPerformanceData {
-  labels: string[];
-  progressPcts: number[];
-  soldTickets: number[];
-  totalTickets: number[];
-}
-
-export interface PaymentMethodsData {
-  amounts: number[];
-  labels: string[];
-}
-
-export interface RecentOrderSummary {
-  createdAt: string;
+interface OrderRow extends RowDataPacket {
+  bank_reference: string | null;
+  concept_reference: string;
+  created_at: Date | string;
   currency: string;
-  customerName: string;
-  customerPhone: string;
-  giveawayTitle: string;
-  id: string;
-  status: 'completed' | 'in_review' | 'pending_payment' | 'expired' | 'cancelled';
-  ticketCount: number;
-  totalAmount: number;
+  customer_name: string;
+  customer_phone: string;
+  expires_at: Date | string;
+  giveaway_id: number;
+  giveaway_slug: string;
+  giveaway_title: string;
+  giveaway_uuid: string;
+  id: number;
+  is_winner: number;
+  receipt_filename: string | null;
+  receipt_url: string | null;
+  status: any;
+  ticket_count: number;
+  ticket_numbers: string | number[];
+  total_amount: number;
+  tracking_key: string | null;
+  updated_at: Date | string;
+  uuid: string;
 }
 
-export interface GatewayStatusItem {
-  latencyMs: number;
-  name: string;
-  status: 'operational' | 'degraded' | 'maintenance';
-  successRatePct: number;
-}
-
-export interface DashboardStatsResponse {
-  charts: {
-    giveawayPerformance: GiveawayPerformanceData;
-    orderStatusDistribution: OrderStatusDistributionData;
-    paymentMethods: PaymentMethodsData;
-    revenueTimeline: RevenueTimelineData;
-  };
-  gatewayStatus: GatewayStatusItem[];
-  kpis: DashboardKpis;
-  period: string;
-  recentOrders: RecentOrderSummary[];
-}
-
-function formatCurrency(amount: number, currency = 'MXN'): string {
-  return new Intl.NumberFormat('es-MX', {
-    currency,
-    maximumFractionDigits: 2,
-    minimumFractionDigits: 2,
-    style: 'currency',
-  }).format(amount) + ` ${currency}`;
-}
-
-function maskPhone(phone: string): string {
-  if (!phone) return '•••• ----';
-  const clean = phone.replace(/\D/g, '');
-  if (clean.length < 4) return '•••• ' + clean;
-  return `•••• ${clean.slice(-4)}`;
-}
-
-function buildTimeline(period: string, rows: RowDataPacket[]): RevenueTimelineData {
-  const days = period === '7d' ? 7 : period === '90d' ? 90 : period === 'year' ? 365 : 30;
-  const labels: string[] = [];
-  const revenue: number[] = [];
-  const tickets: number[] = [];
-
-  const rowMap = new Map<string, { revenue: number; tickets: number }>();
-  for (const r of rows) {
-    const key = String(r.date_key || '');
-    rowMap.set(key, {
-      revenue: Number(r.revenue || 0),
-      tickets: Number(r.tickets || 0),
-    });
-  }
-
-  const step = period === 'year' ? 30 : period === '90d' ? 7 : 1;
-  const totalPoints = Math.min(30, Math.ceil(days / step));
-  const now = new Date();
-
-  for (let i = totalPoints - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i * step);
-    const dateKey = d.toISOString().slice(0, 10);
-    labels.push(d.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' }));
-    const match = rowMap.get(dateKey) || { revenue: 0, tickets: 0 };
-    revenue.push(match.revenue);
-    tickets.push(match.tickets);
-  }
-
-  return { labels, revenue, tickets };
-}
-
-export class DashboardService {
-  async getDashboardStats(period = '30d'): Promise<DashboardStatsResponse> {
-    let days = 30;
-    if (period === '7d') days = 7;
-    else if (period === '90d') days = 90;
-    else if (period === 'year') days = 365;
-
-    const mysqlStart = Date.now();
-    const [kpiRows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-        COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`total_amount\` ELSE 0 END), 0) AS totalRevenue,
-        COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`ticket_count\` ELSE 0 END), 0) AS ticketsSold,
-        COUNT(CASE WHEN \`status\` IN ('in_review', 'pending_payment') THEN 1 END) AS pendingOrdersCount,
-        COUNT(CASE WHEN \`status\` = 'completed' THEN 1 END) AS completedOrdersCount,
-        COUNT(*) AS totalOrdersCount,
-        COALESCE(AVG(CASE WHEN \`status\` = 'completed' THEN \`total_amount\` END), 0) AS averageOrderValue
-       FROM \`orders\`
-       WHERE \`created_at\` >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
-      [days]
+export async function getDashboardStats(): Promise<DashboardStatsResponse> {
+  try {
+    const [revMxnRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COALESCE(SUM(total_amount), 0) AS revenue FROM orders WHERE status = 'completed' AND currency = 'MXN'`
     );
-    const mysqlLatencyMs = Math.max(1, Date.now() - mysqlStart);
-
-    const [prevKpiRows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-        COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`total_amount\` ELSE 0 END), 0) AS totalRevenue,
-        COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`ticket_count\` ELSE 0 END), 0) AS ticketsSold,
-        COUNT(CASE WHEN \`status\` = 'completed' THEN 1 END) AS completedOrdersCount,
-        COUNT(*) AS totalOrdersCount
-       FROM \`orders\`
-       WHERE \`created_at\` >= DATE_SUB(NOW(), INTERVAL ? DAY)
-         AND \`created_at\` < DATE_SUB(NOW(), INTERVAL ? DAY)`,
-      [days * 2, days]
+    const [revUsdRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COALESCE(SUM(total_amount), 0) AS revenue FROM orders WHERE status = 'completed' AND currency = 'USD'`
     );
-
+    const [ticketsRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS sold FROM giveaway_tickets WHERE status = 'paid'`
+    );
     const [giveawaysRows] = await pool.query<RowDataPacket[]>(
-      "SELECT COUNT(*) AS activeGiveaways FROM `giveaways` WHERE `status` = 'active'"
+      `SELECT COUNT(*) AS active FROM giveaways WHERE status = 'active'`
+    );
+    const [reviewRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS in_review FROM orders WHERE status = 'in_review'`
     );
 
-    const [timelineRows] = await pool.query<RowDataPacket[]>(
-      `SELECT DATE(\`created_at\`) AS date_key,
-              COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`total_amount\` ELSE 0 END), 0) AS revenue,
-              COALESCE(SUM(CASE WHEN \`status\` = 'completed' THEN \`ticket_count\` ELSE 0 END), 0) AS tickets
-       FROM \`orders\`
-       WHERE \`created_at\` >= DATE_SUB(NOW(), INTERVAL ? DAY)
-       GROUP BY DATE(\`created_at\`)
-       ORDER BY date_key ASC`,
-      [days]
+    const metrics: DashboardMetrics = {
+      active_giveaways_count: Number(giveawaysRows[0]?.active || 0),
+      in_review_orders_count: Number(reviewRows[0]?.in_review || 0),
+      total_revenue_mxn: Number(revMxnRows[0]?.revenue || 0),
+      total_revenue_usd: Number(revUsdRows[0]?.revenue || 0),
+      total_tickets_sold: Number(ticketsRows[0]?.sold || 0),
+    };
+
+    const alerts: DashboardAlert[] = [];
+
+    const [thresholdGiveaways] = await pool.query<RowDataPacket[]>(
+      `SELECT uuid, title, min_threshold_pct, countdown_hours, threshold_reached_at, end_date
+       FROM giveaways
+       WHERE status = 'active' AND threshold_reached_at IS NOT NULL
+       ORDER BY end_date ASC`
     );
 
-    const [statusRows] = await pool.query<RowDataPacket[]>(
-      `SELECT \`status\`, COUNT(*) AS count
-       FROM \`orders\`
-       WHERE \`created_at\` >= DATE_SUB(NOW(), INTERVAL ? DAY)
-       GROUP BY \`status\``,
-      [days]
-    );
+    for (const g of thresholdGiveaways) {
+      alerts.push({
+        countdown_hours: Number(g.countdown_hours),
+        end_date: new Date(g.end_date).toISOString(),
+        giveaway_title: g.title,
+        giveaway_uuid: g.uuid,
+        id: `threshold-${g.uuid}`,
+        message: `El sorteo "${g.title}" alcanzó el umbral mínimo (${g.min_threshold_pct}%). Cronómetro final de ${g.countdown_hours}h activo.`,
+        severity: 'critical',
+        threshold_pct: Number(g.min_threshold_pct),
+        type: 'threshold_countdown',
+      });
+    }
 
-    const [giveawayPerfRows] = await pool.query<RowDataPacket[]>(
-      `SELECT g.\`title\`, g.\`total_tickets\`,
-              (g.\`total_tickets\` - g.\`available_tickets\`) AS sold_tickets
-       FROM \`giveaways\` g
-       ORDER BY g.\`created_at\` DESC
+    const [closingSoonGiveaways] = await pool.query<RowDataPacket[]>(
+      `SELECT uuid, title, end_date
+       FROM giveaways
+       WHERE status = 'active' AND threshold_reached_at IS NULL AND end_date <= DATE_ADD(NOW(), INTERVAL 48 HOUR)
+       ORDER BY end_date ASC
        LIMIT 5`
     );
 
-    const [recentRows] = await pool.query<RowDataPacket[]>(
-      `SELECT o.\`uuid\`, o.\`customer_name\`, o.\`customer_phone\`, o.\`ticket_count\`,
-              o.\`total_amount\`, o.\`currency\`, o.\`status\`, o.\`created_at\`,
-              COALESCE(g.\`title\`, 'Sorteo') AS giveaway_title
-       FROM \`orders\` o
-       LEFT JOIN \`giveaways\` g ON o.\`giveaway_id\` = g.\`id\`
-       ORDER BY o.\`created_at\` DESC
+    for (const g of closingSoonGiveaways) {
+      alerts.push({
+        end_date: new Date(g.end_date).toISOString(),
+        giveaway_title: g.title,
+        giveaway_uuid: g.uuid,
+        id: `closing-${g.uuid}`,
+        message: `El sorteo "${g.title}" finaliza en menos de 48 horas.`,
+        severity: 'warning',
+        type: 'giveaway_closing',
+      });
+    }
+
+    const [oldReviewsRows] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) AS old_count
+       FROM orders
+       WHERE status = 'in_review' AND updated_at <= DATE_SUB(NOW(), INTERVAL 1 HOUR)`
+    );
+
+    const oldReviewCount = Number(oldReviewsRows[0]?.old_count || 0);
+    if (oldReviewCount > 0) {
+      alerts.push({
+        id: 'pending-reviews-delay',
+        message: `Hay ${oldReviewCount} pago(s) en revisión que superan 1 hora de espera para validación.`,
+        severity: 'warning',
+        type: 'pending_reviews',
+      });
+    }
+
+    const [recentRows] = await pool.query<OrderRow[]>(
+      `SELECT o.id, o.uuid, o.giveaway_id, o.customer_name, o.customer_phone,
+              o.ticket_count, o.ticket_numbers,
+              CAST(o.total_amount AS DOUBLE) AS total_amount,
+              o.currency, o.concept_reference, o.status, o.expires_at,
+              o.receipt_url, o.receipt_filename, o.tracking_key, o.bank_reference, o.is_winner,
+              o.created_at, o.updated_at,
+              g.title AS giveaway_title, g.uuid AS giveaway_uuid, g.slug AS giveaway_slug
+       FROM orders o
+       INNER JOIN giveaways g ON o.giveaway_id = g.id
+       ORDER BY o.created_at DESC
        LIMIT 8`
     );
 
-    const [paymentRows] = await pool.query<RowDataPacket[]>(
-      `SELECT
-         ba.bank_name AS method_name,
-         COALESCE(SUM(
-           CASE
-             WHEN o.status = 'completed' AND o.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-             THEN o.total_amount / GREATEST(1, (
-               SELECT COUNT(*) FROM giveaway_bank_accounts gba2
-               INNER JOIN bank_accounts ba2 ON ba2.id = gba2.bank_account_id
-               WHERE gba2.giveaway_id = o.giveaway_id AND gba2.is_active = 1 AND ba2.is_active = 1
-             ))
-             ELSE 0
-           END
-         ), 0) AS attributed_revenue
-       FROM bank_accounts ba
-       LEFT JOIN giveaway_bank_accounts gba ON gba.bank_account_id = ba.id AND gba.is_active = 1
-       LEFT JOIN orders o ON o.giveaway_id = gba.giveaway_id
-       WHERE ba.is_active = 1
-       GROUP BY ba.id, ba.bank_name
-       ORDER BY ba.id ASC`,
-      [days]
-    );
-
-    const kpi = kpiRows[0] || {};
-    const totalRev = Number(kpi.totalRevenue || 0);
-    const tickets = Number(kpi.ticketsSold || 0);
-    const pending = Number(kpi.pendingOrdersCount || 0);
-    const completed = Number(kpi.completedOrdersCount || 0);
-    const totalOrders = Number(kpi.totalOrdersCount || 0);
-    const aov = Number(kpi.averageOrderValue || 0);
-    const activeGw = Number(giveawaysRows[0]?.activeGiveaways || 0);
-    const conversion = totalOrders > 0 ? Math.round((completed / totalOrders) * 1000) / 10 : 0;
-
-    const prevKpi = prevKpiRows[0] || {};
-    const prevRev = Number(prevKpi.totalRevenue || 0);
-    const prevTickets = Number(prevKpi.ticketsSold || 0);
-    const prevCompleted = Number(prevKpi.completedOrdersCount || 0);
-    const prevTotalOrders = Number(prevKpi.totalOrdersCount || 0);
-    const prevConversion = prevTotalOrders > 0 ? Math.round((prevCompleted / prevTotalOrders) * 1000) / 10 : 0;
-
-    const revenueChangePct = prevRev > 0
-      ? Math.round(((totalRev - prevRev) / prevRev) * 1000) / 10
-      : (totalRev > 0 ? 100 : 0);
-    const ticketsSoldChangePct = prevTickets > 0
-      ? Math.round(((tickets - prevTickets) / prevTickets) * 1000) / 10
-      : (tickets > 0 ? 100 : 0);
-    const conversionChangePct = Math.round((conversion - prevConversion) * 10) / 10;
-
-    const statusCounts: Record<string, number> = {
-      cancelled: 0,
-      completed: 0,
-      expired: 0,
-      in_review: 0,
-      pending_payment: 0,
-    };
-    for (const r of statusRows) {
-      statusCounts[r.status] = Number(r.count || 0);
-    }
-
-    const orderStatusDistribution: OrderStatusDistributionData = {
-      colors: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
-      counts: [
-        statusCounts.completed || 0,
-        statusCounts.in_review || 0,
-        statusCounts.pending_payment || 0,
-        (statusCounts.cancelled || 0) + (statusCounts.expired || 0),
-      ],
-      labels: ['Completadas', 'En Revisión', 'Pendientes', 'Canceladas / Expiradas'],
-    };
-
-    const giveawayPerformance: GiveawayPerformanceData = {
-      labels: giveawayPerfRows.map((r) => r.title),
-      progressPcts: giveawayPerfRows.map((r) => {
-        const total = Number(r.total_tickets || 1);
-        const sold = Number(r.sold_tickets || 0);
-        return Math.min(100, Math.round((sold / total) * 100));
-      }),
-      soldTickets: giveawayPerfRows.map((r) => Number(r.sold_tickets || 0)),
-      totalTickets: giveawayPerfRows.map((r) => Number(r.total_tickets || 0)),
-    };
-
-    const recentOrders: RecentOrderSummary[] = recentRows.map((r) => ({
-      createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
-      currency: r.currency || 'MXN',
-      customerName: r.customer_name || 'Cliente',
-      customerPhone: maskPhone(r.customer_phone || ''),
-      giveawayTitle: r.giveaway_title,
-      id: `ORD-${String(r.uuid || '').slice(0, 8).toUpperCase()}`,
+    const recent_orders: AdminOrder[] = recentRows.map((r) => ({
+      bank_reference: r.bank_reference,
+      concept_reference: r.concept_reference,
+      created_at: new Date(r.created_at).toISOString(),
+      currency: r.currency,
+      customer_name: r.customer_name,
+      customer_phone: r.customer_phone,
+      expires_at: new Date(r.expires_at).toISOString(),
+      giveaway_id: Number(r.giveaway_id),
+      giveaway_slug: r.giveaway_slug,
+      giveaway_title: r.giveaway_title,
+      giveaway_uuid: r.giveaway_uuid,
+      id: Number(r.id),
+      is_winner: Number(r.is_winner || 0),
+      receipt_filename: r.receipt_filename,
+      receipt_url: r.receipt_url,
       status: r.status,
-      ticketCount: Number(r.ticket_count || 1),
-      totalAmount: Number(r.total_amount || 0),
+      ticket_count: Number(r.ticket_count),
+      ticket_numbers: typeof r.ticket_numbers === 'string' ? JSON.parse(r.ticket_numbers) : r.ticket_numbers,
+      total_amount: Number(r.total_amount),
+      tracking_key: r.tracking_key,
+      updated_at: new Date(r.updated_at).toISOString(),
+      uuid: r.uuid,
     }));
 
-    const paymentLabels = paymentRows.length > 0 ? paymentRows.map((r) => r.method_name) : ['Transferencia SPEI'];
-    const attributedSum = paymentRows.reduce((acc, r) => acc + Number(r.attributed_revenue || 0), 0);
-    const paymentAmounts = paymentRows.length > 0
-      ? paymentRows.map((r) => {
-          const val = Math.round(Number(r.attributed_revenue || 0) * 100) / 100;
-          if (attributedSum === 0 && totalRev > 0) {
-            return Math.round((totalRev / paymentRows.length) * 100) / 100;
-          }
-          return val;
-        })
-      : [totalRev];
-
-    let redisLatencyMs = 1;
-    let redisOperational = false;
-    try {
-      const rStart = Date.now();
-      if (redis && (redis.status === 'ready' || redis.status === 'connect')) {
-        const pong = await redis.ping();
-        redisLatencyMs = Math.max(1, Date.now() - rStart);
-        redisOperational = pong === 'PONG';
-      }
-    } catch (err) {
-      logger.db.warn('Advertencia al medir latencia de Redis en dashboard:', err);
-    }
-
-    let speiSuccessPct = 100;
-    try {
-      const [speiRows] = await pool.query<RowDataPacket[]>(
-        `SELECT
-          COUNT(*) AS total,
-          COUNT(CASE WHEN \`status\` IN ('failed', 'rejected') THEN 1 END) AS failed
-         FROM \`spei_validation_queue\`
-         WHERE \`created_at\` >= DATE_SUB(NOW(), INTERVAL ? DAY)`,
-        [days]
-      );
-      const sTotal = Number(speiRows[0]?.total || 0);
-      const sFailed = Number(speiRows[0]?.failed || 0);
-      if (sTotal > 0) {
-        speiSuccessPct = Math.max(0, Math.min(100, Math.round(((sTotal - sFailed) / sTotal) * 1000) / 10));
-      }
-    } catch (_) {}
-
-    const gatewayStatus: GatewayStatusItem[] = [
-      {
-        latencyMs: Math.max(1, mysqlLatencyMs + redisLatencyMs),
-        name: 'Motor SPEI / Banxico CEP',
-        status: 'operational',
-        successRatePct: speiSuccessPct,
-      },
-      {
-        latencyMs: mysqlLatencyMs,
-        name: 'Base de Datos Transaccional (MySQL)',
-        status: 'operational',
-        successRatePct: 100,
-      },
-      {
-        latencyMs: redisLatencyMs,
-        name: 'Cola & Caché en Tiempo Real (Redis)',
-        status: redisOperational ? 'operational' : 'degraded',
-        successRatePct: redisOperational ? 100 : 0,
-      },
-    ];
-
-    return {
-      charts: {
-        giveawayPerformance,
-        orderStatusDistribution,
-        paymentMethods: {
-          amounts: paymentAmounts,
-          labels: paymentLabels,
-        },
-        revenueTimeline: buildTimeline(period, timelineRows),
-      },
-      gatewayStatus,
-      kpis: {
-        activeGiveaways: activeGw,
-        averageOrderValue: aov,
-        averageOrderValueFormatted: formatCurrency(aov),
-        conversionChangePct,
-        conversionRatePct: conversion,
-        pendingOrdersCount: pending,
-        revenueChangePct,
-        ticketsSold: tickets,
-        ticketsSoldChangePct,
-        totalRevenue: totalRev,
-        totalRevenueFormatted: formatCurrency(totalRev),
-      },
-      period,
-      recentOrders,
-    };
+    return { alerts, metrics, recent_orders };
+  } catch (error) {
+    logger.db.error('Error al compilar métricas del dashboard en backend admin', error);
+    throw new Error('Error al obtener estadísticas del dashboard.');
   }
 }
-
-export const dashboardService = new DashboardService();

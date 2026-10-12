@@ -1,160 +1,141 @@
-<div class="component-wrapper component-wrapper--full view-wrapper audit-view" data-ref="audit-view">
+<div class="component-wrapper component-wrapper--full audit-wrapper view-wrapper" data-ref="audit-wrapper">
   <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="audit-scrollable">
-    <div class="view-header" data-ref="audit-floating-top">
-      <div class="view-header__left" data-ref="audit-floating-left">
-        <h1 class="view-header__title" data-ref="audit-title">Bitácora de Auditoría Forense</h1>
-      </div>
+    <div class="view-body" data-ref="audit-body">
+      <div class="view-backdrop" data-ref="audit-gradient-backdrop"></div>
 
-      <div class="view-header__right" data-ref="audit-floating-right">
-        <div class="view-header__actions" data-ref="audit-default-actions">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar eventos" aria-label="Buscar eventos">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          </button>
+      <div class="view-header" data-ref="audit-header">
+        <div class="view-header__left" data-ref="audit-header-left">
+          <h1 class="view-header__title" data-ref="audit-title">
+            <span class="view-header__title-name">Registro de Auditoría e Historial</span>
+          </h1>
+        </div>
 
-          <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
-            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtros de bitácora" aria-label="Filtros de bitácora">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
-            </button>
-
-            <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
-              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="filter-dropdown-menu">
-                <div class="avatar-menu__section-header">
-                  <span class="drawer-section__title">Partición Mensual</span>
-                </div>
-                <div class="menu-panel__list" data-ref="filter-months-list"></div>
-
-                <div class="menu-divider"></div>
-
-                <div class="avatar-menu__section-header">
-                  <span class="drawer-section__title">Tipo de Actor</span>
-                </div>
-                <div class="menu-panel__list" data-ref="filter-actor-list">
-                  <button type="button" class="menu-item is-active" data-ref="btn-filter-actor-all" data-actor-filter="all">
-                    <span class="menu-item__text">Todos los actores</span>
-                  </button>
-                  <button type="button" class="menu-item" data-actor-filter="ADMIN">
-                    <span class="menu-item__text">Operador Admin</span>
-                  </button>
-                  <button type="button" class="menu-item" data-actor-filter="CUSTOMER">
-                    <span class="menu-item__text">Cliente / Usuario</span>
-                  </button>
-                  <button type="button" class="menu-item" data-actor-filter="SYSTEM">
-                    <span class="menu-item__text">Sistema Automático</span>
-                  </button>
-                </div>
-
-                <div class="menu-divider"></div>
-
-                <div class="avatar-menu__section-header">
-                  <span class="drawer-section__title">Acción Registrada</span>
-                </div>
-                <div class="menu-panel__list filter-dropdown-list--scrollable" data-ref="filter-action-list">
-                  <button type="button" class="menu-item is-active" data-ref="btn-filter-action-all" data-action-filter="all">
-                    <span class="menu-item__text">Todas las acciones</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="ORDER_APPROVED">
-                    <span class="menu-item__text">Aprobación de Orden</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="ORDER_REJECTED">
-                    <span class="menu-item__text">Rechazo de Orden</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="ORDER_CREATED">
-                    <span class="menu-item__text">Creación de Orden</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="ORDER_CANCELLED">
-                    <span class="menu-item__text">Cancelación de Orden</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="GIVEAWAY_CREATED">
-                    <span class="menu-item__text">Creación de Sorteo</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="GIVEAWAY_DRAWN">
-                    <span class="menu-item__text">Ejecución de Sorteo</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="ADMIN_LOGIN">
-                    <span class="menu-item__text">Inicio de Sesión Admin</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="ADMIN_CREATED">
-                    <span class="menu-item__text">Creación de Admin</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="ROLE_PERMISSIONS_UPDATED">
-                    <span class="menu-item__text">Mutación de Permisos PBAC</span>
-                  </button>
-                  <button type="button" class="menu-item" data-action-filter="SESSION_REVOKED">
-                    <span class="menu-item__text">Revocación de Sesión</span>
-                  </button>
-                </div>
-              </div>
+        <div class="view-header__right" data-ref="audit-header-right">
+          <div class="view-header__actions" data-ref="audit-actions">
+            <div class="view-header__search" data-ref="audit-search-pill">
+              <svg class="component-icon view-header__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="view-header__search-input" data-ref="audit-search-input" type="text" placeholder="Buscar por IP, orden o acción..." autocomplete="off" />
             </div>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-audit" data-tooltip="Actualizar auditoría" aria-label="Actualizar auditoría">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            </button>
           </div>
-
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-search-order-modal" data-tooltip="Rastrear orden por UUID" aria-label="Rastrear Orden">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-          </button>
-
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-audit" data-tooltip="Recargar bitácora" aria-label="Actualizar">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
-          </button>
         </div>
+      </div>
 
-        <div class="view-header__actions view-header__actions--selected is-hidden" data-ref="audit-selected-actions">
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      <div class="admin-view-content" data-ref="audit-view-content">
+        <div class="orders-tabs-bar" data-ref="audit-tabs-bar">
+        <div class="orders-tabs" data-ref="audit-actor-tabs">
+          <button type="button" class="orders-tab is-active" data-ref="tab-actor-all" data-actor="all">
+            <span>Todos los Actores</span>
           </button>
-
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-inspect" data-tooltip="Inspeccionar evento forense" aria-label="Inspeccionar evento forense">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+          <button type="button" class="orders-tab" data-ref="tab-actor-admin" data-actor="admin">
+            <span>Administrador</span>
           </button>
-
-          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-copy-uuid" data-tooltip="Copiar UUID del evento" aria-label="Copiar UUID del evento">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+          <button type="button" class="orders-tab" data-ref="tab-actor-customer" data-actor="customer">
+            <span>Clientes</span>
+          </button>
+          <button type="button" class="orders-tab" data-ref="tab-actor-system" data-actor="system">
+            <span>Sistema</span>
           </button>
         </div>
       </div>
 
-      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
-        <div class="component-search component-search--full" data-ref="search-box">
-          <div class="component-search__icon" data-ref="search-icon">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          </div>
-          <div class="component-search__input-box" data-ref="search-input-box">
-            <input class="component-search__input" data-ref="input-search-audit" placeholder="Buscar por orden, teléfono, operador o IP..." type="text" maxlength="100" autocomplete="off" />
-          </div>
-          <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" aria-label="Limpiar búsqueda">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      <div class="audit-content" data-ref="audit-content">
+        <div class="orders-skeleton" data-ref="audit-skeleton">
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+        </div>
+
+        <div class="orders-empty" data-ref="audit-empty" style="display: none;">
+          <svg class="component-icon orders-empty__icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
+          <p class="orders-empty__title">No hay registros de auditoría</p>
+          <p class="orders-empty__subtitle">No se encontraron eventos con los filtros seleccionados.</p>
+        </div>
+
+        <div class="orders-table-wrapper" data-ref="audit-table-wrapper" style="display: none;">
+          <table class="orders-table" data-ref="audit-table">
+            <thead>
+              <tr>
+                <th>Fecha / Hora</th>
+                <th>Acción</th>
+                <th>Actor</th>
+                <th>Orden Vinculada</th>
+                <th>Cliente</th>
+                <th>IP / Dispositivo</th>
+                <th>Transición de Estado</th>
+                <th>Monto</th>
+                <th class="orders-col-actions">Detalle</th>
+              </tr>
+            </thead>
+            <tbody data-ref="audit-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="orders-pagination" data-ref="audit-pagination" style="display: none;">
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-audit-prev" disabled>
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            <span>Anterior</span>
+          </button>
+          <span class="orders-pagination__info" data-ref="audit-pagination-info">Página 1 de 1</span>
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-audit-next" disabled>
+            <span>Siguiente</span>
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
           </button>
         </div>
+      </div>
       </div>
     </div>
+  </div>
 
-    <div class="view-body admin-view-body admin-view-body--flush" data-ref="audit-body">
-      <div class="audit-content-area" data-ref="audit-content-area">
-        <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="audit-table-card">
-          <div class="winners-daily-table-container" data-ref="audit-table-container">
-            <table class="winners-daily-table" data-ref="audit-table">
-              <thead>
-                <tr>
-                  <th class="winners-th" scope="col">Fecha y Hora</th>
-                  <th class="winners-th" scope="col">Acción Registrada</th>
-                  <th class="winners-th" scope="col">Actor / Operador</th>
-                  <th class="winners-th" scope="col">Tipo</th>
-                  <th class="winners-th" scope="col">Referencia / Entidad</th>
-                  <th class="winners-th" scope="col">Dirección IP</th>
-                </tr>
-              </thead>
-              <tbody class="winners-tbody" data-ref="audit-table-body">
-                <tr class="winners-table__tr winners-tr--empty">
-                  <td class="winners-table__td winners-td--empty" colspan="6" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
-                    Cargando bitácora forense de Cassandra...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+  <div class="modal-backdrop" data-ref="modal-audit-detail" style="display: none;">
+    <div class="modal-container modal-container--audit" data-ref="modal-audit-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-audit-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+
+      <div class="modal-card modal-card--audit" data-ref="modal-audit-card">
+        <div class="modal-audit__header" data-ref="modal-audit-header">
+          <div class="modal-audit__titles">
+            <h2 class="modal-audit__title" data-ref="audit-modal-title">Inspección de Registro Forense</h2>
+            <span class="modal-audit__ref" data-ref="audit-modal-uuid">UUID: -</span>
           </div>
-          <div class="winners-pagination" data-ref="audit-pagination">
-            <div class="winners-pagination__info">
-              <span data-ref="text-events-count">Mostrando 0 eventos</span>
-            </div>
+          <span class="order-badge" data-ref="audit-modal-action-badge">ACCIÓN</span>
+        </div>
+
+        <div class="modal-audit__meta-grid">
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Fecha y Hora Exacta:</span>
+            <span class="receipt-detail-value" data-ref="audit-detail-timestamp">-</span>
           </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Tipo de Actor:</span>
+            <span class="receipt-detail-value" data-ref="audit-detail-actor">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Dirección IP:</span>
+            <span class="receipt-detail-value account-data-value--mono" data-ref="audit-detail-ip">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Agente de Usuario:</span>
+            <span class="receipt-detail-value" data-ref="audit-detail-useragent">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Orden / Folio:</span>
+            <span class="receipt-detail-value account-data-value--mono" data-ref="audit-detail-order">-</span>
+          </div>
+          <div class="receipt-detail-row">
+            <span class="receipt-detail-label">Cliente / Teléfono:</span>
+            <span class="receipt-detail-value" data-ref="audit-detail-customer">-</span>
+          </div>
+        </div>
+
+        <div class="modal-audit__payload-box">
+          <span class="modal-audit__payload-title">Detalles y Carga Útil (JSON):</span>
+          <pre class="audit-json-viewer" data-ref="audit-json-viewer">{}</pre>
         </div>
       </div>
     </div>

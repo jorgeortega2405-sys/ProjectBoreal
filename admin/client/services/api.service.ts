@@ -1,158 +1,81 @@
-export interface PaginationMeta {
-  currentPage: number;
-  limit: number;
-  totalCount: number;
-  totalPages: number;
+export interface AdminSafeUser {
+  email: string;
+  id: number;
+  name: string;
+  uuid: string;
 }
 
-export interface ApiResponse<T = any> {
-  data?: T;
-  error?: string;
-  message?: string;
-  pagination?: PaginationMeta;
-  success: boolean;
+let currentUser: AdminSafeUser | null = null;
+
+export function getCurrentUser(): AdminSafeUser | null {
+  return currentUser;
 }
 
-export async function getApi<T>(endpoint: string): Promise<ApiResponse<T>> {
+export function setCurrentUser(user: AdminSafeUser | null): void {
+  currentUser = user;
+}
+
+export async function checkAuth(): Promise<boolean> {
   try {
-    const res = await fetch(endpoint, {
-      cache: 'no-store',
-      headers: {
-        'Accept': 'application/json',
-      },
+    const res = await fetch('/api/auth/me', {
+      credentials: 'include',
     });
     if (!res.ok) {
-      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
-        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
-      }
-      const errorJson = await res.json().catch(() => null);
-      return {
-        data: errorJson?.data,
-        error: errorJson?.error || 'Error al obtener los datos del servidor.',
-        success: false,
-      };
+      currentUser = null;
+      return false;
     }
-    const json = await res.json();
-    if (!json.success) {
-      return {
-        data: json.data,
-        error: json.error || 'Error al obtener los datos.',
-        success: false,
-      };
+    const data = await res.json();
+    if (data.authenticated && data.user) {
+      currentUser = data.user;
+      return true;
     }
-    return { data: json.data, pagination: json.pagination, success: true };
-  } catch (_) {
-    return { error: 'Error de red o conexión al servidor.', success: false };
+    currentUser = null;
+    return false;
+  } catch {
+    currentUser = null;
+    return false;
   }
 }
 
-export async function postApi<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+export async function login(email: string, password: string): Promise<{ error?: string; success: boolean }> {
   try {
-    const res = await fetch(endpoint, {
-      body: body ? JSON.stringify(body) : undefined,
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetch('/api/auth/login', {
+      body: JSON.stringify({ email, password }),
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       method: 'POST',
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
-        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
-      }
+
+    const data = await res.json();
+    if (!res.ok) {
       return {
-        data: json.data,
-        error: json.error || 'Error al procesar la solicitud.',
+        error: data.error || 'Credenciales inválidas.',
         success: false,
       };
     }
+
+    if (data.authenticated && data.user) {
+      currentUser = data.user;
+      return { success: true };
+    }
+
+    return { error: 'Respuesta inesperada del servidor.', success: false };
+  } catch {
     return {
-      data: json.data,
-      message: json.message,
-      success: true,
+      error: 'Ha ocurrido un error inesperado al procesar la solicitud. Por favor intenta más tarde.',
+      success: false,
     };
-  } catch (_) {
-    return { error: 'Error de conexión al enviar la solicitud.', success: false };
   }
 }
 
-export async function putApi<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+export async function logout(): Promise<void> {
   try {
-    const res = await fetch(endpoint, {
-      body: body ? JSON.stringify(body) : undefined,
-      headers: { 'Content-Type': 'application/json' },
-      method: 'PUT',
+    await fetch('/api/auth/logout', {
+      credentials: 'include',
+      method: 'POST',
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
-        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
-      }
-      return {
-        data: json.data,
-        error: json.error || 'Error al procesar la solicitud.',
-        success: false,
-      };
-    }
-    return {
-      data: json.data,
-      message: json.message,
-      success: true,
-    };
-  } catch (_) {
-    return { error: 'Error de conexión al enviar la solicitud.', success: false };
-  }
-}
-
-export async function patchApi<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
-  try {
-    const res = await fetch(endpoint, {
-      body: body ? JSON.stringify(body) : undefined,
-      headers: { 'Content-Type': 'application/json' },
-      method: 'PATCH',
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
-        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
-      }
-      return {
-        data: json.data,
-        error: json.error || 'Error al procesar la solicitud.',
-        success: false,
-      };
-    }
-    return {
-      data: json.data,
-      message: json.message,
-      success: true,
-    };
-  } catch (_) {
-    return { error: 'Error de conexión al enviar la solicitud.', success: false };
-  }
-}
-
-export async function deleteApi<T>(endpoint: string): Promise<ApiResponse<T>> {
-  try {
-    const res = await fetch(endpoint, {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'DELETE',
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      if (res.status === 401 && !endpoint.includes('/api/auth/')) {
-        window.dispatchEvent(new CustomEvent('admin:unauthorized'));
-      }
-      return {
-        data: json.data,
-        error: json.error || 'Error al procesar la solicitud.',
-        success: false,
-      };
-    }
-    return {
-      data: json.data,
-      message: json.message,
-      success: true,
-    };
-  } catch (_) {
-    return { error: 'Error de conexión al enviar la solicitud.', success: false };
-  }
+  } catch {}
+  currentUser = null;
 }

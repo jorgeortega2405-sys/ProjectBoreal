@@ -1,35 +1,18 @@
-export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'danger';
-
 export interface ViewController {
-  init(container: HTMLElement): Promise<void> | void;
   destroy(): void;
+  init(): Promise<void> | void;
 }
 
-export interface ModalOptions {
-  bodyHtml?: string | HTMLElement;
-  cancelText?: string;
-  confirmClass?: string;
-  confirmText?: string;
-  description?: string;
-  onCancel?: (() => boolean | Promise<boolean> | void) | null;
-  onClose?: (() => void) | null;
-  onConfirm?: (() => boolean | Promise<boolean> | void) | null;
-  showCancel?: boolean;
-  showConfirm?: boolean;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'split';
-  title?: string;
+export interface RouteHandlerContext {
+  params: Record<string, string>;
+  path: string;
+  previousPath: string;
+  query: URLSearchParams;
 }
 
-export interface ModalInstance {
-  backdrop: HTMLElement;
-  body: HTMLElement;
-  btnCancel: HTMLButtonElement | null;
-  btnConfirm: HTMLButtonElement | null;
-  card: HTMLElement | null;
-  close: () => void;
-  closeBtn: HTMLElement | null;
-  errorBanner: HTMLElement | null;
-  setDescription: (desc: string) => void;
-  setError: (msg: string) => void;
-  setTitle: (title: string) => void;
+export type RouteHandler = (context: RouteHandlerContext) => Promise<HTMLElement>;
+
+export interface RouteDefinition {
+  handler: RouteHandler;
+  path: string;
 }

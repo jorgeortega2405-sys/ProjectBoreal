@@ -1,0 +1,193 @@
+<div class="component-wrapper component-wrapper--full orders-wrapper view-wrapper" data-ref="orders-wrapper">
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="orders-scrollable">
+    <div class="view-body" data-ref="orders-body">
+      <div class="view-backdrop" data-ref="orders-gradient-backdrop"></div>
+
+      <div class="view-header" data-ref="orders-header">
+        <div class="view-header__left" data-ref="orders-header-left">
+          <h1 class="view-header__title" data-ref="orders-title">
+            <span class="view-header__title-name">Gestión y Validación de Órdenes</span>
+          </h1>
+        </div>
+
+        <div class="view-header__right" data-ref="orders-header-right">
+          <div class="view-header__actions" data-ref="orders-actions">
+            <div class="view-header__search" data-ref="orders-search-pill">
+              <svg class="component-icon view-header__search-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+              <input class="view-header__search-input" data-ref="orders-search-input" type="text" placeholder="Buscar por referencia, cliente o SPEI..." autocomplete="off" />
+            </div>
+
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-orders" data-tooltip="Actualizar órdenes" aria-label="Actualizar órdenes">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#refresh"></use></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-view-content" data-ref="orders-view-content">
+        <div class="orders-tabs-bar" data-ref="orders-tabs-bar">
+        <div class="orders-tabs" data-ref="orders-tabs">
+          <button type="button" class="orders-tab is-active" data-ref="tab-in-review" data-status="in_review">
+            <span>En revisión</span>
+            <span class="orders-tab__badge" data-ref="tab-badge-in-review">0</span>
+          </button>
+          <button type="button" class="orders-tab" data-ref="tab-pending" data-status="pending_payment">
+            <span>Pendientes</span>
+          </button>
+          <button type="button" class="orders-tab" data-ref="tab-all" data-status="all">
+            <span>Todas</span>
+          </button>
+          <button type="button" class="orders-tab" data-ref="tab-completed" data-status="completed">
+            <span>Completadas</span>
+          </button>
+          <button type="button" class="orders-tab" data-ref="tab-cancelled" data-status="cancelled">
+            <span>Canceladas / Expiradas</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="spei-monitor-panel" data-ref="spei-monitor-panel">
+        <div class="spei-monitor-header" data-ref="spei-monitor-header">
+          <div class="spei-monitor-title" data-ref="spei-monitor-title">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
+            <span>Monitor de Cola SPEI (Banxico)</span>
+            <span class="spei-count-tag" data-ref="spei-queue-count">0 en cola</span>
+          </div>
+          <div class="spei-monitor-actions" data-ref="spei-monitor-actions">
+            <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-trigger-spei">
+              <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#sync"></use></svg>
+              <span>Procesar Cola SPEI</span>
+            </button>
+          </div>
+        </div>
+        <div class="spei-queue-list" data-ref="spei-queue-list" style="display: none;"></div>
+      </div>
+
+      <div class="orders-content" data-ref="orders-content">
+        <div class="orders-skeleton" data-ref="orders-skeleton">
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+          <div class="skeleton-table-row"></div>
+        </div>
+
+        <div class="orders-empty" data-ref="orders-empty" style="display: none;">
+          <svg class="component-icon orders-empty__icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          <p class="orders-empty__title" data-ref="orders-empty-title">No hay órdenes para mostrar</p>
+          <p class="orders-empty__subtitle" data-ref="orders-empty-subtitle">No se encontraron órdenes con el filtro o término de búsqueda seleccionado.</p>
+        </div>
+
+        <div class="orders-table-wrapper" data-ref="orders-table-wrapper" style="display: none;">
+          <table class="orders-table" data-ref="orders-table">
+            <thead>
+              <tr>
+                <th>Referencia</th>
+                <th>Cliente</th>
+                <th>Sorteo</th>
+                <th>Boletos</th>
+                <th>Monto</th>
+                <th>Estado</th>
+                <th>Comprobante / SPEI</th>
+                <th class="orders-col-actions">Acciones</th>
+              </tr>
+            </thead>
+            <tbody data-ref="orders-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="orders-pagination" data-ref="orders-pagination" style="display: none;">
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-prev-page" disabled>
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#chevron_left"></use></svg>
+            <span>Anterior</span>
+          </button>
+          <span class="orders-pagination__info" data-ref="orders-pagination-info">Página 1 de 1</span>
+          <button type="button" class="component-button component-button--h36 component-button--secondary" data-ref="btn-next-page" disabled>
+            <span>Siguiente</span>
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#chevron_right"></use></svg>
+          </button>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" data-ref="modal-receipt" style="display: none;">
+    <div class="modal-container modal-container--receipt" data-ref="modal-receipt-container">
+      <button type="button" class="modal-close-btn" data-ref="btn-close-receipt-modal" aria-label="Cerrar modal">
+        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+      </button>
+
+      <div class="modal-card modal-card--receipt" data-ref="modal-receipt-card">
+        <div class="modal-receipt__header" data-ref="modal-receipt-header">
+          <div class="modal-receipt__titles" data-ref="modal-receipt-titles">
+            <h2 class="modal-receipt__title" data-ref="receipt-modal-title">Comprobante de Pago</h2>
+            <span class="modal-receipt__ref" data-ref="receipt-modal-ref">REF-000000</span>
+          </div>
+          <span class="order-badge" data-ref="receipt-modal-status-badge">En revisión</span>
+        </div>
+
+        <div class="modal-receipt__body" data-ref="modal-receipt-body">
+          <div class="modal-receipt__media-box" data-ref="receipt-modal-media-box">
+            <div class="modal-receipt__img-wrapper" data-ref="receipt-modal-img-wrapper">
+              <img class="modal-receipt__img" data-ref="receipt-modal-img" src="" alt="Comprobante de pago" />
+            </div>
+            <div class="modal-receipt__img-actions" data-ref="receipt-modal-img-actions">
+              <a class="component-button component-button--h36 component-button--secondary" data-ref="btn-receipt-open-full" href="#" target="_blank" rel="noopener noreferrer">
+                <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#open_in_new"></use></svg>
+                <span>Ver imagen completa</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="modal-receipt__details" data-ref="receipt-modal-details">
+            <div class="receipt-detail-row">
+              <span class="receipt-detail-label">Cliente:</span>
+              <span class="receipt-detail-value" data-ref="receipt-detail-customer">-</span>
+            </div>
+            <div class="receipt-detail-row">
+              <span class="receipt-detail-label">Teléfono:</span>
+              <span class="receipt-detail-value" data-ref="receipt-detail-phone">-</span>
+            </div>
+            <div class="receipt-detail-row">
+              <span class="receipt-detail-label">Sorteo:</span>
+              <span class="receipt-detail-value" data-ref="receipt-detail-giveaway">-</span>
+            </div>
+            <div class="receipt-detail-row">
+              <span class="receipt-detail-label">Boletos asignados:</span>
+              <span class="receipt-detail-value" data-ref="receipt-detail-tickets">-</span>
+            </div>
+            <div class="receipt-detail-row">
+              <span class="receipt-detail-label">Total a validar:</span>
+              <span class="receipt-detail-value receipt-detail-value--amount" data-ref="receipt-detail-amount">$0.00</span>
+            </div>
+            <div class="receipt-detail-row">
+              <span class="receipt-detail-label">Clave de rastreo SPEI:</span>
+              <span class="receipt-detail-value" data-ref="receipt-detail-tracking">-</span>
+            </div>
+            <div class="receipt-detail-row">
+              <span class="receipt-detail-label">Referencia bancaria:</span>
+              <span class="receipt-detail-value" data-ref="receipt-detail-bank-ref">-</span>
+            </div>
+            <div class="receipt-detail-row">
+              <span class="receipt-detail-label">Fecha de orden:</span>
+              <span class="receipt-detail-value" data-ref="receipt-detail-date">-</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-receipt__actions" data-ref="receipt-modal-actions">
+          <button type="button" class="component-button component-button--h45 component-button--green" data-ref="btn-modal-approve-order">
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#check"></use></svg>
+            <span>Aprobar Pago</span>
+          </button>
+          <button type="button" class="component-button component-button--h45 component-button--danger" data-ref="btn-modal-cancel-order">
+            <svg class="component-icon component-button__icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+            <span>Rechazar / Cancelar</span>
+          </button>
+        </div>
+
+        <div class="banner banner--danger" data-ref="modal-receipt-error" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+</div>

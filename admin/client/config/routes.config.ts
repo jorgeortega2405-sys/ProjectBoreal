@@ -20,7 +20,7 @@ export const APP_ROUTES: RouteDefinition[] = [
       return await createLoginView();
     },
     id: 'login',
-    match: (path) => path === '/login' || path === '/iniciar-sesion',
+    match: (path) => path === '/login',
   },
   {
     handler: async () => {
@@ -31,61 +31,41 @@ export const APP_ROUTES: RouteDefinition[] = [
     match: (path) => path === '/' || path === '' || path === '/dashboard',
   },
   {
-    handler: async (ctx) => {
-      const { createGiveawayCreateView } = await import('../views/giveaway-create.view.js');
-      return await createGiveawayCreateView(ctx);
-    },
-    id: 'giveaway-create',
-    match: (path) =>
-      path === '/giveaways/create' ||
-      path === '/giveaways/new' ||
-      path === '/sorteos/crear',
-  },
-  {
-    handler: async (ctx) => {
-      const { createGiveawayEditView } = await import('../views/giveaway-edit.view.js');
-      return await createGiveawayEditView(ctx);
-    },
-    id: 'giveaway-edit',
-    match: (path) => {
-      const editMatch = path.match(/^\/(?:giveaways|sorteos)\/([a-zA-Z0-9_-]+)\/edit$/);
-      if (editMatch) {
-        return { uuid: editMatch[1] };
-      }
-      const altMatch = path.match(/^\/(?:giveaways|sorteos)\/edit\/([a-zA-Z0-9_-]+)$/);
-      if (altMatch) {
-        return { uuid: altMatch[1] };
-      }
-      return false;
-    },
-  },
-  {
     handler: async () => {
       const { createGiveawaysView } = await import('../views/giveaways.view.js');
       return await createGiveawaysView();
     },
     id: 'giveaways',
-    match: (path) =>
-      path === '/giveaways' ||
-      path.startsWith('/giveaways') ||
-      path === '/sorteos' ||
-      path.startsWith('/sorteos'),
+    match: (path) => path === '/sorteos' || path === '/giveaways',
   },
   {
     handler: async () => {
-      const { createPaymentsView } = await import('../views/payments.view.js');
-      return await createPaymentsView();
+      const { createGiveawayFormView } = await import('../views/giveaway-form.view.js');
+      return await createGiveawayFormView();
     },
-    id: 'payments',
-    match: (path) =>
-      path === '/payments' ||
-      path.startsWith('/payments') ||
-      path === '/pagos' ||
-      path.startsWith('/pagos') ||
-      path === '/orders' ||
-      path.startsWith('/orders') ||
-      path === '/comprobantes' ||
-      path.startsWith('/comprobantes'),
+    id: 'giveaway-create',
+    match: (path) => path === '/sorteo/create' || path === '/sorteos/create',
+  },
+  {
+    handler: async (ctx) => {
+      const { createGiveawayFormView } = await import('../views/giveaway-form.view.js');
+      return await createGiveawayFormView(ctx.params.uuid);
+    },
+    id: 'giveaway-edit',
+    match: (path) => {
+      const match = path.match(/^\/sorteos?\/([a-zA-Z0-9-]+)\/edit$/);
+      if (!match) return false;
+      return { uuid: match[1] };
+    },
+  },
+  {
+
+    handler: async () => {
+      const { createOrdersView } = await import('../views/orders.view.js');
+      return await createOrdersView();
+    },
+    id: 'orders',
+    match: (path) => path === '/ordenes' || path === '/pagos' || path === '/orders',
   },
   {
     handler: async () => {
@@ -93,116 +73,7 @@ export const APP_ROUTES: RouteDefinition[] = [
       return await createBankAccountsView();
     },
     id: 'bank-accounts',
-    match: (path) =>
-      path === '/bank-accounts' ||
-      path.startsWith('/bank-accounts') ||
-      path === '/cuentas-bancarias' ||
-      path.startsWith('/cuentas-bancarias') ||
-      path === '/bancos' ||
-      path.startsWith('/bancos'),
-  },
-  {
-    handler: async () => {
-      const { createCustomersView } = await import('../views/customers.view.js');
-      return await createCustomersView();
-    },
-    id: 'customers',
-    match: (path) =>
-      path === '/customers' ||
-      path.startsWith('/customers') ||
-      path === '/clientes' ||
-      path.startsWith('/clientes') ||
-      path === '/participantes' ||
-      path.startsWith('/participantes'),
-  },
-  {
-    handler: async () => {
-      const { createWinnersView } = await import('../views/winners.view.js');
-      return await createWinnersView();
-    },
-    id: 'winners',
-    match: (path) =>
-      path === '/winners' ||
-      path.startsWith('/winners') ||
-      path === '/ganadores' ||
-      path.startsWith('/ganadores') ||
-      path === '/premios' ||
-      path.startsWith('/premios'),
-  },
-  {
-    handler: async (ctx) => {
-      const { createHrCreateView } = await import('../views/hr-form.view.js');
-      return await createHrCreateView(ctx);
-    },
-    id: 'hr-create',
-    match: (path) =>
-      path === '/hr/create' ||
-      path === '/hr/new' ||
-      path === '/recursos-humanos/crear' ||
-      path === '/recursos-humanos/contratar' ||
-      path === '/empleados/crear',
-  },
-  {
-    handler: async (ctx) => {
-      const { createHrEditView } = await import('../views/hr-form.view.js');
-      return await createHrEditView(ctx);
-    },
-    id: 'hr-edit',
-    match: (path) => {
-      const editMatch = path.match(/^\/(?:hr|recursos-humanos|empleados|personal)\/([a-zA-Z0-9_-]+)\/edit$/);
-      if (editMatch) {
-        return { uuid: editMatch[1] };
-      }
-      const altMatch = path.match(/^\/(?:hr|recursos-humanos|empleados|personal)\/edit\/([a-zA-Z0-9_-]+)$/);
-      if (altMatch) {
-        return { uuid: altMatch[1] };
-      }
-      return false;
-    },
-  },
-  {
-    handler: async () => {
-      const { createHrView } = await import('../views/hr.view.js');
-      return await createHrView();
-    },
-    id: 'hr',
-    match: (path) =>
-      path === '/hr' ||
-      path.startsWith('/hr') ||
-      path === '/recursos-humanos' ||
-      path.startsWith('/recursos-humanos') ||
-      path === '/empleados' ||
-      path.startsWith('/empleados') ||
-      path === '/personal' ||
-      path.startsWith('/personal'),
-  },
-  {
-    handler: async () => {
-      const { createBackupsView } = await import('../views/backups.view.js');
-      return await createBackupsView();
-    },
-    id: 'backups',
-    match: (path) =>
-      path === '/backups' ||
-      path.startsWith('/backups') ||
-      path === '/copias-seguridad' ||
-      path.startsWith('/copias-seguridad') ||
-      path === '/respaldos' ||
-      path.startsWith('/respaldos'),
-  },
-  {
-    handler: async () => {
-      const { createAdminsView } = await import('../views/admins.view.js');
-      return await createAdminsView();
-    },
-    id: 'admins',
-    match: (path) =>
-      path === '/admins' ||
-      path.startsWith('/admins') ||
-      path === '/administradores' ||
-      path.startsWith('/administradores') ||
-      path === '/seguridad' ||
-      path.startsWith('/seguridad'),
+    match: (path) => path === '/cuentas-bancarias' || path === '/bancos' || path === '/cuentas',
   },
   {
     handler: async () => {
@@ -210,37 +81,11 @@ export const APP_ROUTES: RouteDefinition[] = [
       return await createAuditView();
     },
     id: 'audit',
-    match: (path) =>
-      path === '/audit' ||
-      path.startsWith('/audit') ||
-      path === '/auditoria' ||
-      path.startsWith('/auditoria') ||
-      path === '/bitacora' ||
-      path.startsWith('/bitacora'),
-  },
-  {
-    handler: async () => {
-      const { createSettingsView } = await import('../views/settings.view.js');
-      return await createSettingsView();
-    },
-    id: 'settings',
-    match: (path) =>
-      path === '/settings' ||
-      path.startsWith('/settings') ||
-      path === '/configuracion' ||
-      path.startsWith('/configuracion') ||
-      path === '/ajustes' ||
-      path.startsWith('/ajustes'),
-  },
-  {
-    handler: async () => {
-      const { createNotFoundView } = await import('../views/not-found.view.js');
-      return await createNotFoundView();
-    },
-    id: 'not-found',
-    match: (path) => path === '/404',
+    match: (path) => path === '/auditoria' || path === '/logs' || path === '/audit',
   },
 ];
+
+
 
 export function findRoute(path: string): { params: Record<string, string>; route: RouteDefinition } | null {
   for (const route of APP_ROUTES) {
