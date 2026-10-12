@@ -1,8 +1,10 @@
+import { openModal } from '../components/modal.component.js';
 import { getApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
+import { DropdownController, setupDropdown } from '../utils/dom.util.js';
 
 interface AuditEventItem {
   action: string;
@@ -65,26 +67,19 @@ function formatMonthLabel(monthStr: string): string {
   return `${monthName.charAt(0).toUpperCase() + monthName.slice(1)} (${monthStr})`;
 }
 
-function getActionBadge(action: string): string {
-  let cls = 'audit-action-badge--neutral';
-  if (action.includes('APPROVED')) cls = 'audit-action-badge--success';
-  else if (action.includes('REJECTED') || action.includes('CANCELLED')) cls = 'audit-action-badge--danger';
-  else if (action.includes('CREATED')) cls = 'audit-action-badge--info';
-  else if (action.includes('GIVEAWAY') || action.includes('DRAWN')) cls = 'audit-action-badge--purple';
-  else if (action.includes('LOGIN') || action.includes('ROLE')) cls = 'audit-action-badge--warning';
-
-  return `<span class="audit-action-badge ${cls}">${escapeHtml(action)}</span>`;
-}
-
 export class AuditController implements ViewController {
   private abortController: AbortController | null = null;
   private actionFilter = 'all';
   private actorFilter = 'all';
   private availableMonths: string[] = [];
   private container: HTMLElement;
+  private defaultActions: HTMLElement | null = null;
   private eventsList: AuditEventItem[] = [];
+  private filterDropdownController: DropdownController | null = null;
   private isCassandraConnected = true;
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private searchQuery = '';
+  private selectedActions: HTMLElement | null = null;
   private selectedEvent: AuditEventItem | null = null;
   private selectedMonth = '';
 
@@ -103,60 +98,138 @@ export class AuditController implements ViewController {
       this.abortController.abort();
       this.abortController = null;
     }
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+    this.filterDropdownController?.destroy();
+    this.filterDropdownController = null;
     this.eventsList = [];
     this.availableMonths = [];
     this.selectedEvent = null;
+    this.defaultActions = null;
+    this.selectedActions = null;
   }
 
   private bindEvents(): void {
     const btnRefreshHeader = this.container.querySelector<HTMLElement>('[data-ref="btn-refresh-audit"]');
-    btnRefreshHeader?.addEventListener('click', () => this.loadAuditData());
-
-    const btnRefreshTimeline = this.container.querySelector<HTMLElement>('[data-ref="btn-refresh-timeline"]');
-    btnRefreshTimeline?.addEventListener('click', () => this.loadAuditData());
-
-    const monthSelect = this.container.querySelector<HTMLSelectElement>('[data-ref="select-audit-month"]');
-    monthSelect?.addEventListener('change', () => {
-      this.selectedMonth = monthSelect.value;
-      this.loadAuditData();
+    btnRefreshHeader?.addEventListener('click', () => {
+      this.deselectAll();
+      void this.loadAuditData();
     });
 
+    const filterWrapper = this.container.querySelector<HTMLElement>('[data-ref="filter-dropdown-wrapper"]');
+    if (filterWrapper) {
+      this.filterDropdownController = setupDropdown(filterWrapper, {
+        isSelect: false,
+        matchWidth: false,
+        placement: 'bottom-end',
+      });
+    }
+
+    const btnToggleSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-toggle-search"]');
+    const searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
     const searchInput = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-audit"]');
+    const btnClearSearch = this.container.querySelector<HTMLElement>('[data-ref="btn-clear-search"]');
+
+    btnToggleSearch?.addEventListener('click', () => {
+      const isHidden = searchToolbar?.classList.toggle('is-hidden');
+      if (!isHidden) {
+        searchInput?.focus();
+      } else if (this.searchQuery) {
+        this.searchQuery = '';
+        if (searchInput) searchInput.value = '';
+        btnClearSearch?.classList.add('is-hidden');
+        this.renderEventsTable();
+      }
+    });
+
     searchInput?.addEventListener('input', () => {
-      this.searchQuery = searchInput.value.trim().toLowerCase();
-      this.renderEventsTable();
+      const val = searchInput.value;
+      btnClearSearch?.classList.toggle('is-hidden', !val);
+
+      if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = setTimeout(() => {
+        this.searchQuery = val.trim().toLowerCase();
+        this.renderEventsTable();
+      }, 250);
     });
 
-    const actionSelect = this.container.querySelector<HTMLSelectElement>('[data-ref="select-action-filter"]');
-    actionSelect?.addEventListener('change', () => {
-      this.actionFilter = actionSelect.value;
+    btnClearSearch?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      btnClearSearch.classList.add('is-hidden');
+      this.searchQuery = '';
       this.renderEventsTable();
+      searchInput?.focus();
     });
 
-    const actorSelect = this.container.querySelector<HTMLSelectElement>('[data-ref="select-actor-filter"]');
-    actorSelect?.addEventListener('change', () => {
-      this.actorFilter = actorSelect.value;
-      this.renderEventsTable();
+    const actorButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-actor-filter]');
+    actorButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.actorFilter = btn.getAttribute('data-actor-filter') || 'all';
+        actorButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
+        this.filterDropdownController?.close();
+        this.renderEventsTable();
+      });
     });
 
-    const btnCloseModalDetail = this.container.querySelector<HTMLElement>('[data-ref="btn-close-modal-detail"]');
-    const btnCloseDetailView = this.container.querySelector<HTMLElement>('[data-ref="btn-close-detail-view"]');
-    btnCloseModalDetail?.addEventListener('click', () => this.closeDetailModal());
-    btnCloseDetailView?.addEventListener('click', () => this.closeDetailModal());
+    const actionButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-action-filter]');
+    actionButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.actionFilter = btn.getAttribute('data-action-filter') || 'all';
+        actionButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
+        this.filterDropdownController?.close();
+        this.renderEventsTable();
+      });
+    });
+
+    this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="audit-default-actions"]');
+    this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="audit-selected-actions"]');
+
+    const btnDeselect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-deselect"]');
+    btnDeselect?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.deselectAll();
+    });
+
+    const btnInspect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-inspect"]');
+    btnInspect?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.selectedEvent) this.openDetailModal(this.selectedEvent);
+    });
+
+    const btnCopyUuid = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-copy-uuid"]');
+    btnCopyUuid?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.selectedEvent) {
+        void navigator.clipboard.writeText(this.selectedEvent.uuid);
+        showToast('UUID copiado al portapapeles', 'info');
+      }
+    });
 
     const btnSearchOrderModal = this.container.querySelector<HTMLElement>('[data-ref="btn-search-order-modal"]');
     btnSearchOrderModal?.addEventListener('click', () => this.openSearchOrderModal());
+  }
 
-    const btnCloseModalSearchOrder = this.container.querySelector<HTMLElement>('[data-ref="btn-close-modal-search-order"]');
-    const btnCancelModalSearchOrder = this.container.querySelector<HTMLElement>('[data-ref="btn-cancel-modal-search-order"]');
-    btnCloseModalSearchOrder?.addEventListener('click', () => this.closeSearchOrderModal());
-    btnCancelModalSearchOrder?.addEventListener('click', () => this.closeSearchOrderModal());
+  private deselectAll(): void {
+    this.selectedEvent = null;
+    this.updateSelectionUi();
+  }
 
-    const formSearchOrder = this.container.querySelector<HTMLFormElement>('[data-ref="form-search-order"]');
-    formSearchOrder?.addEventListener('submit', (e) => this.handleSearchOrder(e));
+  private updateSelectionUi(): void {
+    const isSelected = this.selectedEvent !== null;
+    this.defaultActions?.classList.toggle('is-hidden', isSelected);
+    this.selectedActions?.classList.toggle('is-hidden', !isSelected);
+
+    const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr[data-event-uuid]');
+    rows.forEach((row) => {
+      const uuid = row.getAttribute('data-event-uuid');
+      row.classList.toggle('is-selected', this.selectedEvent?.uuid === uuid);
+    });
   }
 
   private async loadAuditData(): Promise<void> {
+    this.deselectAll();
     try {
       let url = '/api/audit?limit=100';
       if (this.selectedMonth) url += `&month=${encodeURIComponent(this.selectedMonth)}`;
@@ -177,7 +250,6 @@ export class AuditController implements ViewController {
 
         this.updateCassandraBadge();
         this.updateMonthSelector();
-        this.updateKpis(res.data.kpis);
         this.renderEventsTable();
       }
     } catch (_e) {
@@ -200,30 +272,31 @@ export class AuditController implements ViewController {
   }
 
   private updateMonthSelector(): void {
-    const select = this.container.querySelector<HTMLSelectElement>('[data-ref="select-audit-month"]');
-    if (!select) return;
+    const list = this.container.querySelector<HTMLElement>('[data-ref="filter-months-list"]');
+    if (!list) return;
 
     if (this.availableMonths.length > 0) {
-      select.innerHTML = this.availableMonths
+      list.innerHTML = this.availableMonths
         .map(
           (m) =>
-            `<option value="${escapeHtml(m)}" ${m === this.selectedMonth ? 'selected' : ''}>${escapeHtml(formatMonthLabel(m))}</option>`
+            `<button type="button" class="menu-item ${m === this.selectedMonth ? 'is-active' : ''}" data-month-filter="${escapeHtml(m)}">
+              <span class="menu-item__text">${escapeHtml(formatMonthLabel(m))}</span>
+            </button>`
         )
         .join('');
+
+      list.querySelectorAll<HTMLButtonElement>('[data-month-filter]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const m = btn.getAttribute('data-month-filter') || '';
+          if (m && m !== this.selectedMonth) {
+            this.selectedMonth = m;
+            list.querySelectorAll('[data-month-filter]').forEach((b) => b.classList.toggle('is-active', b === btn));
+            this.filterDropdownController?.close();
+            this.loadAuditData();
+          }
+        });
+      });
     }
-  }
-
-  private updateKpis(kpis?: AuditKpis): void {
-    if (!kpis) return;
-    const monthEl = this.container.querySelector<HTMLElement>('[data-ref="kpi-val-month-events"]');
-    const paymentEl = this.container.querySelector<HTMLElement>('[data-ref="kpi-val-payment-events"]');
-    const giveawayEl = this.container.querySelector<HTMLElement>('[data-ref="kpi-val-giveaway-events"]');
-    const actorsEl = this.container.querySelector<HTMLElement>('[data-ref="kpi-val-unique-actors"]');
-
-    if (monthEl) monthEl.textContent = String(kpis.totalEvents ?? this.eventsList.length);
-    if (paymentEl) paymentEl.textContent = String(kpis.ordersAudited ?? 0);
-    if (giveawayEl) giveawayEl.textContent = String(kpis.adminActionsCount ?? 0);
-    if (actorsEl) actorsEl.textContent = String(kpis.customersInvolved ?? 0);
   }
 
   private renderEventsTable(): void {
@@ -262,13 +335,13 @@ export class AuditController implements ViewController {
     }
 
     if (footerCount) {
-      footerCount.textContent = `Mostrando ${filtered.length} de ${this.eventsList.length} eventos en la partición ${this.selectedMonth}`;
+      footerCount.textContent = `Mostrando ${filtered.length} de ${this.eventsList.length} eventos en partición ${this.selectedMonth}`;
     }
 
     if (filtered.length === 0) {
       tbody.innerHTML = `
-        <tr>
-          <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+        <tr class="winners-table__tr winners-tr--empty">
+          <td class="winners-table__td winners-td--empty" colspan="6" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
             No se encontraron eventos registrados en Cassandra para los filtros especificados.
           </td>
         </tr>
@@ -278,6 +351,7 @@ export class AuditController implements ViewController {
 
     const rowsHtml = filtered
       .map((ev) => {
+        const isSelected = this.selectedEvent?.uuid === ev.uuid;
         const actorLabel = ev.customer_name || ev.actor_name || ev.actor_email || (ev.customer_phone ? `Tel: ${ev.customer_phone}` : ev.actor_type);
         const entityParts: string[] = [];
         if (ev.order_uuid) entityParts.push(`Orden: ${ev.order_uuid.substring(0, 8)}...`);
@@ -288,23 +362,24 @@ export class AuditController implements ViewController {
         const entityStr = entityParts.length > 0 ? entityParts.join(' • ') : '-';
 
         return `
-          <tr data-event-uuid="${escapeHtml(ev.uuid)}">
-            <td><span class="audit-timestamp">${formatDate(ev.created_at)}</span></td>
-            <td>${getActionBadge(ev.action)}</td>
-            <td>
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-weight: 600;">${escapeHtml(actorLabel)}</span>
-                ${ev.customer_phone && ev.customer_name ? `<span style="font-size: 0.6875rem; color: var(--text-secondary);">${escapeHtml(ev.customer_phone)}</span>` : ''}
-              </div>
+          <tr class="winners-table__tr ${isSelected ? 'is-selected' : ''}" data-event-uuid="${escapeHtml(ev.uuid)}">
+            <td class="winners-table__td">
+              <span class="component-badge component-badge--sm component-badge--mono-bold">${formatDate(ev.created_at)}</span>
             </td>
-            <td><span class="admins-badge admins-badge--neutral">${escapeHtml((ev.actor_type || 'SYSTEM').toUpperCase())}</span></td>
-            <td><code style="font-size: 0.75rem;">${escapeHtml(entityStr)}</code></td>
-            <td><span class="audit-ip-tag">${escapeHtml(ev.ip_address || '127.0.0.1')}</span></td>
-            <td style="text-align: right;">
-              <button type="button" class="component-button component-button--h32 component-button--secondary" data-action="view-detail" data-uuid="${escapeHtml(ev.uuid)}">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
-                <span>Inspeccionar</span>
-              </button>
+            <td class="winners-table__td">
+              <span class="component-badge component-badge--sm">${escapeHtml(ev.action)}</span>
+            </td>
+            <td class="winners-table__td">
+              <span class="component-badge component-badge--sm">${escapeHtml(actorLabel)}</span>
+            </td>
+            <td class="winners-table__td">
+              <span class="component-badge component-badge--sm">${escapeHtml((ev.actor_type || 'SYSTEM').toUpperCase())}</span>
+            </td>
+            <td class="winners-table__td">
+              <span class="component-badge component-badge--sm component-badge--mono-bold">${escapeHtml(entityStr)}</span>
+            </td>
+            <td class="winners-table__td">
+              <span class="component-badge component-badge--sm component-badge--mono-bold">${escapeHtml(ev.ip_address || '127.0.0.1')}</span>
             </td>
           </tr>
         `;
@@ -314,151 +389,184 @@ export class AuditController implements ViewController {
     tbody.innerHTML = rowsHtml;
     renderIcons(tbody);
 
-    tbody.querySelectorAll<HTMLButtonElement>('button[data-action="view-detail"]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const uuid = btn.dataset.uuid;
-        const ev = this.eventsList.find((item) => item.uuid === uuid);
-        if (ev) {
-          this.openDetailModal(ev);
+    const rows = tbody.querySelectorAll<HTMLElement>('.winners-table__tr[data-event-uuid]');
+    rows.forEach((row) => {
+      const uuid = row.getAttribute('data-event-uuid');
+      const ev = this.eventsList.find((item) => item.uuid === uuid);
+      if (!ev) return;
+
+      row.addEventListener('click', () => {
+        if (this.selectedEvent?.uuid === ev.uuid) {
+          this.deselectAll();
+        } else {
+          this.selectedEvent = ev;
+          this.updateSelectionUi();
         }
+      });
+
+      row.addEventListener('dblclick', () => {
+        this.selectedEvent = ev;
+        this.updateSelectionUi();
+        this.openDetailModal(ev);
       });
     });
   }
 
   private openDetailModal(ev: AuditEventItem): void {
     this.selectedEvent = ev;
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-audit-detail"]');
-    const textUuid = this.container.querySelector<HTMLElement>('[data-ref="text-detail-uuid"]');
-    const valAction = this.container.querySelector<HTMLElement>('[data-ref="detail-val-action"]');
-    const valTime = this.container.querySelector<HTMLElement>('[data-ref="detail-val-timestamp"]');
-    const valActor = this.container.querySelector<HTMLElement>('[data-ref="detail-val-actor"]');
-    const valIp = this.container.querySelector<HTMLElement>('[data-ref="detail-val-ip"]');
-    const valUserAgent = this.container.querySelector<HTMLElement>('[data-ref="detail-val-useragent"]');
-    const valPayload = this.container.querySelector<HTMLElement>('[data-ref="detail-val-payload"]');
+    this.updateSelectionUi();
 
-    if (textUuid) textUuid.textContent = `UUID: ${ev.uuid} | Partición: ${this.selectedMonth}`;
-    if (valAction) valAction.innerHTML = getActionBadge(ev.action);
-    if (valTime) valTime.textContent = formatDate(ev.created_at);
-    if (valActor) valActor.textContent = `${ev.customer_name || ev.actor_name || 'Desconocido'} (${ev.customer_phone || ev.actor_email || 'Sin contacto'}) [${ev.actor_type || 'SYSTEM'}]`;
-    if (valIp) valIp.textContent = ev.ip_address || '127.0.0.1';
-    if (valUserAgent) valUserAgent.textContent = ev.user_agent || 'Desconocido';
+    const combined = {
+      action: ev.action,
+      actor_type: ev.actor_type,
+      amount: ev.amount,
+      amount_formatted: ev.amount_formatted,
+      created_at: ev.created_at,
+      currency: ev.currency,
+      customer_name: ev.customer_name,
+      customer_phone: ev.customer_phone,
+      details: ev.details,
+      ip_address: ev.ip_address,
+      new_status: ev.new_status,
+      order_id: ev.order_id,
+      order_uuid: ev.order_uuid,
+      previous_status: ev.previous_status,
+      user_agent: ev.user_agent,
+    };
 
-    if (valPayload) {
-      const combined = {
-        action: ev.action,
-        actor_type: ev.actor_type,
-        amount: ev.amount,
-        amount_formatted: ev.amount_formatted,
-        created_at: ev.created_at,
-        currency: ev.currency,
-        customer_name: ev.customer_name,
-        customer_phone: ev.customer_phone,
-        details: ev.details,
-        ip_address: ev.ip_address,
-        new_status: ev.new_status,
-        order_id: ev.order_id,
-        order_uuid: ev.order_uuid,
-        previous_status: ev.previous_status,
-        user_agent: ev.user_agent,
-      };
-      valPayload.textContent = JSON.stringify(combined, null, 2);
-    }
+    const actorDisplay = `${ev.customer_name || ev.actor_name || 'Desconocido'}${ev.customer_phone || ev.actor_email ? ` (${ev.customer_phone || ev.actor_email})` : ''} [${ev.actor_type || 'SYSTEM'}]`;
 
-    modal?.classList.remove('is-hidden');
-  }
+    const bodyHtml = `
+      <div class="audit-detail-grid">
+        <div class="audit-detail-card">
+          <span class="audit-detail-card__label">Acción Ejecutada</span>
+          <span class="audit-detail-card__val"><span class="component-badge component-badge--sm">${escapeHtml(ev.action)}</span></span>
+        </div>
+        <div class="audit-detail-card">
+          <span class="audit-detail-card__label">Estampa de Tiempo</span>
+          <span class="audit-detail-card__val"><span class="component-badge component-badge--sm component-badge--mono-bold">${formatDate(ev.created_at)}</span></span>
+        </div>
+        <div class="audit-detail-card">
+          <span class="audit-detail-card__label">Operador / Actor</span>
+          <span class="audit-detail-card__val"><span class="component-badge component-badge--sm">${escapeHtml(actorDisplay)}</span></span>
+        </div>
+        <div class="audit-detail-card">
+          <span class="audit-detail-card__label">Dirección IP de Origen</span>
+          <span class="audit-detail-card__val"><span class="component-badge component-badge--sm component-badge--mono-bold">${escapeHtml(ev.ip_address || '127.0.0.1')}</span></span>
+        </div>
+      </div>
 
-  private closeDetailModal(): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-audit-detail"]');
-    modal?.classList.add('is-hidden');
-    this.selectedEvent = null;
+      ${ev.user_agent ? `
+      <div class="audit-detail-section" style="margin-top: 14px;">
+        <label class="audit-detail-section__title">Navegador y Entorno (User-Agent)</label>
+        <div class="audit-detail-raw">${escapeHtml(ev.user_agent)}</div>
+      </div>` : ''}
+
+      <div class="audit-detail-section" style="margin-top: 14px;">
+        <label class="audit-detail-section__title">Payload Forense y Parámetros Contextuales (JSON)</label>
+        <pre class="audit-detail-json">${escapeHtml(JSON.stringify(combined, null, 2))}</pre>
+      </div>
+    `;
+
+    openModal({
+      bodyHtml,
+      cancelText: 'Cerrar',
+      description: `Partición: ${this.selectedMonth} • UUID: ${ev.uuid}`,
+      showConfirm: false,
+      size: 'lg',
+      title: 'Inspección Forense de Evento',
+    });
   }
 
   private openSearchOrderModal(): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-search-order"]');
-    const banner = this.container.querySelector<HTMLElement>('[data-ref="banner-search-order-error"]');
-    const results = this.container.querySelector<HTMLElement>('[data-ref="order-timeline-results"]');
-    const form = this.container.querySelector<HTMLFormElement>('[data-ref="form-search-order"]');
+    const bodyContainer = document.createElement('div');
+    bodyContainer.className = 'audit-search-order-container';
+    bodyContainer.innerHTML = `
+      <p style="margin: 0 0 16px; font-size: 0.875rem; color: var(--text-secondary);">
+        Ingresa el UUID o folio de la orden para consultar la pista forense completa en Cassandra (<code>audit_logs_by_order</code>).
+      </p>
 
-    banner?.classList.add('is-hidden');
-    results?.classList.add('is-hidden');
-    form?.reset();
+      <label class="field" data-ref="field-order-uuid">
+        <input class="field__input" data-ref="input-order-uuid" type="text" placeholder=" " autocomplete="off" />
+        <span class="field__label">Folio / UUID de Orden *</span>
+      </label>
 
-    modal?.classList.remove('is-hidden');
-  }
+      <div class="audit-order-timeline is-hidden" data-ref="order-timeline-results" style="margin-top: 20px;">
+        <h3 style="font-size: 0.875rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">
+          Resultados de la Orden
+        </h3>
+        <div class="audit-order-events-list" data-ref="order-events-list"></div>
+      </div>
+    `;
 
-  private closeSearchOrderModal(): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-search-order"]');
-    modal?.classList.add('is-hidden');
-  }
+    const input = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-order-uuid"]');
+    const resultsBox = bodyContainer.querySelector<HTMLElement>('[data-ref="order-timeline-results"]');
+    const eventsList = bodyContainer.querySelector<HTMLElement>('[data-ref="order-events-list"]');
 
-  private async handleSearchOrder(e: Event): Promise<void> {
-    e.preventDefault();
-    const input = this.container.querySelector<HTMLInputElement>('[data-ref="input-order-uuid"]');
-    const banner = this.container.querySelector<HTMLElement>('[data-ref="banner-search-order-error"]');
-    const bannerText = this.container.querySelector<HTMLElement>('[data-ref="text-search-order-error"]');
-    const resultsBox = this.container.querySelector<HTMLElement>('[data-ref="order-timeline-results"]');
-    const eventsList = this.container.querySelector<HTMLElement>('[data-ref="order-events-list"]');
-
-    banner?.classList.add('is-hidden');
-    const orderUuid = input?.value.trim() || '';
-
-    if (!orderUuid) {
-      if (banner && bannerText) {
-        bannerText.textContent = 'Ingresa el UUID o identificador de la orden.';
-        banner.classList.remove('is-hidden');
-      }
-      return;
-    }
-
-    try {
-      const res = await getApi<{ events: AuditEventItem[] }>(`/api/audit/order/${encodeURIComponent(orderUuid)}`);
-      const events = res?.data?.events || [];
-
-      if (events.length === 0) {
-        if (banner && bannerText) {
-          bannerText.textContent = `No se encontraron eventos forenses en Cassandra para la orden "${orderUuid}".`;
-          banner.classList.remove('is-hidden');
+    const modal = openModal({
+      bodyHtml: bodyContainer,
+      cancelText: 'Cerrar',
+      confirmClass: 'component-button--black',
+      confirmText: 'Buscar Trazabilidad',
+      description: 'Consulta en tiempo real sobre la partición forense de órdenes.',
+      onConfirm: async () => {
+        const orderUuid = input?.value.trim() || '';
+        if (!orderUuid) {
+          modal.setError('Ingresa el UUID o identificador de la orden.');
+          return false;
         }
-        resultsBox?.classList.add('is-hidden');
-        return;
-      }
 
-      resultsBox?.classList.remove('is-hidden');
-      if (eventsList) {
-        eventsList.innerHTML = events
-          .map(
-            (ev) => `
-            <div class="audit-order-event-card">
-              <div>
-                <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">${formatDate(ev.created_at)}</span>
-                <span style="font-weight: 600; font-size: 0.8125rem;">${escapeHtml(ev.action)}</span>
-                <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">Actor: ${escapeHtml(ev.customer_name || ev.actor_name || ev.actor_type)} (${escapeHtml(ev.ip_address || '127.0.0.1')})</span>
-              </div>
-              <button type="button" class="component-button component-button--h32 component-button--ghost" data-action="view-order-event-detail" data-uuid="${escapeHtml(ev.uuid)}">
-                <span>Ver Payload</span>
-              </button>
-            </div>
-          `
-          )
-          .join('');
+        try {
+          const res = await getApi<{ events: AuditEventItem[] }>(`/api/audit/order/${encodeURIComponent(orderUuid)}`);
+          const events = res?.data?.events || [];
 
-        eventsList.querySelectorAll<HTMLButtonElement>('button[data-action="view-order-event-detail"]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const uuid = btn.dataset.uuid;
-            const ev = events.find((item) => item.uuid === uuid);
-            if (ev) {
-              this.openDetailModal(ev);
-            }
-          });
-        });
-      }
-    } catch (err: any) {
-      if (banner && bannerText) {
-        bannerText.textContent = err?.message || 'Error al consultar la orden en Apache Cassandra.';
-        banner.classList.remove('is-hidden');
-      }
-    }
+          if (events.length === 0) {
+            modal.setError(`No se encontraron eventos forenses en Cassandra para la orden "${orderUuid}".`);
+            resultsBox?.classList.add('is-hidden');
+            return false;
+          }
+
+          modal.setError('');
+          resultsBox?.classList.remove('is-hidden');
+          if (eventsList) {
+            eventsList.innerHTML = events
+              .map(
+                (ev) => `
+                <div class="audit-order-event-card">
+                  <div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">${formatDate(ev.created_at)}</span>
+                    <span style="font-weight: 600; font-size: 0.8125rem;">${escapeHtml(ev.action)}</span>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary); display: block;">Actor: ${escapeHtml(ev.customer_name || ev.actor_name || ev.actor_type)} (${escapeHtml(ev.ip_address || '127.0.0.1')})</span>
+                  </div>
+                  <button type="button" class="component-button component-button--icon-only component-button--ghost" data-action="view-order-event-detail" data-uuid="${escapeHtml(ev.uuid)}" data-tooltip="Ver detalle" aria-label="Ver detalle">
+                    <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+                  </button>
+                </div>
+              `
+              )
+              .join('');
+
+            renderIcons(eventsList);
+
+            eventsList.querySelectorAll<HTMLButtonElement>('button[data-action="view-order-event-detail"]').forEach((btn) => {
+              btn.addEventListener('click', () => {
+                const uuid = btn.dataset.uuid;
+                const ev = events.find((item) => item.uuid === uuid);
+                if (ev) {
+                  this.openDetailModal(ev);
+                }
+              });
+            });
+          }
+          return false;
+        } catch (err: any) {
+          modal.setError(err?.message || 'Error al consultar la orden en Apache Cassandra.');
+          return false;
+        }
+      },
+      size: 'md',
+      title: 'Rastrear Historial de Orden',
+    });
   }
 }
 

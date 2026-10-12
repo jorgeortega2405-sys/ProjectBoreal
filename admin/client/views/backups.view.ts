@@ -1,8 +1,10 @@
+import { openModal } from '../components/modal.component.js';
 import { deleteApi, getApi, postApi, putApi } from '../services/api.service.js';
 import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
+import { DropdownController, setupDropdown } from '../utils/dom.util.js';
 import { hasPermission } from '../utils/permission.util.js';
 
 interface BackupItem {
@@ -87,17 +89,31 @@ function escapeHtml(str: string | null | undefined): string {
 export class BackupsController implements ViewController {
   private abortController: AbortController | null = null;
   private activeTab: 'catalog' | 'inventory' | 'restores' = 'catalog';
+  private btnCatalogNext: HTMLButtonElement | null = null;
+  private btnCatalogPrev: HTMLButtonElement | null = null;
+  private btnClearSearch: HTMLButtonElement | null = null;
   private catalogItems: BackupItem[] = [];
   private container: HTMLElement;
   private currentPage = 1;
   private engineFilter = 'all';
+  private filterDropdownController: DropdownController | null = null;
+  private inputPaginationPage: HTMLInputElement | null = null;
+  private inputSearch: HTMLInputElement | null = null;
   private inventoryData: any = null;
   private isCreating = false;
   private isRestoring = false;
+  private isSearchActive = false;
   private restoreItems: RestoreItem[] = [];
   private restoreMode: 'merge' | 'replace' = 'merge';
+  private searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   private searchQuery = '';
+  private searchToolbar: HTMLElement | null = null;
+  private sectionDropdownController: DropdownController | null = null;
+  private defaultActions: HTMLElement | null = null;
+  private selectedActions: HTMLElement | null = null;
+  private selectedBackup: BackupItem | null = null;
   private selectedBackupForRestore: BackupItem | null = null;
+  private selectedRestore: RestoreItem | null = null;
   private statusFilter = 'all';
   private totalPages = 1;
 
@@ -107,24 +123,49 @@ export class BackupsController implements ViewController {
 
   async init(): Promise<void> {
     this.abortController = new AbortController();
+    this.setupDropdowns();
     this.bindEvents();
+    renderIcons(this.container);
     await Promise.all([
-      this.loadKpis(),
       this.loadCatalog(),
       this.loadInventory(),
     ]);
   }
 
+  private setupDropdowns(): void {
+    const filterWrapper = this.container.querySelector<HTMLElement>('[data-ref="filter-dropdown-wrapper"]');
+    if (filterWrapper) {
+      this.filterDropdownController = setupDropdown(filterWrapper, {
+        isSelect: false,
+        matchWidth: false,
+        placement: 'bottom-end',
+      });
+    }
+
+    const sectionWrapper = this.container.querySelector<HTMLElement>('[data-ref="section-dropdown-wrapper"]');
+    if (sectionWrapper) {
+      this.sectionDropdownController = setupDropdown(sectionWrapper, {
+        isSelect: false,
+        matchWidth: false,
+        placement: 'bottom-end',
+      });
+    }
+  }
+
   private bindEvents(): void {
     const signal = this.abortController?.signal;
 
-    const btnTabCatalog = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-btn-catalog"]');
-    const btnTabRestores = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-btn-restores"]');
-    const btnTabInventory = this.container.querySelector<HTMLButtonElement>('[data-ref="tab-btn-inventory"]');
-
-    btnTabCatalog?.addEventListener('click', () => this.switchTab('catalog'), { signal });
-    btnTabRestores?.addEventListener('click', () => this.switchTab('restores'), { signal });
-    btnTabInventory?.addEventListener('click', () => this.switchTab('inventory'), { signal });
+    const sectionButtons = this.container.querySelectorAll<HTMLButtonElement>('[data-section]');
+    sectionButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const sec = btn.getAttribute('data-section') as 'catalog' | 'inventory' | 'restores';
+        if (sec) {
+          sectionButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
+          this.sectionDropdownController?.close();
+          this.switchTab(sec);
+        }
+      }, { signal });
+    });
 
     const btnSync = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-sync-catalog"]');
     btnSync?.addEventListener('click', () => this.handleSyncCatalog(), { signal });
@@ -135,111 +176,220 @@ export class BackupsController implements ViewController {
     const btnCreate = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-create-backup"]');
     btnCreate?.addEventListener('click', () => this.openCreateModal(), { signal });
 
-    const btnRefreshCatalog = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-catalog"]');
-    btnRefreshCatalog?.addEventListener('click', () => this.loadCatalog(), { signal });
+    this.searchToolbar = this.container.querySelector<HTMLElement>('[data-ref="search-toolbar"]');
+    this.inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-backup"]');
+    this.btnClearSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-clear-search"]');
 
-    const btnRefreshRestores = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-restores"]');
-    btnRefreshRestores?.addEventListener('click', () => this.loadRestores(), { signal });
-
-    const btnRefreshInventory = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-refresh-inventory"]');
-    btnRefreshInventory?.addEventListener('click', () => this.loadInventory(true), { signal });
-
-    const inputSearch = this.container.querySelector<HTMLInputElement>('[data-ref="input-search-backup"]');
-    inputSearch?.addEventListener('input', (e) => {
-      this.searchQuery = (e.target as HTMLInputElement).value;
-      this.currentPage = 1;
-      this.loadCatalog();
+    const btnToggleSearch = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-search"]');
+    btnToggleSearch?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!this.searchToolbar) return;
+      this.isSearchActive = !this.isSearchActive;
+      if (this.isSearchActive) {
+        this.searchToolbar.classList.remove('is-hidden');
+        this.inputSearch?.focus();
+      } else {
+        this.searchToolbar.classList.add('is-hidden');
+        if (this.inputSearch) this.inputSearch.value = '';
+        this.btnClearSearch?.classList.add('is-hidden');
+        if (this.searchQuery) {
+          this.searchQuery = '';
+          this.currentPage = 1;
+          void this.loadCatalog();
+        }
+      }
     }, { signal });
 
-    const selectStatus = this.container.querySelector<HTMLSelectElement>('[data-ref="select-status-filter"]');
-    selectStatus?.addEventListener('change', (e) => {
-      this.statusFilter = (e.target as HTMLSelectElement).value;
-      this.currentPage = 1;
-      this.loadCatalog();
+    this.inputSearch?.addEventListener('input', () => {
+      const val = this.inputSearch?.value.trim() || '';
+      this.btnClearSearch?.classList.toggle('is-hidden', val.length === 0);
+      if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = setTimeout(() => {
+        this.searchQuery = val;
+        this.currentPage = 1;
+        void this.loadCatalog();
+      }, 250);
     }, { signal });
 
-    const selectEngine = this.container.querySelector<HTMLSelectElement>('[data-ref="select-engine-filter"]');
-    selectEngine?.addEventListener('change', (e) => {
-      this.engineFilter = (e.target as HTMLSelectElement).value;
+    this.btnClearSearch?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.inputSearch) this.inputSearch.value = '';
+      this.btnClearSearch?.classList.add('is-hidden');
+      this.searchQuery = '';
       this.currentPage = 1;
-      this.loadCatalog();
+      void this.loadCatalog();
     }, { signal });
 
-    const btnPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-catalog-prev"]');
-    btnPrev?.addEventListener('click', () => {
+    const statusBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-status-filter]');
+    statusBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const st = btn.getAttribute('data-status-filter') || 'all';
+        this.statusFilter = st;
+        statusBtns.forEach((b) => b.classList.toggle('is-active', b === btn));
+        this.currentPage = 1;
+        this.filterDropdownController?.close();
+        void this.loadCatalog();
+      }, { signal });
+    });
+
+    const engineBtns = this.container.querySelectorAll<HTMLButtonElement>('[data-engine-filter]');
+    engineBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const eg = btn.getAttribute('data-engine-filter') || 'all';
+        this.engineFilter = eg;
+        engineBtns.forEach((b) => b.classList.toggle('is-active', b === btn));
+        this.currentPage = 1;
+        this.filterDropdownController?.close();
+        void this.loadCatalog();
+      }, { signal });
+    });
+
+    this.inputPaginationPage = this.container.querySelector<HTMLInputElement>('[data-ref="input-pagination-page"]');
+    this.btnCatalogPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-catalog-prev"]');
+    this.btnCatalogNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-catalog-next"]');
+
+    this.btnCatalogPrev?.addEventListener('click', () => {
       if (this.currentPage > 1) {
         this.currentPage--;
-        this.loadCatalog();
+        void this.loadCatalog();
       }
     }, { signal });
 
-    const btnNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-catalog-next"]');
-    btnNext?.addEventListener('click', () => {
+    this.btnCatalogNext?.addEventListener('click', () => {
       if (this.currentPage < this.totalPages) {
         this.currentPage++;
-        this.loadCatalog();
+        void this.loadCatalog();
       }
     }, { signal });
 
-    this.bindCreateModalEvents(signal);
-    this.bindRestoreModalEvents(signal);
-    this.bindDetailsModalEvents(signal);
-    this.bindScheduleModalEvents(signal);
+    this.inputPaginationPage?.addEventListener('change', () => {
+      if (!this.inputPaginationPage) return;
+      let val = parseInt(this.inputPaginationPage.value, 10);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > this.totalPages) val = this.totalPages;
+      this.currentPage = val;
+      this.inputPaginationPage.value = String(val);
+      void this.loadCatalog();
+    }, { signal });
+
+    this.defaultActions = this.container.querySelector<HTMLElement>('[data-ref="backups-default-actions"]');
+    this.selectedActions = this.container.querySelector<HTMLElement>('[data-ref="backups-selected-actions"]');
+
+    const btnDeselect = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-deselect"]');
+    btnDeselect?.addEventListener('click', (e) => {
+      e.preventDefault();
+      this.deselectAll();
+    }, { signal });
+
+    const btnRestore = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-restore"]');
+    btnRestore?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.selectedBackup) this.openRestoreModal(this.selectedBackup);
+    }, { signal });
+
+    const btnVerify = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-verify-hash"]');
+    btnVerify?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.selectedBackup) this.handleVerifyHash(this.selectedBackup.uuid);
+    }, { signal });
+
+    const btnDownload = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-download"]');
+    btnDownload?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.selectedBackup) window.open(`/api/backups/download/${this.selectedBackup.uuid}`, '_blank');
+    }, { signal });
+
+    const btnManifest = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-manifest"]');
+    btnManifest?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.selectedBackup) this.openManifestModal(this.selectedBackup.uuid);
+      else if (this.selectedRestore) this.openForensicDetailsModal('Reporte de Restauración', this.selectedRestore.restore_report || this.selectedRestore);
+    }, { signal });
+
+    const btnPin = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-pin"]');
+    btnPin?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (this.selectedBackup) {
+        await this.handleTogglePin(this.selectedBackup.uuid, this.selectedBackup.is_pinned !== 1);
+      }
+    }, { signal });
+
+    const btnDelete = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-action-delete"]');
+    btnDelete?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.selectedBackup) this.handleDeleteBackup(this.selectedBackup.uuid);
+    }, { signal });
+  }
+
+
+  private deselectAll(): void {
+    this.selectedBackup = null;
+    this.selectedRestore = null;
+    this.updateSelectionUi();
+  }
+
+  private updateSelectionUi(): void {
+    const isSelected = this.selectedBackup !== null || this.selectedRestore !== null;
+    this.defaultActions?.classList.toggle('is-hidden', isSelected);
+    this.selectedActions?.classList.toggle('is-hidden', !isSelected);
+
+    const btnRestore = this.container.querySelector<HTMLElement>('[data-ref="btn-action-restore"]');
+    const btnVerify = this.container.querySelector<HTMLElement>('[data-ref="btn-action-verify-hash"]');
+    const btnDownload = this.container.querySelector<HTMLElement>('[data-ref="btn-action-download"]');
+    const btnPin = this.container.querySelector<HTMLElement>('[data-ref="btn-action-pin"]');
+    const btnDelete = this.container.querySelector<HTMLElement>('[data-ref="btn-action-delete"]');
+
+    if (this.selectedBackup) {
+      btnRestore?.classList.remove('is-hidden');
+      btnVerify?.classList.remove('is-hidden');
+      btnDownload?.classList.remove('is-hidden');
+      btnPin?.classList.remove('is-hidden');
+      btnDelete?.classList.toggle('is-hidden', this.selectedBackup.is_pinned === 1);
+    } else if (this.selectedRestore) {
+      btnRestore?.classList.add('is-hidden');
+      btnVerify?.classList.add('is-hidden');
+      btnDownload?.classList.add('is-hidden');
+      btnPin?.classList.add('is-hidden');
+      btnDelete?.classList.add('is-hidden');
+    }
+
+    const rows = this.container.querySelectorAll<HTMLElement>('.winners-table__tr');
+    rows.forEach((r) => {
+      const u = r.getAttribute('data-uuid');
+      const isSel = (this.selectedBackup && u === this.selectedBackup.uuid) || (this.selectedRestore && u === this.selectedRestore.uuid);
+      r.classList.toggle('is-selected', Boolean(isSel));
+    });
   }
 
   private switchTab(tab: 'catalog' | 'inventory' | 'restores'): void {
+    this.deselectAll();
     this.activeTab = tab;
-    const btnCatalog = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-catalog"]');
-    const btnRestores = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-restores"]');
-    const btnInventory = this.container.querySelector<HTMLElement>('[data-ref="tab-btn-inventory"]');
+    const sectionButtons = this.container.querySelectorAll<HTMLElement>('[data-section]');
+    sectionButtons.forEach((b) => b.classList.toggle('is-active', b.getAttribute('data-section') === tab));
 
     const paneCatalog = this.container.querySelector<HTMLElement>('[data-ref="pane-catalog"]');
     const paneRestores = this.container.querySelector<HTMLElement>('[data-ref="pane-restores"]');
     const paneInventory = this.container.querySelector<HTMLElement>('[data-ref="pane-inventory"]');
-
-    btnCatalog?.classList.toggle('is-active', tab === 'catalog');
-    btnRestores?.classList.toggle('is-active', tab === 'restores');
-    btnInventory?.classList.toggle('is-active', tab === 'inventory');
 
     paneCatalog?.classList.toggle('is-hidden', tab !== 'catalog');
     paneRestores?.classList.toggle('is-hidden', tab !== 'restores');
     paneInventory?.classList.toggle('is-hidden', tab !== 'inventory');
 
     if (tab === 'restores') {
-      this.loadRestores();
+      void this.loadRestores();
     } else if (tab === 'inventory' && !this.inventoryData) {
-      this.loadInventory();
+      void this.loadInventory();
     }
   }
 
-  private async loadKpis(): Promise<void> {
-    try {
-      const res = await getApi<any>('/api/backups/kpis');
-      if (res.success && res.data) {
-        const kpis = res.data;
-        const valTotal = this.container.querySelector<HTMLElement>('[data-ref="kpi-val-total-backups"]');
-        const valSize = this.container.querySelector<HTMLElement>('[data-ref="kpi-val-storage-size"]');
-        const subSize = this.container.querySelector<HTMLElement>('[data-ref="kpi-sub-storage-size"]');
-        const valRecords = this.container.querySelector<HTMLElement>('[data-ref="kpi-val-records-archived"]');
-        const valRestores = this.container.querySelector<HTMLElement>('[data-ref="kpi-val-restores-count"]');
-
-        if (valTotal) valTotal.textContent = formatNumber(kpis.completed_backups || 0);
-        if (valSize) valSize.textContent = formatBytes(kpis.total_size_bytes || 0);
-        if (subSize) subSize.textContent = `Desc. ${formatBytes(kpis.total_uncompressed_bytes || 0)}`;
-        if (valRecords) valRecords.textContent = `${formatNumber(kpis.total_archived_rows || 0)} / ${formatNumber(kpis.total_archived_s3_objects || 0)}`;
-        if (valRestores) valRestores.textContent = formatNumber(kpis.completed_restores || 0);
-      }
-    } catch {
-      // Ignorar fallo de KPIs silenciosamente
-    }
-  }
+  private async loadKpis(): Promise<void> {}
 
   private async loadCatalog(): Promise<void> {
     const tableBody = this.container.querySelector<HTMLElement>('[data-ref="catalog-table-body"]');
     if (tableBody) {
       tableBody.innerHTML = `
-        <tr>
-          <td colspan="9" style="text-align: center; padding: 32px; color: var(--text-secondary);">
+        <tr class="winners-table__tr winners-tr--empty">
+          <td class="winners-table__td winners-td--empty" colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">
             Cargando catálogo de copias de seguridad...
           </td>
         </tr>
@@ -265,8 +415,8 @@ export class BackupsController implements ViewController {
     } catch {
       if (tableBody) {
         tableBody.innerHTML = `
-          <tr>
-            <td colspan="9" style="text-align: center; padding: 32px; color: #d32f2f;">
+          <tr class="winners-table__tr winners-tr--empty">
+            <td class="winners-table__td winners-td--empty" colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">
               Error al consultar el catálogo de copias de seguridad.
             </td>
           </tr>
@@ -281,8 +431,8 @@ export class BackupsController implements ViewController {
 
     if (this.catalogItems.length === 0) {
       tableBody.innerHTML = `
-        <tr>
-          <td colspan="9" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
+        <tr class="winners-table__tr winners-tr--empty">
+          <td class="winners-table__td winners-td--empty" colspan="8" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
             No se encontraron copias de seguridad coincidentes.
           </td>
         </tr>
@@ -291,171 +441,75 @@ export class BackupsController implements ViewController {
     }
 
     tableBody.innerHTML = this.catalogItems.map((item) => {
-      const enginesList = item.engines ? item.engines.split(',') : [];
-      const engineTagsHtml = enginesList.map((e) => {
-        const clean = e.trim().toLowerCase();
-        let label = clean.toUpperCase();
-        if (clean === 's3') label = 'S3 MinIO';
-        return `<span class="engine-tag engine-tag--${clean}">${label}</span>`;
-      }).join('');
-
-      let statusBadgeClass = 'badge-status--completed';
+      const isSelected = this.selectedBackup?.uuid === item.uuid;
+      const isPinned = item.is_pinned === 1;
       let statusLabel = 'Completado';
-      if (item.status === 'in_progress') {
-        statusBadgeClass = 'badge-status--in_progress';
-        statusLabel = 'En curso';
-      } else if (item.status === 'failed') {
-        statusBadgeClass = 'badge-status--failed';
-        statusLabel = 'Fallido';
-      }
+      if (item.status === 'in_progress') statusLabel = 'En curso';
+      else if (item.status === 'failed') statusLabel = 'Fallido';
 
       const shortSha = item.sha256_checksum ? `${item.sha256_checksum.substring(0, 10)}...` : 'Pendiente';
-      const isPinned = item.is_pinned === 1;
 
       return `
-        <tr data-uuid="${escapeHtml(item.uuid)}">
-          <td>
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span style="font-weight: 700; color: var(--text-primary);">${escapeHtml(item.backup_name)}</span>
-              <span style="font-family: monospace; font-size: 0.6875rem; color: var(--text-tertiary);">${escapeHtml(item.uuid)}</span>
-            </div>
+        <tr class="winners-table__tr ${isSelected ? 'is-selected' : ''}" data-uuid="${escapeHtml(item.uuid)}">
+          <td class="winners-table__td">
+            <span class="component-badge component-badge--sm component-badge--mono-bold">${escapeHtml(item.backup_name)}</span>
           </td>
-          <td>
-            <span class="badge-status ${statusBadgeClass}">${statusLabel}</span>
+          <td class="winners-table__td">
+            <span class="component-badge component-badge--sm">${statusLabel}</span>
           </td>
-          <td>
-            <div class="engine-tags">${engineTagsHtml}</div>
+          <td class="winners-table__td">
+            <span class="component-badge component-badge--sm">${escapeHtml(item.engines || 'MySQL')}</span>
           </td>
-          <td>
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span style="font-weight: 600;">${formatBytes(item.size_bytes)}</span>
-              <span style="font-size: 0.6875rem; color: var(--text-tertiary);">Desc: ${formatBytes(item.uncompressed_size_bytes)}</span>
-            </div>
+          <td class="winners-table__td">
+            <span class="component-badge component-badge--sm component-badge--mono-bold">${formatBytes(item.size_bytes)}</span>
           </td>
-          <td>
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span>${formatNumber(item.total_rows)} filas</span>
-              <span style="font-size: 0.6875rem; color: var(--text-tertiary);">${formatNumber(item.total_s3_objects)} archivos</span>
-            </div>
+          <td class="winners-table__td">
+            <span class="component-badge component-badge--sm component-badge--mono-bold">${formatNumber(item.total_rows)} filas</span>
           </td>
-          <td>
-            <span class="hash-pill" data-action="copy-hash" data-hash="${escapeHtml(item.sha256_checksum || '')}" title="Click para copiar SHA-256 completo">
-              <svg class="component-icon" style="width: 12px; height: 12px;" aria-hidden="true"><use href="/icons.svg#shield"></use></svg>
-              <span>${shortSha}</span>
-            </span>
+          <td class="winners-table__td">
+            <span class="component-badge component-badge--sm component-badge--mono-bold">${shortSha}</span>
           </td>
-          <td>
-            <div style="display: flex; flex-direction: column; gap: 2px;">
-              <span>${formatDate(item.created_at)}</span>
-              <span style="font-size: 0.6875rem; color: var(--text-tertiary);">Por: ${escapeHtml(item.created_by_name)}</span>
-            </div>
+          <td class="winners-table__td">
+            <span class="component-badge component-badge--sm component-badge--mono-bold">${formatDate(item.created_at)}</span>
           </td>
-          <td>
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <button type="button" class="component-button component-button--icon-only component-button--ghost" data-action="toggle-pin" data-uuid="${escapeHtml(item.uuid)}" data-pinned="${isPinned ? '1' : '0'}" title="${isPinned ? 'Desproteger de purga' : 'Proteger y fijar'}">
-                <svg class="component-icon" style="width: 16px; height: 16px; color: ${isPinned ? '#f59e0b' : 'var(--text-tertiary)'};" aria-hidden="true"><use href="/icons.svg#bookmark"></use></svg>
-              </button>
-              <span style="font-size: 0.75rem;">${item.retention_days}d</span>
-            </div>
-          </td>
-          <td style="text-align: right;">
-            <div style="display: inline-flex; align-items: center; gap: 4px;">
-              <button type="button" class="component-button component-button--h32 component-button--primary" data-action="open-restore" data-uuid="${escapeHtml(item.uuid)}" title="Restaurar de forma granular">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-                <span>Restaurar</span>
-              </button>
-              <button type="button" class="component-button component-button--h32 component-button--icon-only component-button--ghost" data-action="verify-hash" data-uuid="${escapeHtml(item.uuid)}" title="Verificar integridad criptográfica SHA-256 en S3">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified"></use></svg>
-              </button>
-              <button type="button" class="component-button component-button--h32 component-button--icon-only component-button--ghost" data-action="download-tar" data-uuid="${escapeHtml(item.uuid)}" title="Descargar paquete .tar.gz">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#download"></use></svg>
-              </button>
-              <button type="button" class="component-button component-button--h32 component-button--icon-only component-button--ghost" data-action="view-manifest" data-uuid="${escapeHtml(item.uuid)}" title="Ver Manifiesto Forense">
-                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#article"></use></svg>
-              </button>
-              ${!isPinned ? `
-                <button type="button" class="component-button component-button--h32 component-button--icon-only component-button--danger-ghost" data-action="delete-backup" data-uuid="${escapeHtml(item.uuid)}" title="Eliminar de S3">
-                  <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-                </button>
-              ` : ''}
-            </div>
+          <td class="winners-table__td">
+            <span class="component-badge component-badge--sm">${item.retention_days}d ${isPinned ? '• Fijado' : ''}</span>
           </td>
         </tr>
       `;
     }).join('');
 
     renderIcons(tableBody);
-    this.bindTableActionEvents(tableBody);
-  }
 
-  private bindTableActionEvents(tbody: HTMLElement): void {
-    tbody.querySelectorAll<HTMLElement>('[data-action="copy-hash"]').forEach((el) => {
-      el.addEventListener('click', () => {
-        const h = el.getAttribute('data-hash');
-        if (h) {
-          navigator.clipboard.writeText(h);
-          showToast('Checksum SHA-256 copiado al portapapeles');
+    const rows = tableBody.querySelectorAll<HTMLElement>('.winners-table__tr');
+    rows.forEach((row) => {
+      const uuid = row.getAttribute('data-uuid');
+      const item = this.catalogItems.find((x) => x.uuid === uuid);
+      if (!item) return;
+
+      row.addEventListener('click', () => {
+        if (this.selectedBackup?.uuid === item.uuid) {
+          this.selectedBackup = null;
+        } else {
+          this.selectedBackup = item;
+          this.selectedRestore = null;
         }
+        this.updateSelectionUi();
       });
-    });
 
-    tbody.querySelectorAll<HTMLButtonElement>('[data-action="toggle-pin"]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const u = btn.getAttribute('data-uuid');
-        const p = btn.getAttribute('data-pinned') === '1';
-        if (u) {
-          await this.handleTogglePin(u, !p);
-        }
-      });
-    });
-
-    tbody.querySelectorAll<HTMLButtonElement>('[data-action="open-restore"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const u = btn.getAttribute('data-uuid');
-        const item = this.catalogItems.find((x) => x.uuid === u);
-        if (item) this.openRestoreModal(item);
-      });
-    });
-
-    tbody.querySelectorAll<HTMLButtonElement>('[data-action="verify-hash"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const u = btn.getAttribute('data-uuid');
-        if (u) this.handleVerifyHash(u);
-      });
-    });
-
-    tbody.querySelectorAll<HTMLButtonElement>('[data-action="download-tar"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const u = btn.getAttribute('data-uuid');
-        if (u) window.open(`/api/backups/download/${u}`, '_blank');
-      });
-    });
-
-    tbody.querySelectorAll<HTMLButtonElement>('[data-action="view-manifest"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const u = btn.getAttribute('data-uuid');
-        if (u) this.openManifestModal(u);
-      });
-    });
-
-    tbody.querySelectorAll<HTMLButtonElement>('[data-action="delete-backup"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const u = btn.getAttribute('data-uuid');
-        if (u) this.handleDeleteBackup(u);
+      row.addEventListener('dblclick', () => {
+        this.openRestoreModal(item);
       });
     });
   }
 
-  private renderPagination(total: number): void {
-    const info = this.container.querySelector<HTMLElement>('[data-ref="catalog-pagination-info"]');
-    const btnPrev = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-catalog-prev"]');
-    const btnNext = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-catalog-next"]');
-
-    if (info) {
-      info.textContent = `Página ${this.currentPage} de ${this.totalPages} (${formatNumber(total)} registros)`;
+  private renderPagination(_total: number): void {
+    if (this.inputPaginationPage) {
+      this.inputPaginationPage.value = String(this.currentPage);
+      this.inputPaginationPage.max = String(Math.max(1, this.totalPages));
     }
-    if (btnPrev) btnPrev.disabled = this.currentPage <= 1;
-    if (btnNext) btnNext.disabled = this.currentPage >= this.totalPages;
+    if (this.btnCatalogPrev) this.btnCatalogPrev.disabled = this.currentPage <= 1;
+    if (this.btnCatalogNext) this.btnCatalogNext.disabled = this.currentPage >= this.totalPages;
   }
 
   private async loadRestores(): Promise<void> {
@@ -469,8 +523,8 @@ export class BackupsController implements ViewController {
     } catch {
       if (tableBody) {
         tableBody.innerHTML = `
-          <tr>
-            <td colspan="9" style="text-align: center; padding: 32px; color: #d32f2f;">
+          <tr class="winners-table__tr winners-tr--empty">
+            <td class="winners-table__td winners-td--empty" colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">
               Error al consultar el historial de restauraciones.
             </td>
           </tr>
@@ -485,8 +539,8 @@ export class BackupsController implements ViewController {
 
     if (this.restoreItems.length === 0) {
       tableBody.innerHTML = `
-        <tr>
-          <td colspan="9" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
+        <tr class="winners-table__tr winners-tr--empty">
+          <td class="winners-table__td winners-td--empty" colspan="8" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
             No hay operaciones de restauración registradas aún.
           </td>
         </tr>
@@ -495,36 +549,44 @@ export class BackupsController implements ViewController {
     }
 
     tableBody.innerHTML = this.restoreItems.map((r) => {
+      const isSelected = this.selectedRestore?.uuid === r.uuid;
       const isMerge = r.restore_mode === 'merge';
-      const modeLabel = isMerge ? 'Fusión / Upsert' : 'Sobrescritura (Replace)';
-      const modeBadgeColor = isMerge ? '#0288d1' : '#d32f2f';
+      const modeLabel = isMerge ? 'Fusión (Upsert)' : 'Sobrescritura (Replace)';
 
       return `
-        <tr>
-          <td><span style="font-family: monospace; font-size: 0.75rem;">${escapeHtml(r.uuid)}</span></td>
-          <td><span style="font-family: monospace; font-size: 0.75rem; color: var(--text-secondary);">${escapeHtml(r.backup_uuid.substring(0, 8))}...</span></td>
-          <td><span style="font-size: 0.6875rem; font-weight: 700; color: ${modeBadgeColor};">${modeLabel}</span></td>
-          <td><span style="font-size: 0.75rem;">${escapeHtml(r.selected_engines)}</span></td>
-          <td><span class="badge-status badge-status--${r.status === 'completed' ? 'completed' : 'failed'}">${r.status === 'completed' ? 'Exitoso' : 'Fallido'}</span></td>
-          <td><span style="font-size: 0.75rem;">${(r.execution_duration_ms / 1000).toFixed(1)}s</span></td>
-          <td><span style="font-size: 0.75rem;">${formatDate(r.created_at)}</span></td>
-          <td><span style="font-size: 0.75rem;">${escapeHtml(r.restored_by_name)}</span></td>
-          <td style="text-align: right;">
-            <button type="button" class="component-button component-button--h32 component-button--secondary" data-action="view-restore-report" data-uuid="${escapeHtml(r.uuid)}">
-              <span>Detalles</span>
-            </button>
-          </td>
+        <tr class="winners-table__tr ${isSelected ? 'is-selected' : ''}" data-uuid="${escapeHtml(r.uuid)}">
+          <td class="winners-table__td"><span class="component-badge component-badge--sm component-badge--mono-bold">${escapeHtml(r.uuid.substring(0, 10))}...</span></td>
+          <td class="winners-table__td"><span class="component-badge component-badge--sm component-badge--mono-bold">${escapeHtml(r.backup_uuid.substring(0, 8))}...</span></td>
+          <td class="winners-table__td"><span class="component-badge component-badge--sm">${modeLabel}</span></td>
+          <td class="winners-table__td"><span class="component-badge component-badge--sm">${escapeHtml(r.selected_engines)}</span></td>
+          <td class="winners-table__td"><span class="component-badge component-badge--sm">${r.status === 'completed' ? 'Exitoso' : 'Fallido'}</span></td>
+          <td class="winners-table__td"><span class="component-badge component-badge--sm component-badge--mono-bold">${(r.execution_duration_ms / 1000).toFixed(1)}s</span></td>
+          <td class="winners-table__td"><span class="component-badge component-badge--sm component-badge--mono-bold">${formatDate(r.created_at)}</span></td>
+          <td class="winners-table__td"><span class="component-badge component-badge--sm">${escapeHtml(r.restored_by_name)}</span></td>
         </tr>
       `;
     }).join('');
 
-    tableBody.querySelectorAll<HTMLButtonElement>('[data-action="view-restore-report"]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const u = btn.getAttribute('data-uuid');
-        const item = this.restoreItems.find((x) => x.uuid === u);
-        if (item) {
-          this.openForensicDetailsModal('Reporte de Restauración', item.restore_report || item);
+    renderIcons(tableBody);
+
+    const rows = tableBody.querySelectorAll<HTMLElement>('.winners-table__tr');
+    rows.forEach((row) => {
+      const uuid = row.getAttribute('data-uuid');
+      const item = this.restoreItems.find((x) => x.uuid === uuid);
+      if (!item) return;
+
+      row.addEventListener('click', () => {
+        if (this.selectedRestore?.uuid === item.uuid) {
+          this.selectedRestore = null;
+        } else {
+          this.selectedRestore = item;
+          this.selectedBackup = null;
         }
+        this.updateSelectionUi();
+      });
+
+      row.addEventListener('dblclick', () => {
+        this.openForensicDetailsModal('Reporte de Restauración', item.restore_report || item);
       });
     });
   }
@@ -669,535 +731,592 @@ export class BackupsController implements ViewController {
     }
   }
 
-  private bindCreateModalEvents(signal?: AbortSignal): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-create-backup"]');
-    const overlay = this.container.querySelector<HTMLElement>('[data-ref="modal-create-overlay"]');
-    const btnClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-modal-create"]');
-    const btnCancel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-modal-create"]');
-    const form = this.container.querySelector<HTMLFormElement>('[data-ref="form-create-backup"]');
-    const selectType = this.container.querySelector<HTMLSelectElement>('[data-ref="select-backup-type"]');
-    const checkMysql = this.container.querySelector<HTMLInputElement>('[data-ref="engine-check-mysql"]');
-    const checkS3 = this.container.querySelector<HTMLInputElement>('[data-ref="engine-check-s3"]');
-
-    const closeModal = () => {
-      modal?.classList.add('is-hidden');
-    };
-
-    overlay?.addEventListener('click', closeModal, { signal });
-    btnClose?.addEventListener('click', closeModal, { signal });
-    btnCancel?.addEventListener('click', closeModal, { signal });
-
-    selectType?.addEventListener('change', () => {
-      const isSelective = selectType.value === 'selective';
-      const detailsMysql = this.container.querySelector<HTMLElement>('[data-ref="selective-details-mysql"]');
-      const detailsS3 = this.container.querySelector<HTMLElement>('[data-ref="selective-details-s3"]');
-      detailsMysql?.classList.toggle('is-hidden', !isSelective || !checkMysql?.checked);
-      detailsS3?.classList.toggle('is-hidden', !isSelective || !checkS3?.checked);
-    }, { signal });
-
-    checkMysql?.addEventListener('change', () => {
-      const isSelective = selectType?.value === 'selective';
-      const detailsMysql = this.container.querySelector<HTMLElement>('[data-ref="selective-details-mysql"]');
-      detailsMysql?.classList.toggle('is-hidden', !isSelective || !checkMysql.checked);
-    }, { signal });
-
-    checkS3?.addEventListener('change', () => {
-      const isSelective = selectType?.value === 'selective';
-      const detailsS3 = this.container.querySelector<HTMLElement>('[data-ref="selective-details-s3"]');
-      detailsS3?.classList.toggle('is-hidden', !isSelective || !checkS3.checked);
-    }, { signal });
-
-    form?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await this.handleSubmitCreateBackup();
-    }, { signal });
-  }
-
   private openCreateModal(): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-create-backup"]');
-    const bannerError = this.container.querySelector<HTMLElement>('[data-ref="banner-create-error"]');
-    bannerError?.classList.add('is-hidden');
+    const bodyContainer = document.createElement('div');
+    bodyContainer.className = 'backups-modal-form-content';
 
-    if (this.inventoryData) {
-      const mysqlBox = this.container.querySelector<HTMLElement>('[data-ref="mysql-tables-selection-box"]');
-      if (mysqlBox && Array.isArray(this.inventoryData.mysql?.tables)) {
-        mysqlBox.innerHTML = this.inventoryData.mysql.tables.map((t: any) => `
-          <div class="backup-selection-item">
-            <label>
-              <input type="checkbox" data-table="${escapeHtml(t.name)}" checked />
-              <span>${escapeHtml(t.name)}</span>
-            </label>
-            <span style="font-size: 0.6875rem; color: var(--text-secondary);">${formatNumber(t.row_count)} filas</span>
+    const mysqlTables = Array.isArray(this.inventoryData?.mysql?.tables) ? this.inventoryData.mysql.tables : [];
+    const s3Prefixes = Array.isArray(this.inventoryData?.s3?.prefixes) ? this.inventoryData.s3.prefixes : [];
+
+    bodyContainer.innerHTML = `
+      <label class="field" data-ref="field-backup-name">
+        <input class="field__input" data-ref="input-backup-name" type="text" placeholder=" " />
+        <span class="field__label">Nombre descriptivo del respaldo (opcional)</span>
+      </label>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px;">
+        <label class="field field--select" data-ref="field-backup-type">
+          <select class="field__input" data-ref="select-backup-type">
+            <option value="full">Respaldo Integral (Full Dump)</option>
+            <option value="selective">Respaldo Selectivo Personalizado</option>
+          </select>
+          <span class="field__label">Modalidad de Respaldo</span>
+        </label>
+        <label class="field" data-ref="field-retention-days">
+          <input class="field__input" data-ref="input-retention-days" type="number" value="30" min="1" max="3650" />
+          <span class="field__label">Días de Retención en S3</span>
+        </label>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px;">
+        <input class="field__checkbox" data-ref="check-is-pinned" type="checkbox" />
+        <span style="font-size: 0.8125rem; font-weight: 500; color: var(--text-primary);">
+          Fijar y Proteger Respaldo (Evita purgas automáticas por retención)
+        </span>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; display: block;">
+          Motores de Almacenamiento a Incluir
+        </span>
+        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; cursor: pointer;">
+            <input class="field__checkbox" data-ref="engine-check-mysql" type="checkbox" checked />
+            <span class="component-badge component-badge--sm">MySQL</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; cursor: pointer;">
+            <input class="field__checkbox" data-ref="engine-check-cassandra" type="checkbox" checked />
+            <span class="component-badge component-badge--sm">Cassandra</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; cursor: pointer;">
+            <input class="field__checkbox" data-ref="engine-check-s3" type="checkbox" checked />
+            <span class="component-badge component-badge--sm">S3 MinIO</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; cursor: pointer;">
+            <input class="field__checkbox" data-ref="engine-check-redis" type="checkbox" checked />
+            <span class="component-badge component-badge--sm">Redis</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="selective-engines-box is-hidden" data-ref="selective-details-box" style="margin-top: 16px; border-top: 1px solid var(--border-color); padding-top: 14px;">
+        <div class="selective-details" data-ref="selective-details-mysql" style="margin-bottom: 12px;">
+          <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">
+            Tablas MySQL (db_lottery)
+          </span>
+          <div class="backup-selection-box" data-ref="mysql-tables-selection-box" style="max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border-color); padding: 8px; border-radius: var(--radius-sm);">
+            ${mysqlTables.length > 0 ? mysqlTables.map((t: any) => `
+              <label style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; cursor: pointer;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <input class="field__checkbox" type="checkbox" data-table="${escapeHtml(t.name)}" checked />
+                  <span>${escapeHtml(t.name)}</span>
+                </span>
+                <span style="color: var(--text-secondary);">${formatNumber(t.row_count)} filas</span>
+              </label>
+            `).join('') : '<span style="font-size: 0.75rem; color: var(--text-secondary);">Sin tablas registradas</span>'}
           </div>
-        `).join('');
-      }
+        </div>
 
-      const s3Box = this.container.querySelector<HTMLElement>('[data-ref="s3-prefixes-selection-box"]');
-      if (s3Box && Array.isArray(this.inventoryData.s3?.prefixes)) {
-        s3Box.innerHTML = this.inventoryData.s3.prefixes.map((p: string) => `
-          <div class="backup-selection-item">
-            <label>
-              <input type="checkbox" data-prefix="${escapeHtml(p)}" checked />
-              <span>${escapeHtml(p)}</span>
-            </label>
-            <span style="font-size: 0.6875rem; color: var(--text-secondary);">Directorio</span>
+        <div class="selective-details" data-ref="selective-details-s3">
+          <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: block;">
+            Prefijos de Almacenamiento S3
+          </span>
+          <div class="backup-selection-box" data-ref="s3-prefixes-selection-box" style="max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; border: 1px solid var(--border-color); padding: 8px; border-radius: var(--radius-sm);">
+            ${s3Prefixes.length > 0 ? s3Prefixes.map((p: string) => `
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; cursor: pointer;">
+                <input class="field__checkbox" type="checkbox" data-prefix="${escapeHtml(p)}" checked />
+                <span>${escapeHtml(p)}</span>
+              </label>
+            `).join('') : '<span style="font-size: 0.75rem; color: var(--text-secondary);">Sin prefijos registrados</span>'}
           </div>
-        `).join('');
-      }
-    }
+        </div>
+      </div>
 
-    modal?.classList.remove('is-hidden');
-  }
+      <div class="banner banner--danger is-hidden" data-ref="banner-create-error" style="margin-top: 14px;">
+        <span data-ref="text-create-error"></span>
+      </div>
+    `;
 
-  private async handleSubmitCreateBackup(): Promise<void> {
-    if (this.isCreating) return;
-    const bannerError = this.container.querySelector<HTMLElement>('[data-ref="banner-create-error"]');
-    const textError = this.container.querySelector<HTMLElement>('[data-ref="text-create-error"]');
-    const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-create-backup"]');
+    const selectType = bodyContainer.querySelector<HTMLSelectElement>('[data-ref="select-backup-type"]');
+    const selectiveBox = bodyContainer.querySelector<HTMLElement>('[data-ref="selective-details-box"]');
+    selectType?.addEventListener('change', () => {
+      selectiveBox?.classList.toggle('is-hidden', selectType.value !== 'selective');
+    });
 
-    bannerError?.classList.add('is-hidden');
+    openModal({
+      bodyHtml: bodyContainer,
+      cancelText: 'Cancelar',
+      confirmText: 'Ejecutar Respaldo',
+      description: 'Generación manual de copias de seguridad de los motores de persistencia',
+      onConfirm: async () => {
+        const bannerError = bodyContainer.querySelector<HTMLElement>('[data-ref="banner-create-error"]');
+        const textError = bodyContainer.querySelector<HTMLElement>('[data-ref="text-create-error"]');
+        bannerError?.classList.add('is-hidden');
 
-    const inputName = this.container.querySelector<HTMLInputElement>('[data-ref="input-backup-name"]');
-    const selectType = this.container.querySelector<HTMLSelectElement>('[data-ref="select-backup-type"]');
-    const inputRetention = this.container.querySelector<HTMLInputElement>('[data-ref="input-retention-days"]');
-    const checkPinned = this.container.querySelector<HTMLInputElement>('[data-ref="check-is-pinned"]');
+        const inputName = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-backup-name"]');
+        const inputRetention = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-retention-days"]');
+        const checkPinned = bodyContainer.querySelector<HTMLInputElement>('[data-ref="check-is-pinned"]');
 
-    const checkMysql = this.container.querySelector<HTMLInputElement>('[data-ref="engine-check-mysql"]');
-    const checkCassandra = this.container.querySelector<HTMLInputElement>('[data-ref="engine-check-cassandra"]');
-    const checkS3 = this.container.querySelector<HTMLInputElement>('[data-ref="engine-check-s3"]');
-    const checkRedis = this.container.querySelector<HTMLInputElement>('[data-ref="engine-check-redis"]');
+        const checkMysql = bodyContainer.querySelector<HTMLInputElement>('[data-ref="engine-check-mysql"]');
+        const checkCassandra = bodyContainer.querySelector<HTMLInputElement>('[data-ref="engine-check-cassandra"]');
+        const checkS3 = bodyContainer.querySelector<HTMLInputElement>('[data-ref="engine-check-s3"]');
+        const checkRedis = bodyContainer.querySelector<HTMLInputElement>('[data-ref="engine-check-redis"]');
 
-    const engines: string[] = [];
-    if (checkMysql?.checked) engines.push('mysql');
-    if (checkCassandra?.checked) engines.push('cassandra');
-    if (checkS3?.checked) engines.push('s3');
-    if (checkRedis?.checked) engines.push('redis');
+        const engines: string[] = [];
+        if (checkMysql?.checked) engines.push('mysql');
+        if (checkCassandra?.checked) engines.push('cassandra');
+        if (checkS3?.checked) engines.push('s3');
+        if (checkRedis?.checked) engines.push('redis');
 
-    if (engines.length === 0) {
-      if (bannerError && textError) {
-        textError.textContent = 'Debes seleccionar al menos un motor de almacenamiento para el respaldo.';
-        bannerError.classList.remove('is-hidden');
-      }
-      return;
-    }
-
-    const isSelective = selectType?.value === 'selective';
-    const selectedMysql: string[] = [];
-    const selectedS3: string[] = [];
-
-    if (isSelective) {
-      this.container.querySelectorAll<HTMLInputElement>('[data-ref="mysql-tables-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
-        const tbl = c.getAttribute('data-table');
-        if (tbl) selectedMysql.push(tbl);
-      });
-      this.container.querySelectorAll<HTMLInputElement>('[data-ref="s3-prefixes-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
-        const pfx = c.getAttribute('data-prefix');
-        if (pfx) selectedS3.push(pfx);
-      });
-    }
-
-    this.isCreating = true;
-    if (btnSubmit) {
-      btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<span>Empaquetando en S3...</span>';
-    }
-
-    try {
-      showToast('Iniciando procesamiento de copia de seguridad en Python...');
-      const res = await postApi<any>('/api/backups/create', {
-        backup_name: inputName?.value.trim() || undefined,
-        backup_type: selectType?.value || 'full',
-        engines,
-        is_pinned: Boolean(checkPinned?.checked),
-        retention_days: parseInt(inputRetention?.value || '30', 10),
-        selected_mysql_tables: isSelective ? selectedMysql : undefined,
-        selected_s3_prefixes: isSelective ? selectedS3 : undefined,
-      });
-
-      if (res.success && res.data) {
-        showToast('Copia de seguridad creada y subida a S3 MinIO con éxito');
-        this.container.querySelector<HTMLElement>('[data-ref="modal-create-backup"]')?.classList.add('is-hidden');
-        await Promise.all([this.loadKpis(), this.loadCatalog()]);
-      } else {
-        if (bannerError && textError) {
-          textError.textContent = res.error || 'Error al generar la copia de seguridad.';
-          bannerError.classList.remove('is-hidden');
+        if (engines.length === 0) {
+          if (bannerError && textError) {
+            textError.textContent = 'Debes seleccionar al menos un motor de almacenamiento para el respaldo.';
+            bannerError.classList.remove('is-hidden');
+          }
+          return false;
         }
-      }
-    } catch {
-      if (bannerError && textError) {
-        textError.textContent = 'Error inesperado de comunicación con el motor de copias.';
-        bannerError.classList.remove('is-hidden');
-      }
-    } finally {
-      this.isCreating = false;
-      if (btnSubmit) {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = `
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
-          <span>Ejecutar Respaldo</span>
-        `;
-        renderIcons(btnSubmit);
-      }
-    }
-  }
 
-  private bindRestoreModalEvents(signal?: AbortSignal): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-restore-backup"]');
-    const overlay = this.container.querySelector<HTMLElement>('[data-ref="modal-restore-overlay"]');
-    const btnClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-modal-restore"]');
-    const btnCancel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-modal-restore"]');
-    const form = this.container.querySelector<HTMLFormElement>('[data-ref="form-restore-backup"]');
+        const isSelective = selectType?.value === 'selective';
+        const selectedMysql: string[] = [];
+        const selectedS3: string[] = [];
 
-    const optMerge = this.container.querySelector<HTMLElement>('[data-ref="opt-restore-merge"]');
-    const optReplace = this.container.querySelector<HTMLElement>('[data-ref="opt-restore-replace"]');
+        if (isSelective) {
+          bodyContainer.querySelectorAll<HTMLInputElement>('[data-ref="mysql-tables-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
+            const tbl = c.getAttribute('data-table');
+            if (tbl) selectedMysql.push(tbl);
+          });
+          bodyContainer.querySelectorAll<HTMLInputElement>('[data-ref="s3-prefixes-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
+            const pfx = c.getAttribute('data-prefix');
+            if (pfx) selectedS3.push(pfx);
+          });
+        }
 
-    optMerge?.addEventListener('click', () => {
-      this.restoreMode = 'merge';
-      optMerge.classList.add('is-selected');
-      optReplace?.classList.remove('is-selected');
-    }, { signal });
+        try {
+          showToast('Iniciando procesamiento de copia de seguridad en Python...');
+          const res = await postApi<any>('/api/backups/create', {
+            backup_name: inputName?.value.trim() || undefined,
+            backup_type: selectType?.value || 'full',
+            engines,
+            is_pinned: Boolean(checkPinned?.checked),
+            retention_days: parseInt(inputRetention?.value || '30', 10),
+            selected_mysql_tables: isSelective ? selectedMysql : undefined,
+            selected_s3_prefixes: isSelective ? selectedS3 : undefined,
+          });
 
-    optReplace?.addEventListener('click', () => {
-      this.restoreMode = 'replace';
-      optReplace.classList.add('is-selected');
-      optMerge?.classList.remove('is-selected');
-    }, { signal });
-
-    const btnToggleMysql = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-restore-mysql"]');
-    btnToggleMysql?.addEventListener('click', () => {
-      const inputs = this.container.querySelectorAll<HTMLInputElement>('[data-ref="restore-mysql-selection-box"] input[type="checkbox"]');
-      const allChecked = Array.from(inputs).every((i) => i.checked);
-      inputs.forEach((i) => { i.checked = !allChecked; });
-    }, { signal });
-
-    const btnToggleCass = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-restore-cass"]');
-    btnToggleCass?.addEventListener('click', () => {
-      const inputs = this.container.querySelectorAll<HTMLInputElement>('[data-ref="restore-cass-selection-box"] input[type="checkbox"]');
-      const allChecked = Array.from(inputs).every((i) => i.checked);
-      inputs.forEach((i) => { i.checked = !allChecked; });
-    }, { signal });
-
-    const btnToggleS3 = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-restore-s3"]');
-    btnToggleS3?.addEventListener('click', () => {
-      const inputs = this.container.querySelectorAll<HTMLInputElement>('[data-ref="restore-s3-selection-box"] input[type="checkbox"]');
-      const allChecked = Array.from(inputs).every((i) => i.checked);
-      inputs.forEach((i) => { i.checked = !allChecked; });
-    }, { signal });
-
-    const closeModal = () => {
-      modal?.classList.add('is-hidden');
-    };
-
-    overlay?.addEventListener('click', closeModal, { signal });
-    btnClose?.addEventListener('click', closeModal, { signal });
-    btnCancel?.addEventListener('click', closeModal, { signal });
-
-    form?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await this.handleSubmitRestoreBackup();
-    }, { signal });
+          if (res.success && res.data) {
+            showToast('Copia de seguridad creada y subida a S3 MinIO con éxito');
+            await this.loadCatalog();
+            return true;
+          }
+          if (bannerError && textError) {
+            textError.textContent = res.error || 'Error al generar la copia de seguridad.';
+            bannerError.classList.remove('is-hidden');
+          }
+          return false;
+        } catch {
+          if (bannerError && textError) {
+            textError.textContent = 'Error inesperado de comunicación con el motor de copias.';
+            bannerError.classList.remove('is-hidden');
+          }
+          return false;
+        }
+      },
+      size: 'lg',
+      title: 'Generar Copia de Seguridad',
+    });
   }
 
   private openRestoreModal(backup: BackupItem): void {
     this.selectedBackupForRestore = backup;
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-restore-backup"]');
-    const targetName = this.container.querySelector<HTMLElement>('[data-ref="restore-target-name"]');
-    const targetUuid = this.container.querySelector<HTMLElement>('[data-ref="restore-target-uuid"]');
-    const bannerError = this.container.querySelector<HTMLElement>('[data-ref="banner-restore-error"]');
-
-    bannerError?.classList.add('is-hidden');
-    if (targetName) targetName.textContent = backup.backup_name;
-    if (targetUuid) targetUuid.textContent = `UUID: ${backup.uuid} • Creado: ${formatDate(backup.created_at)} • Tamaño: ${formatBytes(backup.size_bytes)}`;
-
     const meta = backup.metadata || {};
+    const tables = meta.mysql?.tables || {};
+    const tKeys = Object.keys(tables);
+    const cassTables = meta.cassandra?.tables || {};
+    const cKeys = Object.keys(cassTables);
 
-    const mysqlBox = this.container.querySelector<HTMLElement>('[data-ref="restore-mysql-selection-box"]');
-    if (mysqlBox) {
-      const tables = meta.mysql?.tables || {};
-      const tKeys = Object.keys(tables);
-      if (tKeys.length > 0) {
-        mysqlBox.innerHTML = tKeys.map((k) => `
-          <div class="backup-selection-item">
-            <label>
-              <input type="checkbox" data-restore-mysql="${escapeHtml(k)}" checked />
-              <span>${escapeHtml(k)}</span>
-            </label>
-            <span style="font-size: 0.6875rem; color: var(--text-secondary);">${formatNumber(tables[k].row_count || 0)} filas</span>
-          </div>
-        `).join('');
-      } else {
-        mysqlBox.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-secondary);">Sin datos MySQL en este archivo</span>';
-      }
+    const s3Objs: Array<{ key: string }> = meta.s3?.objects || [];
+    const prefixesSet = new Set<string>();
+    for (const o of s3Objs) {
+      const parts = o.key.split('/');
+      if (parts.length > 1) prefixesSet.add(parts[0] + '/');
     }
+    const pList = Array.from(prefixesSet);
 
-    const cassBox = this.container.querySelector<HTMLElement>('[data-ref="restore-cass-selection-box"]');
-    if (cassBox) {
-      const cassTables = meta.cassandra?.tables || {};
-      const cKeys = Object.keys(cassTables);
-      if (cKeys.length > 0) {
-        cassBox.innerHTML = cKeys.map((k) => `
-          <div class="backup-selection-item">
-            <label>
-              <input type="checkbox" data-restore-cass="${escapeHtml(k)}" checked />
-              <span>${escapeHtml(k)}</span>
-            </label>
-            <span style="font-size: 0.6875rem; color: var(--text-secondary);">${formatNumber(cassTables[k].row_count || 0)} registros</span>
+    const bodyContainer = document.createElement('div');
+    bodyContainer.className = 'backups-modal-form-content';
+    bodyContainer.innerHTML = `
+      <div class="banner banner--warning" style="margin-bottom: 16px;">
+        <strong>Precaución Operativa:</strong> La restauración sobreescribirá los datos del sistema con el estado archivado en la copia seleccionada.
+      </div>
+
+      <div style="background: var(--bg-sunken); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 16px;">
+        <div style="font-size: 0.875rem; font-weight: 600; color: var(--text-primary);">${escapeHtml(backup.backup_name)}</div>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; font-family: monospace;">
+          UUID: ${escapeHtml(backup.uuid)} • Creado: ${formatDate(backup.created_at)} • Tamaño: ${formatBytes(backup.size_bytes)}
+        </div>
+      </div>
+
+      <span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; display: block;">
+        Modo de Aplicación de la Restauración
+      </span>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+        <label class="restore-mode-card" style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <input type="radio" name="restore-mode" value="merge" checked data-ref="radio-restore-merge" />
+            <span style="font-size: 0.8125rem; font-weight: 600;">Fusión / Upsert (Recomendado)</span>
           </div>
-        `).join('');
-      } else {
-        cassBox.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-secondary);">Sin datos Cassandra en este archivo</span>';
-      }
-    }
-
-    const s3Box = this.container.querySelector<HTMLElement>('[data-ref="restore-s3-selection-box"]');
-    if (s3Box) {
-      const s3Objs: Array<{ key: string }> = meta.s3?.objects || [];
-      const prefixesSet = new Set<string>();
-      for (const o of s3Objs) {
-        const parts = o.key.split('/');
-        if (parts.length > 1) prefixesSet.add(parts[0] + '/');
-      }
-      const pList = Array.from(prefixesSet);
-      if (pList.length > 0) {
-        s3Box.innerHTML = pList.map((p) => `
-          <div class="backup-selection-item">
-            <label>
-              <input type="checkbox" data-restore-s3="${escapeHtml(p)}" checked />
-              <span>${escapeHtml(p)}</span>
-            </label>
-            <span style="font-size: 0.6875rem; color: var(--text-secondary);">Directorio</span>
+          <span style="font-size: 0.6875rem; color: var(--text-secondary);">Preserva registros existentes e inserta o actualiza por clave primaria.</span>
+        </label>
+        <label class="restore-mode-card" style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); cursor: pointer; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <input type="radio" name="restore-mode" value="replace" data-ref="radio-restore-replace" />
+            <span style="font-size: 0.8125rem; font-weight: 600; color: #d32f2f;">Sobrescritura Total (Replace)</span>
           </div>
-        `).join('');
-      } else {
-        s3Box.innerHTML = '<span style="font-size: 0.75rem; color: var(--text-secondary);">Sin archivos S3 en este respaldo</span>';
-      }
-    }
+          <span style="font-size: 0.6875rem; color: var(--text-secondary);">Vacía las tablas antes de restaurar para replicar el respaldo. Destructivo.</span>
+        </label>
+      </div>
 
-    modal?.classList.remove('is-hidden');
-  }
+      <span style="font-size: 0.8125rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; display: block;">
+        Selección Granular de Componentes a Restaurar
+      </span>
 
-  private async handleSubmitRestoreBackup(): Promise<void> {
-    if (this.isRestoring || !this.selectedBackupForRestore) return;
-    const bannerError = this.container.querySelector<HTMLElement>('[data-ref="banner-restore-error"]');
-    const textError = this.container.querySelector<HTMLElement>('[data-ref="text-restore-error"]');
-    const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-restore-backup"]');
-    const checkSnapshot = this.container.querySelector<HTMLInputElement>('[data-ref="check-pre-restore-snapshot"]');
-    const checkRedis = this.container.querySelector<HTMLInputElement>('[data-ref="restore-check-redis"]');
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Tablas MySQL (${tKeys.length})</span>
+            <button type="button" class="component-button component-button--link" data-ref="btn-toggle-all-restore-mysql" style="font-size: 0.6875rem;">Alternar todas</button>
+          </div>
+          <div class="backup-selection-box" data-ref="restore-mysql-selection-box" style="max-height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--border-color); padding: 8px; border-radius: var(--radius-sm);">
+            ${tKeys.length > 0 ? tKeys.map((k) => `
+              <label style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; cursor: pointer;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <input class="field__checkbox" type="checkbox" data-restore-mysql="${escapeHtml(k)}" checked />
+                  <span>${escapeHtml(k)}</span>
+                </span>
+                <span style="color: var(--text-secondary);">${formatNumber(tables[k].row_count || 0)} filas</span>
+              </label>
+            `).join('') : '<span style="font-size: 0.75rem; color: var(--text-secondary);">Sin datos MySQL en este archivo</span>'}
+          </div>
+        </div>
 
-    bannerError?.classList.add('is-hidden');
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Tablas Cassandra (${cKeys.length})</span>
+            <button type="button" class="component-button component-button--link" data-ref="btn-toggle-all-restore-cass" style="font-size: 0.6875rem;">Alternar todas</button>
+          </div>
+          <div class="backup-selection-box" data-ref="restore-cass-selection-box" style="max-height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--border-color); padding: 8px; border-radius: var(--radius-sm);">
+            ${cKeys.length > 0 ? cKeys.map((k) => `
+              <label style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; cursor: pointer;">
+                <span style="display: flex; align-items: center; gap: 6px;">
+                  <input class="field__checkbox" type="checkbox" data-restore-cass="${escapeHtml(k)}" checked />
+                  <span>${escapeHtml(k)}</span>
+                </span>
+                <span style="color: var(--text-secondary);">${formatNumber(cassTables[k].row_count || 0)} registros</span>
+              </label>
+            `).join('') : '<span style="font-size: 0.75rem; color: var(--text-secondary);">Sin datos Cassandra en este archivo</span>'}
+          </div>
+        </div>
 
-    const selectedMysql: string[] = [];
-    const selectedCass: string[] = [];
-    const selectedS3: string[] = [];
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Prefijos de Archivos S3 MinIO (${pList.length})</span>
+            <button type="button" class="component-button component-button--link" data-ref="btn-toggle-all-restore-s3" style="font-size: 0.6875rem;">Alternar todos</button>
+          </div>
+          <div class="backup-selection-box" data-ref="restore-s3-selection-box" style="max-height: 100px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--border-color); padding: 8px; border-radius: var(--radius-sm);">
+            ${pList.length > 0 ? pList.map((p) => `
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 0.75rem; cursor: pointer;">
+                <input class="field__checkbox" type="checkbox" data-restore-s3="${escapeHtml(p)}" checked />
+                <span>${escapeHtml(p)}</span>
+              </label>
+            `).join('') : '<span style="font-size: 0.75rem; color: var(--text-secondary);">Sin archivos S3 en este respaldo</span>'}
+          </div>
+        </div>
 
-    this.container.querySelectorAll<HTMLInputElement>('[data-ref="restore-mysql-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
-      const t = c.getAttribute('data-restore-mysql');
-      if (t) selectedMysql.push(t);
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 500; cursor: pointer;">
+          <input class="field__checkbox" data-ref="restore-check-redis" type="checkbox" />
+          <span>Restaurar estado y llaves Redis</span>
+        </label>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; margin-top: 14px; background: rgba(255, 152, 0, 0.08); padding: 10px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 152, 0, 0.25);">
+        <input class="field__checkbox" data-ref="check-pre-restore-snapshot" type="checkbox" checked />
+        <span style="font-size: 0.8125rem; font-weight: 500; color: var(--text-primary);">
+          Crear snapshot automático de seguridad antes de ejecutar la restauración (Recomendado)
+        </span>
+      </div>
+
+      <div class="banner banner--danger is-hidden" data-ref="banner-restore-error" style="margin-top: 14px;">
+        <span data-ref="text-restore-error"></span>
+      </div>
+    `;
+
+    const btnToggleMysql = bodyContainer.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-restore-mysql"]');
+    btnToggleMysql?.addEventListener('click', () => {
+      const inputs = bodyContainer.querySelectorAll<HTMLInputElement>('[data-ref="restore-mysql-selection-box"] input[type="checkbox"]');
+      const allChecked = Array.from(inputs).every((i) => i.checked);
+      inputs.forEach((i) => { i.checked = !allChecked; });
     });
 
-    this.container.querySelectorAll<HTMLInputElement>('[data-ref="restore-cass-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
-      const t = c.getAttribute('data-restore-cass');
-      if (t) selectedCass.push(t);
+    const btnToggleCass = bodyContainer.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-restore-cass"]');
+    btnToggleCass?.addEventListener('click', () => {
+      const inputs = bodyContainer.querySelectorAll<HTMLInputElement>('[data-ref="restore-cass-selection-box"] input[type="checkbox"]');
+      const allChecked = Array.from(inputs).every((i) => i.checked);
+      inputs.forEach((i) => { i.checked = !allChecked; });
     });
 
-    this.container.querySelectorAll<HTMLInputElement>('[data-ref="restore-s3-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
-      const p = c.getAttribute('data-restore-s3');
-      if (p) selectedS3.push(p);
+    const btnToggleS3 = bodyContainer.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-restore-s3"]');
+    btnToggleS3?.addEventListener('click', () => {
+      const inputs = bodyContainer.querySelectorAll<HTMLInputElement>('[data-ref="restore-s3-selection-box"] input[type="checkbox"]');
+      const allChecked = Array.from(inputs).every((i) => i.checked);
+      inputs.forEach((i) => { i.checked = !allChecked; });
     });
 
-    if (selectedMysql.length === 0 && selectedCass.length === 0 && selectedS3.length === 0 && !checkRedis?.checked) {
-      if (bannerError && textError) {
-        textError.textContent = 'Debes seleccionar al menos un componente para restaurar.';
-        bannerError.classList.remove('is-hidden');
-      }
-      return;
-    }
+    openModal({
+      bodyHtml: bodyContainer,
+      cancelText: 'Cancelar',
+      confirmText: 'Ejecutar Restauración',
+      description: `Restauración de datos archivados • ${backup.uuid.substring(0, 8)}...`,
+      onConfirm: async () => {
+        const bannerError = bodyContainer.querySelector<HTMLElement>('[data-ref="banner-restore-error"]');
+        const textError = bodyContainer.querySelector<HTMLElement>('[data-ref="text-restore-error"]');
+        const checkSnapshot = bodyContainer.querySelector<HTMLInputElement>('[data-ref="check-pre-restore-snapshot"]');
+        const checkRedis = bodyContainer.querySelector<HTMLInputElement>('[data-ref="restore-check-redis"]');
+        const isReplace = bodyContainer.querySelector<HTMLInputElement>('[data-ref="radio-restore-replace"]')?.checked;
+        const mode = isReplace ? 'replace' : 'merge';
 
-    if (this.restoreMode === 'replace') {
-      const msg = 'ATENCIÓN: Has seleccionado el modo "Sobrescritura Total (Replace)". Las tablas seleccionadas serán vaciadas antes de insertar los datos del respaldo. ¿Deseas continuar?';
-      if (!confirm(msg)) return;
-    }
+        bannerError?.classList.add('is-hidden');
 
-    this.isRestoring = true;
-    if (btnSubmit) {
-      btnSubmit.disabled = true;
-      btnSubmit.innerHTML = '<span>Restaurando datos...</span>';
-    }
+        const selectedMysql: string[] = [];
+        const selectedCass: string[] = [];
+        const selectedS3: string[] = [];
 
-    try {
-      showToast('Descargando y verificando integridad del respaldo en S3...');
-      const res = await postApi<any>('/api/backups/restore', {
-        backup_uuid: this.selectedBackupForRestore.uuid,
-        create_pre_restore_backup: Boolean(checkSnapshot?.checked),
-        restore_mode: this.restoreMode,
-        selected_components: {
-          cassandra_tables: selectedCass,
-          mysql_tables: selectedMysql,
-          redis: Boolean(checkRedis?.checked),
-          s3_prefixes: selectedS3,
-        },
-      });
+        bodyContainer.querySelectorAll<HTMLInputElement>('[data-ref="restore-mysql-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
+          const t = c.getAttribute('data-restore-mysql');
+          if (t) selectedMysql.push(t);
+        });
 
-      if (res.success && res.data) {
-        showToast('Restauración selectiva completada con éxito');
-        this.container.querySelector<HTMLElement>('[data-ref="modal-restore-backup"]')?.classList.add('is-hidden');
-        this.switchTab('restores');
-        await this.loadKpis();
-      } else {
-        if (bannerError && textError) {
-          textError.textContent = res.error || 'Falla durante la restauración.';
-          bannerError.classList.remove('is-hidden');
+        bodyContainer.querySelectorAll<HTMLInputElement>('[data-ref="restore-cass-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
+          const t = c.getAttribute('data-restore-cass');
+          if (t) selectedCass.push(t);
+        });
+
+        bodyContainer.querySelectorAll<HTMLInputElement>('[data-ref="restore-s3-selection-box"] input[type="checkbox"]:checked').forEach((c) => {
+          const p = c.getAttribute('data-restore-s3');
+          if (p) selectedS3.push(p);
+        });
+
+        if (selectedMysql.length === 0 && selectedCass.length === 0 && selectedS3.length === 0 && !checkRedis?.checked) {
+          if (bannerError && textError) {
+            textError.textContent = 'Debes seleccionar al menos un componente para restaurar.';
+            bannerError.classList.remove('is-hidden');
+          }
+          return false;
         }
-      }
-    } catch {
-      if (bannerError && textError) {
-        textError.textContent = 'Error de comunicación durante la restauración.';
-        bannerError.classList.remove('is-hidden');
-      }
-    } finally {
-      this.isRestoring = false;
-      if (btnSubmit) {
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = `
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-          <span>Iniciar Restauración</span>
-        `;
-        renderIcons(btnSubmit);
-      }
-    }
-  }
 
-  private bindDetailsModalEvents(signal?: AbortSignal): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-details-backup"]');
-    const overlay = this.container.querySelector<HTMLElement>('[data-ref="modal-details-overlay"]');
-    const btnClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-modal-details"]');
-    const btnCloseView = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-details-view"]');
+        if (mode === 'replace') {
+          const msg = 'ATENCIÓN: Has seleccionado el modo "Sobrescritura Total (Replace)". Las tablas seleccionadas serán vaciadas antes de insertar los datos del respaldo. ¿Deseas continuar?';
+          if (!confirm(msg)) return false;
+        }
 
-    const closeModal = () => modal?.classList.add('is-hidden');
+        try {
+          showToast('Descargando y verificando integridad del respaldo en S3...');
+          const res = await postApi<any>('/api/backups/restore', {
+            backup_uuid: backup.uuid,
+            create_pre_restore_backup: Boolean(checkSnapshot?.checked),
+            restore_mode: mode,
+            selected_components: {
+              cassandra_tables: selectedCass,
+              mysql_tables: selectedMysql,
+              redis: Boolean(checkRedis?.checked),
+              s3_prefixes: selectedS3,
+            },
+          });
 
-    overlay?.addEventListener('click', closeModal, { signal });
-    btnClose?.addEventListener('click', closeModal, { signal });
-    btnCloseView?.addEventListener('click', closeModal, { signal });
+          if (res.success && res.data) {
+            showToast('Restauración selectiva completada con éxito');
+            this.switchTab('restores');
+            return true;
+          }
+          if (bannerError && textError) {
+            textError.textContent = res.error || 'Falla durante la restauración.';
+            bannerError.classList.remove('is-hidden');
+          }
+          return false;
+        } catch {
+          if (bannerError && textError) {
+            textError.textContent = 'Error de comunicación durante la restauración.';
+            bannerError.classList.remove('is-hidden');
+          }
+          return false;
+        }
+      },
+      size: 'lg',
+      title: 'Restauración Granular Selectiva',
+    });
   }
 
   private async openManifestModal(uuid: string): Promise<void> {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-details-backup"]');
-    const title = this.container.querySelector<HTMLElement>('[data-ref="modal-details-title"]');
-    const content = this.container.querySelector<HTMLElement>('[data-ref="details-manifest-content"]');
+    const item = this.catalogItems.find((b) => b.uuid === uuid);
+    showToast('Cargando manifiesto forense desde S3...');
 
-    if (title) title.textContent = `Manifiesto Forense • ${uuid}`;
-    if (content) content.textContent = 'Recuperando manifiesto desde S3 MinIO...';
-    modal?.classList.remove('is-hidden');
-
+    let manifestData: any = item?.metadata || {};
     try {
       const res = await getApi<any>(`/api/backups/catalog/${uuid}`);
       if (res.success && res.data) {
-        if (content) {
-          content.textContent = JSON.stringify(res.data.metadata || res.data, null, 2);
-        }
-      } else {
-        if (content) content.textContent = 'No se pudo cargar el manifiesto.';
+        manifestData = res.data.metadata || res.data;
       }
     } catch {
-      if (content) content.textContent = 'Error al cargar detalles del manifiesto.';
+      // Usar datos existentes
     }
+
+    const shaText = item?.sha256_checksum || 'No registrado';
+    const sizeText = item ? formatBytes(item.size_bytes) : '-';
+    const s3Path = item?.s3_archive_key ? `${item.s3_bucket}/${item.s3_archive_key}` : '-';
+
+    const bodyHtml = `
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+        <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <div style="font-size: 11px; color: var(--text-secondary);">Estado de Integridad</div>
+          <div style="font-weight: 600; margin-top: 4px;">
+            <span class="component-badge component-badge--sm">${item?.sha256_checksum ? 'Verificado SHA-256' : 'Pendiente'}</span>
+          </div>
+        </div>
+        <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <div style="font-size: 11px; color: var(--text-secondary);">Tamaño Comprimido</div>
+          <div style="font-weight: 600; margin-top: 4px;">
+            <span class="component-badge component-badge--sm component-badge--mono-bold">${sizeText}</span>
+          </div>
+        </div>
+        <div style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <div style="font-size: 11px; color: var(--text-secondary);">Almacenamiento S3</div>
+          <div style="font-weight: 600; margin-top: 4px; font-size: 11px; font-family: monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(s3Path)}">
+            ${escapeHtml(s3Path)}
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 6px; font-weight: 600; font-size: 13px;">Hash de Verificación SHA-256:</div>
+      <div style="padding: 8px 12px; background: var(--bg-surface-secondary); border-radius: var(--radius-sm); font-family: monospace; font-size: 12px; word-break: break-all; margin-bottom: 16px;">
+        ${escapeHtml(shaText)}
+      </div>
+
+      <div style="margin-bottom: 6px; font-weight: 600; font-size: 13px;">Contenido del Manifiesto JSON:</div>
+      <pre class="audit-detail-json" style="max-height: 280px; overflow-y: auto;">${escapeHtml(JSON.stringify(manifestData, null, 2))}</pre>
+    `;
+
+    openModal({
+      bodyHtml,
+      cancelText: 'Cerrar',
+      description: `UUID: ${uuid}`,
+      showConfirm: false,
+      size: 'lg',
+      title: 'Manifiesto & Verificación de Integridad',
+    });
   }
 
   private openForensicDetailsModal(titleText: string, data: any): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-details-backup"]');
-    const title = this.container.querySelector<HTMLElement>('[data-ref="modal-details-title"]');
-    const content = this.container.querySelector<HTMLElement>('[data-ref="details-manifest-content"]');
+    const bodyHtml = `
+      <pre class="audit-detail-json" style="max-height: 380px; overflow-y: auto;">${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+    `;
 
-    if (title) title.textContent = titleText;
-    if (content) content.textContent = JSON.stringify(data, null, 2);
-    modal?.classList.remove('is-hidden');
+    openModal({
+      bodyHtml,
+      cancelText: 'Cerrar',
+      description: 'Reporte forense detallado',
+      showConfirm: false,
+      size: 'lg',
+      title: titleText,
+    });
   }
 
-  private bindScheduleModalEvents(signal?: AbortSignal): void {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-schedule-settings"]');
-    const overlay = this.container.querySelector<HTMLElement>('[data-ref="modal-schedule-overlay"]');
-    const btnClose = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-close-modal-schedule"]');
-    const btnCancel = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-cancel-modal-schedule"]');
-    const form = this.container.querySelector<HTMLFormElement>('[data-ref="form-schedule-settings"]');
-
-    const closeModal = () => modal?.classList.add('is-hidden');
-
-    overlay?.addEventListener('click', closeModal, { signal });
-    btnClose?.addEventListener('click', closeModal, { signal });
-    btnCancel?.addEventListener('click', closeModal, { signal });
-
-    form?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await this.handleSubmitScheduleSettings();
-    }, { signal });
-  }
 
   private async openScheduleModal(): Promise<void> {
-    const modal = this.container.querySelector<HTMLElement>('[data-ref="modal-schedule-settings"]');
-    const bannerError = this.container.querySelector<HTMLElement>('[data-ref="banner-schedule-error"]');
-    bannerError?.classList.add('is-hidden');
+    let settings = {
+      backup_auto_enabled: '1',
+      backup_default_retention_days: '30',
+      backup_schedule_frequency: 'daily',
+      backup_schedule_time: '03:00',
+    };
 
     try {
       const res = await getApi<any>('/api/backups/schedule');
       if (res.success && res.data) {
-        const s = res.data;
-        const checkEnabled = this.container.querySelector<HTMLInputElement>('[data-ref="schedule-check-enabled"]');
-        const selectFreq = this.container.querySelector<HTMLSelectElement>('[data-ref="select-schedule-frequency"]');
-        const inputTime = this.container.querySelector<HTMLInputElement>('[data-ref="input-schedule-time"]');
-        const inputRet = this.container.querySelector<HTMLInputElement>('[data-ref="input-default-retention"]');
-
-        if (checkEnabled) checkEnabled.checked = s.backup_auto_enabled === '1';
-        if (selectFreq) selectFreq.value = s.backup_schedule_frequency || 'daily';
-        if (inputTime) inputTime.value = s.backup_schedule_time || '03:00';
-        if (inputRet) inputRet.value = s.backup_default_retention_days || '30';
+        settings = { ...settings, ...res.data };
       }
     } catch {
-      // Ignorar fallo de carga de settings
+      // Ignorar fallo inicial
     }
 
-    modal?.classList.remove('is-hidden');
-  }
+    const bodyContainer = document.createElement('div');
+    bodyContainer.className = 'backups-modal-form-content';
+    bodyContainer.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+          <input class="field__checkbox" data-ref="schedule-check-enabled" type="checkbox" ${settings.backup_auto_enabled === '1' ? 'checked' : ''} />
+          <span style="font-size: 0.875rem; font-weight: 500; color: var(--text-primary);">Ejecutar respaldos automáticos programados hacia S3 MinIO</span>
+        </label>
+      </div>
 
-  private async handleSubmitScheduleSettings(): Promise<void> {
-    const bannerError = this.container.querySelector<HTMLElement>('[data-ref="banner-schedule-error"]');
-    const textError = this.container.querySelector<HTMLElement>('[data-ref="text-schedule-error"]');
-    const btnSubmit = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-submit-schedule-settings"]');
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <label class="field field--select" data-ref="field-schedule-frequency">
+          <select class="field__input" data-ref="select-schedule-frequency">
+            <option value="daily" ${settings.backup_schedule_frequency === 'daily' ? 'selected' : ''}>Diario (Cada 24 horas)</option>
+            <option value="every_12h" ${settings.backup_schedule_frequency === 'every_12h' ? 'selected' : ''}>Cada 12 horas</option>
+            <option value="every_6h" ${settings.backup_schedule_frequency === 'every_6h' ? 'selected' : ''}>Cada 6 horas</option>
+            <option value="weekly" ${settings.backup_schedule_frequency === 'weekly' ? 'selected' : ''}>Semanal</option>
+          </select>
+          <span class="field__label">Frecuencia Programada</span>
+        </label>
 
-    bannerError?.classList.add('is-hidden');
+        <label class="field" data-ref="field-schedule-time">
+          <input class="field__input" data-ref="input-schedule-time" type="time" value="${escapeHtml(settings.backup_schedule_time || '03:00')}" />
+          <span class="field__label">Hora Programada (24h)</span>
+        </label>
+      </div>
 
-    const checkEnabled = this.container.querySelector<HTMLInputElement>('[data-ref="schedule-check-enabled"]');
-    const selectFreq = this.container.querySelector<HTMLSelectElement>('[data-ref="select-schedule-frequency"]');
-    const inputTime = this.container.querySelector<HTMLInputElement>('[data-ref="input-schedule-time"]');
-    const inputRet = this.container.querySelector<HTMLInputElement>('[data-ref="input-default-retention"]');
+      <label class="field" data-ref="field-default-retention" style="margin-top: 14px;">
+        <input class="field__input" data-ref="input-default-retention" type="number" min="1" max="3650" value="${escapeHtml(settings.backup_default_retention_days || '30')}" />
+        <span class="field__label">Días Predeterminados de Retención en S3</span>
+      </label>
 
-    if (btnSubmit) btnSubmit.disabled = true;
+      <div class="banner banner--danger is-hidden" data-ref="banner-schedule-error" style="margin-top: 14px;">
+        <span data-ref="text-schedule-error"></span>
+      </div>
+    `;
 
-    try {
-      const res = await putApi<any>('/api/backups/schedule', {
-        backup_auto_enabled: checkEnabled?.checked ? '1' : '0',
-        backup_default_retention_days: inputRet?.value || '30',
-        backup_schedule_frequency: selectFreq?.value || 'daily',
-        backup_schedule_time: inputTime?.value || '03:00',
-      });
+    openModal({
+      bodyHtml: bodyContainer,
+      cancelText: 'Cancelar',
+      confirmText: 'Guardar Política',
+      description: 'Configuración de copias de seguridad automáticas y retención en S3',
+      onConfirm: async () => {
+        const checkEnabled = bodyContainer.querySelector<HTMLInputElement>('[data-ref="schedule-check-enabled"]');
+        const selectFreq = bodyContainer.querySelector<HTMLSelectElement>('[data-ref="select-schedule-frequency"]');
+        const inputTime = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-schedule-time"]');
+        const inputRet = bodyContainer.querySelector<HTMLInputElement>('[data-ref="input-default-retention"]');
+        const bannerError = bodyContainer.querySelector<HTMLElement>('[data-ref="banner-schedule-error"]');
+        const textError = bodyContainer.querySelector<HTMLElement>('[data-ref="text-schedule-error"]');
 
-      if (res.success) {
-        showToast('Política de retención y programación guardada');
-        this.container.querySelector<HTMLElement>('[data-ref="modal-schedule-settings"]')?.classList.add('is-hidden');
-      } else {
-        if (bannerError && textError) {
-          textError.textContent = res.error || 'Error al guardar la configuración.';
-          bannerError.classList.remove('is-hidden');
+        bannerError?.classList.add('is-hidden');
+
+        try {
+          const res = await putApi<any>('/api/backups/schedule', {
+            backup_auto_enabled: checkEnabled?.checked ? '1' : '0',
+            backup_default_retention_days: inputRet?.value || '30',
+            backup_schedule_frequency: selectFreq?.value || 'daily',
+            backup_schedule_time: inputTime?.value || '03:00',
+          });
+
+          if (res.success) {
+            showToast('Política de retención y programación guardada con éxito');
+            return true;
+          }
+          if (bannerError && textError) {
+            textError.textContent = res.error || 'Error al guardar la configuración.';
+            bannerError.classList.remove('is-hidden');
+          }
+          return false;
+        } catch {
+          if (bannerError && textError) {
+            textError.textContent = 'Error inesperado al guardar la programación.';
+            bannerError.classList.remove('is-hidden');
+          }
+          return false;
         }
-      }
-    } catch {
-      if (bannerError && textError) {
-        textError.textContent = 'Error inesperado al guardar la programación.';
-        bannerError.classList.remove('is-hidden');
-      }
-    } finally {
-      if (btnSubmit) btnSubmit.disabled = false;
-    }
+      },
+      size: 'md',
+      title: 'Automatizar Copias de Seguridad',
+    });
   }
 
   destroy(): void {
@@ -1205,10 +1324,24 @@ export class BackupsController implements ViewController {
       this.abortController.abort();
       this.abortController = null;
     }
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+    if (this.filterDropdownController) {
+      this.filterDropdownController.destroy();
+      this.filterDropdownController = null;
+    }
+    if (this.sectionDropdownController) {
+      this.sectionDropdownController.destroy();
+      this.sectionDropdownController = null;
+    }
     this.catalogItems = [];
     this.restoreItems = [];
     this.inventoryData = null;
+    this.selectedBackup = null;
     this.selectedBackupForRestore = null;
+    this.selectedRestore = null;
   }
 }
 

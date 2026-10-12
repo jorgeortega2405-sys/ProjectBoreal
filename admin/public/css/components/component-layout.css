@@ -2011,7 +2011,10 @@ html.dark-theme .component-top--gradient .design-share-btn:hover {
 
 .admin-view-body--flush .payments-content-area,
 .admin-view-body--flush .customers-content-area,
-.admin-view-body--flush .winners-content-area {
+.admin-view-body--flush .winners-content-area,
+.admin-view-body--flush .backups-content-area,
+.admin-view-body--flush .admins-content-area,
+.admin-view-body--flush .audit-content-area {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;

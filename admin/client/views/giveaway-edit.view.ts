@@ -5,7 +5,7 @@ import { renderIcons } from '../services/icon.service.js';
 import { loadTemplate } from '../services/template.service.js';
 import { showToast } from '../services/toast.service.js';
 import { ViewController } from '../types/common.types.js';
-import { escapeHtml } from '../utils/dom.util.js';
+import { DropdownController, escapeHtml, setupDropdown } from '../utils/dom.util.js';
 
 interface AdminGiveawayDetail {
   available_tickets: number;
@@ -86,10 +86,13 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 export class GiveawayEditController implements ViewController {
   private abortController: AbortController | null = null;
+  private bankAccounts: BankAccountItem[] = [];
+  private banksContainer: HTMLElement | null = null;
+  private banksDropdownController: DropdownController | null = null;
+  private banksSelectedText: HTMLElement | null = null;
   private bannerCompletedInfo: HTMLElement | null = null;
   private bannerError: HTMLElement | null = null;
   private bannerSalesWarning: HTMLElement | null = null;
-  private banksContainer: HTMLElement | null = null;
   private btnAddSecondaryImg: HTMLButtonElement | null = null;
   private btnBack: HTMLButtonElement | null = null;
   private btnCancel: HTMLButtonElement | null = null;
@@ -98,6 +101,7 @@ export class GiveawayEditController implements ViewController {
   private btnHeaderSave: HTMLButtonElement | null = null;
   private btnRemoveCover: HTMLButtonElement | null = null;
   private btnSubmit: HTMLButtonElement | null = null;
+  private btnToggleAllBanks: HTMLButtonElement | null = null;
   private container: HTMLElement;
   private coverDropzone: HTMLElement | null = null;
   private coverPreviewCard: HTMLElement | null = null;
@@ -176,6 +180,8 @@ export class GiveawayEditController implements ViewController {
     this.bannerCompletedInfo = this.container.querySelector<HTMLElement>('[data-ref="banner-completed-info"]');
     this.textPaidCount = this.container.querySelector<HTMLElement>('[data-ref="text-paid-count"]');
     this.banksContainer = this.container.querySelector<HTMLElement>('[data-ref="banks-container"]');
+    this.banksSelectedText = this.container.querySelector<HTMLElement>('[data-ref="banks-selected-text"]');
+    this.btnToggleAllBanks = this.container.querySelector<HTMLButtonElement>('[data-ref="btn-toggle-all-banks"]');
 
     this.inputTitle = this.container.querySelector<HTMLInputElement>('[data-ref="input-title"]');
     this.inputSlug = this.container.querySelector<HTMLInputElement>('[data-ref="input-slug"]');
@@ -217,6 +223,15 @@ export class GiveawayEditController implements ViewController {
     this.statPotentialRevenue = this.container.querySelector<HTMLElement>('[data-ref="stat-potential-revenue"]');
     this.statThreshold = this.container.querySelector<HTMLElement>('[data-ref="stat-threshold-tickets"]');
     this.statDuration = this.container.querySelector<HTMLElement>('[data-ref="stat-duration-days"]');
+
+    const banksWrapper = this.container.querySelector<HTMLElement>('[data-ref="dropdown-wrapper-banks"]');
+    if (banksWrapper) {
+      this.banksDropdownController = setupDropdown(banksWrapper, {
+        isSelect: false,
+        matchWidth: true,
+        placement: 'bottom-start',
+      });
+    }
 
     this.bindEvents();
     renderIcons(this.container);
@@ -446,32 +461,54 @@ export class GiveawayEditController implements ViewController {
     if (this.btnChangeCover) this.btnChangeCover.disabled = true;
     if (this.btnRemoveCover) this.btnRemoveCover.disabled = true;
     if (this.btnAddSecondaryImg) this.btnAddSecondaryImg.style.display = 'none';
+    if (this.btnToggleAllBanks) this.btnToggleAllBanks.disabled = true;
   }
 
   private renderBankAccounts(allBanks: BankAccountItem[], assignedIds: Set<number>): void {
     if (!this.banksContainer) return;
+    this.bankAccounts = allBanks;
+
     if (allBanks.length === 0) {
       this.banksContainer.innerHTML = `
-        <div class="giveaway-create__empty-banks">
+        <div class="giveaway-create__empty-banks" data-ref="empty-banks-msg">
           No hay cuentas bancarias activas registradas en la plataforma.
         </div>
       `;
+      this.updateBanksTriggerText();
       return;
     }
 
     this.banksContainer.innerHTML = allBanks
       .map(
         (b) => `
-        <label class="giveaway-create__bank-item">
-          <input class="giveaway-create__bank-checkbox" name="bank_account" type="checkbox" value="${b.id}" ${assignedIds.has(b.id) ? 'checked' : ''} ${this.isCompleted ? 'disabled' : ''} />
-          <div class="giveaway-create__bank-info">
-            <span class="giveaway-create__bank-name">${escapeHtml(b.bank_name)} • ${escapeHtml(b.account_holder)}</span>
-            <span class="giveaway-create__bank-meta">${escapeHtml(b.account_type.toUpperCase())} ${b.clabe ? `• CLABE: ${escapeHtml(b.clabe)}` : ''} ${b.card_number ? `• Tarjeta: ${escapeHtml(b.card_number)}` : ''}</span>
+        <label class="menu-item giveaway-create__bank-option ${this.isCompleted ? 'is-disabled' : ''}" data-ref="bank-option-${b.id}">
+          <input class="component-checkbox" data-ref="bank-checkbox-${b.id}" name="bank_account" type="checkbox" value="${b.id}" ${assignedIds.has(b.id) ? 'checked' : ''} ${this.isCompleted ? 'disabled' : ''} />
+          <div class="giveaway-create__bank-info" data-ref="bank-info-${b.id}">
+            <span class="giveaway-create__bank-name" data-ref="bank-name-${b.id}">${escapeHtml(b.bank_name)} • ${escapeHtml(b.account_holder)}</span>
+            <span class="giveaway-create__bank-meta" data-ref="bank-meta-${b.id}">${escapeHtml(b.account_type.toUpperCase())} ${b.clabe ? `• CLABE: ${escapeHtml(b.clabe)}` : ''} ${b.card_number ? `• Tarjeta: ${escapeHtml(b.card_number)}` : ''}</span>
           </div>
         </label>
       `
       )
       .join('');
+    this.updateBanksTriggerText();
+  }
+
+  private updateBanksTriggerText(): void {
+    if (!this.banksSelectedText) return;
+    const checkboxes = this.container.querySelectorAll<HTMLInputElement>('input[name="bank_account"]');
+    const total = checkboxes.length;
+    const checked = Array.from(checkboxes).filter((cb) => cb.checked).length;
+
+    if (total === 0) {
+      this.banksSelectedText.textContent = 'Sin cuentas registradas';
+    } else if (checked === total) {
+      this.banksSelectedText.textContent = `Todas las cuentas habilitadas (${total})`;
+    } else if (checked === 0) {
+      this.banksSelectedText.textContent = 'Ninguna cuenta seleccionada';
+    } else {
+      this.banksSelectedText.textContent = `${checked} de ${total} cuentas seleccionadas`;
+    }
   }
 
   private bindEvents(): void {
@@ -566,6 +603,29 @@ export class GiveawayEditController implements ViewController {
         { signal }
       );
     }
+
+    this.btnToggleAllBanks?.addEventListener(
+      'click',
+      (e) => {
+        e.preventDefault();
+        if (this.isCompleted) return;
+        const checkboxes = this.container.querySelectorAll<HTMLInputElement>('input[name="bank_account"]');
+        const allChecked = Array.from(checkboxes).every((cb) => cb.checked);
+        checkboxes.forEach((cb) => {
+          cb.checked = !allChecked;
+        });
+        this.updateBanksTriggerText();
+      },
+      { signal }
+    );
+
+    this.banksContainer?.addEventListener(
+      'change',
+      () => {
+        this.updateBanksTriggerText();
+      },
+      { signal }
+    );
   }
 
   private updateLivePreview(): void {
@@ -811,6 +871,8 @@ export class GiveawayEditController implements ViewController {
   }
 
   destroy(): void {
+    this.banksDropdownController?.destroy();
+    this.banksDropdownController = null;
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;

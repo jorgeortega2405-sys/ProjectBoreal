@@ -1,236 +1,159 @@
 <div class="component-wrapper component-wrapper--full view-wrapper audit-view" data-ref="audit-view">
-  <div class="audit-header" data-ref="audit-header">
-    <div class="audit-header__title-box" data-ref="audit-title-box">
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <h1 class="audit-header__title" data-ref="audit-title">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#history"></use></svg>
-          <span>Bitácora de Auditoría y Trazabilidad Forense</span>
-        </h1>
-        <span class="audit-badge audit-badge--cassandra" data-ref="badge-cassandra-status">
-          <span class="audit-status-dot" data-ref="dot-cassandra-status"></span>
-          <span data-ref="text-cassandra-status">Cassandra En Línea</span>
-        </span>
-      </div>
-      <p class="audit-header__subtitle" data-ref="audit-subtitle">
-        Registro inmutable y cronológico de todas las mutaciones críticas en Apache Cassandra (aprobaciones, rechazos, sorteos, sesiones y accesos).
-      </p>
-    </div>
-    <div class="audit-header__actions" data-ref="audit-header-actions">
-      <button type="button" class="component-button component-button--h40 component-button--secondary" data-ref="btn-search-order-modal" data-tooltip="Rastrear el ciclo de vida completo de una orden" aria-label="Rastrear Orden">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
-        <span>Rastrear Orden</span>
-      </button>
-      <button type="button" class="component-button component-button--h40 component-button--primary" data-ref="btn-refresh-audit" data-tooltip="Recargar bitácora de eventos" aria-label="Actualizar">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
-        <span>Actualizar</span>
-      </button>
-    </div>
-  </div>
-
-  <div class="audit-stats-grid" data-ref="audit-kpis-grid">
-    <div class="audit-stat-card" data-ref="kpi-month-events">
-      <div class="audit-stat-card__top">
-        <span class="audit-stat-card__label">Eventos del Mes</span>
-        <svg class="audit-stat-card__icon" aria-hidden="true"><use href="/icons.svg#insights"></use></svg>
-      </div>
-      <div class="audit-stat-card__value" data-ref="kpi-val-month-events">-</div>
-      <div class="audit-stat-card__subtext" data-ref="kpi-sub-month-events">Registrados en partición Cassandra</div>
-    </div>
-
-    <div class="audit-stat-card" data-ref="kpi-payment-events">
-      <div class="audit-stat-card__top">
-        <span class="audit-stat-card__label">Decisiones de Pagos</span>
-        <svg class="audit-stat-card__icon" aria-hidden="true"><use href="/icons.svg#payments"></use></svg>
-      </div>
-      <div class="audit-stat-card__value" data-ref="kpi-val-payment-events">-</div>
-      <div class="audit-stat-card__subtext" data-ref="kpi-sub-payment-events">Aprobadas / Rechazadas</div>
-    </div>
-
-    <div class="audit-stat-card" data-ref="kpi-giveaway-events">
-      <div class="audit-stat-card__top">
-        <span class="audit-stat-card__label">Operaciones de Sorteos</span>
-        <svg class="audit-stat-card__icon" aria-hidden="true"><use href="/icons.svg#confirmation_number"></use></svg>
-      </div>
-      <div class="audit-stat-card__value" data-ref="kpi-val-giveaway-events">-</div>
-      <div class="audit-stat-card__subtext" data-ref="kpi-sub-giveaway-events">Creación, sorteos y premios</div>
-    </div>
-
-    <div class="audit-stat-card" data-ref="kpi-unique-actors">
-      <div class="audit-stat-card__top">
-        <span class="audit-stat-card__label">Operadores Activos</span>
-        <svg class="audit-stat-card__icon" aria-hidden="true"><use href="/icons.svg#security"></use></svg>
-      </div>
-      <div class="audit-stat-card__value" data-ref="kpi-val-unique-actors">-</div>
-      <div class="audit-stat-card__subtext" data-ref="kpi-sub-unique-actors">Con actividad registrada</div>
-    </div>
-  </div>
-
-  <div class="audit-body" data-ref="audit-body">
-    <div class="audit-toolbar" data-ref="audit-toolbar">
-      <div class="audit-toolbar__filters" data-ref="audit-filters">
-        <div class="field field--select" data-ref="field-audit-month" style="min-width: 170px;">
-          <select class="field__input" data-ref="select-audit-month">
-          </select>
-        </div>
-
-        <div class="field field--search" data-ref="field-search-audit" style="flex: 1; min-width: 240px;">
-          <svg class="component-icon field__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-          <input class="field__input" data-ref="input-search-audit" type="text" placeholder="Buscar por orden, teléfono, operador o IP..." />
-        </div>
-
-        <div class="field field--select" data-ref="field-action-filter" style="min-width: 200px;">
-          <select class="field__input" data-ref="select-action-filter">
-            <option value="all">Todas las acciones</option>
-            <option value="ORDER_APPROVED">Aprobación de Orden</option>
-            <option value="ORDER_REJECTED">Rechazo de Orden</option>
-            <option value="ORDER_CREATED">Creación de Orden</option>
-            <option value="ORDER_CANCELLED">Cancelación de Orden</option>
-            <option value="GIVEAWAY_CREATED">Creación de Sorteo</option>
-            <option value="GIVEAWAY_DRAWN">Ejecución de Sorteo</option>
-            <option value="ADMIN_LOGIN">Inicio de Sesión Admin</option>
-            <option value="ADMIN_CREATED">Creación de Admin</option>
-            <option value="ROLE_PERMISSIONS_UPDATED">Mutación de Permisos PBAC</option>
-            <option value="SESSION_REVOKED">Revocación de Sesión</option>
-          </select>
-        </div>
-
-        <div class="field field--select" data-ref="field-actor-filter" style="min-width: 150px;">
-          <select class="field__input" data-ref="select-actor-filter">
-            <option value="all">Todos los actores</option>
-            <option value="ADMIN">Operador Admin</option>
-            <option value="CUSTOMER">Cliente / Usuario</option>
-            <option value="SYSTEM">Sistema Automático</option>
-          </select>
-        </div>
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="audit-scrollable">
+    <div class="view-header" data-ref="audit-floating-top">
+      <div class="view-header__left" data-ref="audit-floating-left">
+        <h1 class="view-header__title" data-ref="audit-title">Bitácora de Auditoría Forense</h1>
       </div>
 
-      <div class="audit-toolbar__actions" data-ref="audit-quick-actions">
-        <button type="button" class="component-button component-button--h36 component-button--ghost" data-ref="btn-refresh-timeline" data-tooltip="Recargar línea de tiempo" aria-label="Recargar línea de tiempo">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
-          <span>Actualizar</span>
-        </button>
-      </div>
-    </div>
+      <div class="view-header__right" data-ref="audit-floating-right">
+        <div class="view-header__actions" data-ref="audit-default-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar eventos" aria-label="Buscar eventos">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </button>
 
-    <div class="audit-table-container" data-ref="audit-table-container">
-      <table class="audit-table" data-ref="audit-table">
-        <thead>
-          <tr>
-            <th>Fecha y Hora</th>
-            <th>Acción Registrada</th>
-            <th>Actor / Operador</th>
-            <th>Tipo Actor</th>
-            <th>Referencia / Entidad</th>
-            <th>Dirección IP</th>
-            <th style="text-align: right;">Acciones</th>
-          </tr>
-        </thead>
-        <tbody data-ref="audit-table-body">
-          <tr>
-            <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-secondary);">
-              Cargando bitácora forense de Cassandra...
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+          <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtros de bitácora" aria-label="Filtros de bitácora">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            </button>
 
-    <div class="audit-footer-info" data-ref="audit-footer-info">
-      <span data-ref="text-events-count">Mostrando 0 eventos en la partición actual</span>
-    </div>
-  </div>
+            <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="filter-dropdown-menu">
+                <div class="avatar-menu__section-header">
+                  <span class="drawer-section__title">Partición Mensual</span>
+                </div>
+                <div class="menu-panel__list" data-ref="filter-months-list"></div>
 
-  <div class="modal is-hidden" data-ref="modal-audit-detail">
-    <div class="modal__overlay" data-ref="modal-detail-overlay"></div>
-    <div class="modal__dialog modal__dialog--lg" data-ref="modal-detail-dialog">
-      <div class="modal__header">
-        <div>
-          <h2 class="modal__title" data-ref="modal-detail-title">Inspección Forense de Evento</h2>
-          <span class="audit-event-uuid" data-ref="text-detail-uuid">UUID: -</span>
-        </div>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-detail" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-      <div class="modal__body" data-ref="modal-detail-body">
-        <div class="audit-detail-grid">
-          <div class="audit-detail-card">
-            <span class="audit-detail-card__label">Acción Ejecutada</span>
-            <span class="audit-detail-card__val" data-ref="detail-val-action">-</span>
+                <div class="menu-divider"></div>
+
+                <div class="avatar-menu__section-header">
+                  <span class="drawer-section__title">Tipo de Actor</span>
+                </div>
+                <div class="menu-panel__list" data-ref="filter-actor-list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-filter-actor-all" data-actor-filter="all">
+                    <span class="menu-item__text">Todos los actores</span>
+                  </button>
+                  <button type="button" class="menu-item" data-actor-filter="ADMIN">
+                    <span class="menu-item__text">Operador Admin</span>
+                  </button>
+                  <button type="button" class="menu-item" data-actor-filter="CUSTOMER">
+                    <span class="menu-item__text">Cliente / Usuario</span>
+                  </button>
+                  <button type="button" class="menu-item" data-actor-filter="SYSTEM">
+                    <span class="menu-item__text">Sistema Automático</span>
+                  </button>
+                </div>
+
+                <div class="menu-divider"></div>
+
+                <div class="avatar-menu__section-header">
+                  <span class="drawer-section__title">Acción Registrada</span>
+                </div>
+                <div class="menu-panel__list filter-dropdown-list--scrollable" data-ref="filter-action-list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-filter-action-all" data-action-filter="all">
+                    <span class="menu-item__text">Todas las acciones</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="ORDER_APPROVED">
+                    <span class="menu-item__text">Aprobación de Orden</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="ORDER_REJECTED">
+                    <span class="menu-item__text">Rechazo de Orden</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="ORDER_CREATED">
+                    <span class="menu-item__text">Creación de Orden</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="ORDER_CANCELLED">
+                    <span class="menu-item__text">Cancelación de Orden</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="GIVEAWAY_CREATED">
+                    <span class="menu-item__text">Creación de Sorteo</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="GIVEAWAY_DRAWN">
+                    <span class="menu-item__text">Ejecución de Sorteo</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="ADMIN_LOGIN">
+                    <span class="menu-item__text">Inicio de Sesión Admin</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="ADMIN_CREATED">
+                    <span class="menu-item__text">Creación de Admin</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="ROLE_PERMISSIONS_UPDATED">
+                    <span class="menu-item__text">Mutación de Permisos PBAC</span>
+                  </button>
+                  <button type="button" class="menu-item" data-action-filter="SESSION_REVOKED">
+                    <span class="menu-item__text">Revocación de Sesión</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="audit-detail-card">
-            <span class="audit-detail-card__label">Estampa de Tiempo</span>
-            <span class="audit-detail-card__val" data-ref="detail-val-timestamp">-</span>
-          </div>
-          <div class="audit-detail-card">
-            <span class="audit-detail-card__label">Operador / Actor</span>
-            <span class="audit-detail-card__val" data-ref="detail-val-actor">-</span>
-          </div>
-          <div class="audit-detail-card">
-            <span class="audit-detail-card__label">Dirección IP de Origen</span>
-            <span class="audit-detail-card__val" data-ref="detail-val-ip">-</span>
-          </div>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-search-order-modal" data-tooltip="Rastrear orden por UUID" aria-label="Rastrear Orden">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#receipt_long"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-audit" data-tooltip="Recargar bitácora" aria-label="Actualizar">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
+          </button>
         </div>
 
-        <div class="audit-detail-section" style="margin-top: 16px;">
-          <label class="audit-detail-section__title">Navegador y Entorno (User-Agent)</label>
-          <div class="audit-detail-raw" data-ref="detail-val-useragent">-</div>
-        </div>
+        <div class="view-header__actions view-header__actions--selected is-hidden" data-ref="audit-selected-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
 
-        <div class="audit-detail-section" style="margin-top: 16px;">
-          <label class="audit-detail-section__title">Payload Forense y Parámetros Contextuales (JSON)</label>
-          <pre class="audit-detail-json" data-ref="detail-val-payload">{}</pre>
-        </div>
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-inspect" data-tooltip="Inspeccionar evento forense" aria-label="Inspeccionar evento forense">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#visibility"></use></svg>
+          </button>
 
-        <div class="modal__actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
-          <button type="button" class="component-button component-button--secondary" data-ref="btn-close-detail-view">
-            <span>Cerrar</span>
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-copy-uuid" data-tooltip="Copiar UUID del evento" aria-label="Copiar UUID del evento">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#content_copy"></use></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="input-search-audit" placeholder="Buscar por orden, teléfono, operador o IP..." type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="modal is-hidden" data-ref="modal-search-order">
-    <div class="modal__overlay" data-ref="modal-search-order-overlay"></div>
-    <div class="modal__dialog modal__dialog--md" data-ref="modal-search-order-dialog">
-      <div class="modal__header">
-        <h2 class="modal__title">Rastrear Historial de Orden</h2>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-search-order" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-      <div class="modal__body" data-ref="modal-search-order-body">
-        <form class="modal-form" data-ref="form-search-order">
-          <p style="margin: 0 0 16px; font-size: 0.875rem; color: var(--text-secondary);">
-            Ingresa el UUID o número de folio de la orden para consultar la pista forense completa en Cassandra (<code style="font-size: 0.75rem;">audit_logs_by_order</code>).
-          </p>
-
-          <div class="field" data-ref="field-input-order-uuid">
-            <input class="field__input" data-ref="input-order-uuid" type="text" placeholder=" " required />
-            <label class="field__label">Folio / UUID de Orden *</label>
+    <div class="view-body admin-view-body admin-view-body--flush" data-ref="audit-body">
+      <div class="audit-content-area" data-ref="audit-content-area">
+        <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="audit-table-card">
+          <div class="winners-daily-table-container" data-ref="audit-table-container">
+            <table class="winners-daily-table" data-ref="audit-table">
+              <thead>
+                <tr>
+                  <th class="winners-th" scope="col">Fecha y Hora</th>
+                  <th class="winners-th" scope="col">Acción Registrada</th>
+                  <th class="winners-th" scope="col">Actor / Operador</th>
+                  <th class="winners-th" scope="col">Tipo</th>
+                  <th class="winners-th" scope="col">Referencia / Entidad</th>
+                  <th class="winners-th" scope="col">Dirección IP</th>
+                </tr>
+              </thead>
+              <tbody class="winners-tbody" data-ref="audit-table-body">
+                <tr class="winners-table__tr winners-tr--empty">
+                  <td class="winners-table__td winners-td--empty" colspan="6" style="text-align: center; padding: 48px 16px; color: var(--text-secondary);">
+                    Cargando bitácora forense de Cassandra...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-
-          <div class="modal__actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
-            <button type="button" class="component-button component-button--secondary" data-ref="btn-cancel-modal-search-order">
-              <span>Cancelar</span>
-            </button>
-            <button type="submit" class="component-button component-button--primary" data-ref="btn-submit-search-order">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-              <span>Buscar Trazabilidad</span>
-            </button>
-          </div>
-
-          <div class="banner banner--danger is-hidden" data-ref="banner-search-order-error" style="margin-top: 16px;">
-            <span data-ref="text-search-order-error"></span>
-          </div>
-        </form>
-
-        <div class="audit-order-timeline is-hidden" data-ref="order-timeline-results" style="margin-top: 20px;">
-          <h3 style="font-size: 0.875rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">
-            Resultados de la Orden
-          </h3>
-          <div class="audit-order-events-list" data-ref="order-events-list">
+          <div class="winners-pagination" data-ref="audit-pagination">
+            <div class="winners-pagination__info">
+              <span data-ref="text-events-count">Mostrando 0 eventos</span>
+            </div>
           </div>
         </div>
       </div>

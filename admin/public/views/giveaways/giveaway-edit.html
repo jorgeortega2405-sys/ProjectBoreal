@@ -181,8 +181,32 @@
             <p class="giveaway-create__section-desc">Cuentas activas asociadas a este sorteo para recibir transferencias.</p>
           </div>
 
-          <div class="giveaway-create__banks-list" data-ref="banks-container">
-            <div class="skeleton-placeholder skeleton-banks-loading">Cargando cuentas bancarias...</div>
+          <div class="field field--dropdown" data-ref="field-banks">
+            <span class="field__label">Cuentas Bancarias Asignadas</span>
+            <div class="settings-dropdown-wrapper dropdown-wrapper dropdown-wrapper--full" data-ref="dropdown-wrapper-banks">
+              <button type="button" class="dropdown-trigger dropdown-trigger--full" data-ref="btn-trigger-banks" aria-label="Cuentas Bancarias Habilitadas">
+                <div class="dropdown-trigger__left">
+                  <svg class="component-icon dropdown-trigger__icon" aria-hidden="true"><use href="/icons.svg#account_balance"></use></svg>
+                  <span class="dropdown-trigger__text" data-ref="banks-selected-text">Cargando cuentas bancarias...</span>
+                </div>
+                <svg class="component-icon dropdown-trigger__chevron" aria-hidden="true"><use href="/icons.svg#expand_more"></use></svg>
+              </button>
+
+              <div class="dropdown-backdrop" data-ref="dropdown-backdrop-banks">
+                <div class="menu-panel menu-panel--dropdown menu-panel--w-full menu-panel--h-auto" data-ref="dropdown-menu-banks">
+                  <div class="menu-panel__drag-zone" data-ref="drag-zone-banks" aria-hidden="true">
+                    <div class="menu-panel__drag-handle"></div>
+                  </div>
+                  <div class="avatar-menu__section-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 6px;">
+                    <span class="drawer-section__title" style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--text-secondary);">Cuentas Disponibles</span>
+                    <button type="button" class="component-button component-button--link" data-ref="btn-toggle-all-banks" style="font-size: 11px;">Alternar todas</button>
+                  </div>
+                  <div class="menu-panel__list giveaway-create__banks-dropdown-list" data-ref="banks-container" style="max-height: 280px; overflow-y: auto;">
+                    <div class="skeleton-placeholder skeleton-banks-loading" style="padding: 16px; text-align: center;">Cargando cuentas bancarias...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

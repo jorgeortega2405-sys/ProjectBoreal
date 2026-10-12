@@ -3403,6 +3403,27 @@ html.dark-theme .dashboard-panel-card {
   border-color: var(--border-color-hover);
 }
 
+.giveaway-create__bank-option {
+  height: auto;
+  min-height: 48px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  user-select: none;
+}
+
+.giveaway-create__bank-option:hover {
+  background-color: var(--bg-hover);
+}
+
+.giveaway-create__bank-option.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .giveaway-create__empty-banks {
   font-size: 13px;
   color: var(--text-tertiary);

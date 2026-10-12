@@ -1,358 +1,202 @@
 <div class="component-wrapper component-wrapper--full view-wrapper admins-view" data-ref="admins-view">
-  <div class="admins-header" data-ref="admins-header">
-    <div class="admins-header__title-box" data-ref="admins-title-box">
-      <h1 class="admins-header__title" data-ref="admins-title">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#admin_panel_settings"></use></svg>
-        <span>Gestión de Administradores, Roles y PBAC</span>
-      </h1>
-      <p class="admins-header__subtitle" data-ref="admins-subtitle">
-        Control de acceso basado en permisos estrictos (PBAC), catálogo de operadores, privilegios granulares y auditoría de sesiones concurrentes en Redis.
-      </p>
-    </div>
-    <div class="admins-header__actions" data-ref="admins-header-actions">
-      <button type="button" class="component-button component-button--h40 component-button--secondary" data-ref="btn-refresh-admins" data-tooltip="Recargar directorio y métricas" aria-label="Actualizar datos">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
-        <span>Actualizar</span>
-      </button>
-      <button type="button" class="component-button component-button--h40 component-button--primary" data-ref="btn-create-admin" data-tooltip="Crear una nueva cuenta de administrador" aria-label="Nuevo Administrador">
-        <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
-        <span>Nuevo Administrador</span>
-      </button>
-    </div>
-  </div>
-
-  <div class="admins-stats-grid" data-ref="admins-kpis-grid">
-    <div class="admins-stat-card" data-ref="kpi-total-admins">
-      <div class="admins-stat-card__top">
-        <span class="admins-stat-card__label">Total Administradores</span>
-        <svg class="admins-stat-card__icon" aria-hidden="true"><use href="/icons.svg#badge"></use></svg>
+  <div class="layout-body layout-body--scrollable layout-scrollable view-scrollable" data-ref="admins-scrollable">
+    <div class="view-header" data-ref="admins-floating-top">
+      <div class="view-header__left" data-ref="admins-floating-left">
+        <h1 class="view-header__title" data-ref="admins-title">Administradores y Accesos</h1>
       </div>
-      <div class="admins-stat-card__value" data-ref="kpi-val-total-admins">-</div>
-      <div class="admins-stat-card__subtext" data-ref="kpi-sub-total-admins">Operadores en base de datos</div>
-    </div>
 
-    <div class="admins-stat-card" data-ref="kpi-active-admins">
-      <div class="admins-stat-card__top">
-        <span class="admins-stat-card__label">Cuentas Activas</span>
-        <svg class="admins-stat-card__icon" aria-hidden="true"><use href="/icons.svg#check_circle"></use></svg>
-      </div>
-      <div class="admins-stat-card__value" data-ref="kpi-val-active-admins">-</div>
-      <div class="admins-stat-card__subtext" data-ref="kpi-sub-active-admins">Con acceso habilitado</div>
-    </div>
-
-    <div class="admins-stat-card" data-ref="kpi-active-sessions">
-      <div class="admins-stat-card__top">
-        <span class="admins-stat-card__label">Sesiones Redis en Vivo</span>
-        <svg class="admins-stat-card__icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
-      </div>
-      <div class="admins-stat-card__value" data-ref="kpi-val-active-sessions">-</div>
-      <div class="admins-stat-card__subtext" data-ref="kpi-sub-active-sessions">Tokens activos en memoria</div>
-    </div>
-
-    <div class="admins-stat-card" data-ref="kpi-roles-count">
-      <div class="admins-stat-card__top">
-        <span class="admins-stat-card__label">Roles PBAC Configurables</span>
-        <svg class="admins-stat-card__icon" aria-hidden="true"><use href="/icons.svg#security"></use></svg>
-      </div>
-      <div class="admins-stat-card__value" data-ref="kpi-val-roles-count">-</div>
-      <div class="admins-stat-card__subtext" data-ref="kpi-sub-roles-count">Contenedores de permisos</div>
-    </div>
-  </div>
-
-  <div class="admins-tabs" data-ref="admins-tabs">
-    <button type="button" class="admins-tab-btn is-active" data-ref="tab-btn-admins">
-      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#people"></use></svg>
-      <span>Directorio de Administradores</span>
-    </button>
-    <button type="button" class="admins-tab-btn" data-ref="tab-btn-roles">
-      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#security"></use></svg>
-      <span>Roles y Permisos PBAC</span>
-    </button>
-    <button type="button" class="admins-tab-btn" data-ref="tab-btn-sessions">
-      <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
-      <span>Sesiones Activas (Redis)</span>
-    </button>
-  </div>
-
-  <div class="admins-tab-content" data-ref="admins-tab-content">
-    <div class="admins-tab-pane is-active" data-ref="pane-admins">
-      <div class="admins-toolbar" data-ref="admins-toolbar">
-        <div class="admins-toolbar__filters" data-ref="admins-filters">
-          <div class="field field--search" data-ref="field-search-admins">
-            <svg class="component-icon field__icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
-            <input class="field__input" data-ref="input-search-admins" type="text" placeholder="Buscar por nombre o correo..." />
-          </div>
-          <div class="field field--select" data-ref="field-role-filter">
-            <select class="field__input" data-ref="select-role-filter">
-              <option value="all">Todos los roles</option>
-            </select>
-          </div>
-          <div class="field field--select" data-ref="field-status-filter">
-            <select class="field__input" data-ref="select-status-filter">
-              <option value="all">Todos los estados</option>
-              <option value="active">Activos</option>
-              <option value="inactive">Inactivos</option>
-            </select>
-          </div>
-        </div>
-        <div class="admins-toolbar__actions" data-ref="admins-quick-actions">
-          <button type="button" class="component-button component-button--h36 component-button--ghost" data-ref="btn-refresh-list" data-tooltip="Recargar tabla" aria-label="Recargar tabla">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
-            <span>Actualizar</span>
+      <div class="view-header__right" data-ref="admins-floating-right">
+        <div class="view-header__actions" data-ref="admins-default-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-search" data-tooltip="Buscar administradores" aria-label="Buscar administradores">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
           </button>
-        </div>
-      </div>
 
-      <div class="admins-table-container" data-ref="admins-table-container">
-        <table class="admins-table" data-ref="admins-table">
-          <thead>
-            <tr>
-              <th>Administrador</th>
-              <th>Roles Asignados</th>
-              <th>Permisos Efectivos</th>
-              <th>Estado</th>
-              <th>Último Acceso</th>
-              <th>Fecha de Alta</th>
-              <th style="text-align: right;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody data-ref="admins-table-body">
-            <tr>
-              <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-secondary);">
-                Cargando directorio de administradores...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <div class="settings-dropdown-wrapper" data-ref="filter-dropdown-wrapper">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-filter" data-tooltip="Filtros" aria-label="Filtros">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#tune"></use></svg>
+            </button>
 
-    <div class="admins-tab-pane is-hidden" data-ref="pane-roles">
-      <div class="admins-notice" data-ref="roles-notice">
-        <div class="admins-notice__icon">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
-        </div>
-        <div class="admins-notice__content">
-          <h3 class="admins-notice__title">Arquitectura de Seguridad Basada en Permisos (PBAC)</h3>
-          <p class="admins-notice__text">
-            En cumplimiento estricto con las directivas de seguridad del sistema, el acceso del software no depende de nombres de rol fijos en el código. Los roles operan exclusivamente como agrupadores en base de datos. Modificar los permisos de un rol actualizará instantáneamente las facultades de todos los operadores que lo tengan asignado.
-          </p>
-        </div>
-      </div>
+            <div class="dropdown-backdrop" data-ref="filter-dropdown-backdrop">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="filter-dropdown-menu">
+                <div class="avatar-menu__section-header">
+                  <span class="drawer-section__title">Rol Asignado</span>
+                </div>
+                <div class="menu-panel__list filter-roles-dropdown-list" data-ref="filter-roles-list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-filter-role-all" data-role-filter="all">
+                    <span class="menu-item__text">Todos los roles</span>
+                  </button>
+                </div>
 
-      <div class="admins-roles-grid" data-ref="roles-grid">
-      </div>
-    </div>
+                <div class="menu-divider"></div>
 
-    <div class="admins-tab-pane is-hidden" data-ref="pane-sessions">
-      <div class="admins-toolbar" data-ref="sessions-toolbar">
-        <div class="admins-toolbar__filters" data-ref="sessions-filters">
-          <div class="field field--select" data-ref="field-sessions-admin-filter">
-            <select class="field__input" data-ref="select-sessions-admin-filter">
-              <option value="all">Todas las sesiones de operadores</option>
-            </select>
-          </div>
-        </div>
-        <div class="admins-toolbar__actions" data-ref="sessions-quick-actions">
-          <button type="button" class="component-button component-button--h36 component-button--ghost" data-ref="btn-refresh-sessions" data-tooltip="Recargar sesiones en memoria" aria-label="Recargar sesiones">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
-            <span>Actualizar</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="admins-table-container" data-ref="sessions-table-container">
-        <table class="admins-table" data-ref="sessions-table">
-          <thead>
-            <tr>
-              <th>Administrador</th>
-              <th>Dirección IP</th>
-              <th>Navegador y Sistema</th>
-              <th>Fecha de Inicio</th>
-              <th>Vigencia en Redis</th>
-              <th>Sesión Actual</th>
-              <th style="text-align: right;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody data-ref="sessions-table-body">
-            <tr>
-              <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-secondary);">
-                Cargando sesiones concurrentes en Redis...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal is-hidden" data-ref="modal-admin-form">
-    <div class="modal__overlay" data-ref="modal-admin-overlay"></div>
-    <div class="modal__dialog modal__dialog--md" data-ref="modal-admin-dialog">
-      <div class="modal__header">
-        <h2 class="modal__title" data-ref="modal-admin-title">Nuevo Administrador</h2>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-admin" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-      <div class="modal__body" data-ref="modal-admin-body">
-        <form class="modal-form" data-ref="form-admin">
-          <div class="field" data-ref="field-admin-name">
-            <input class="field__input" data-ref="input-admin-name" type="text" placeholder=" " required autocomplete="off" />
-            <label class="field__label">Nombre Completo *</label>
-          </div>
-
-          <div class="field" data-ref="field-admin-email" style="margin-top: 14px;">
-            <input class="field__input" data-ref="input-admin-email" type="email" placeholder=" " required autocomplete="off" />
-            <label class="field__label">Correo Electrónico Corporativo *</label>
-          </div>
-
-          <div class="field" data-ref="field-admin-password" style="margin-top: 14px;">
-            <input class="field__input" data-ref="input-admin-password" type="password" placeholder=" " autocomplete="new-password" />
-            <label class="field__label" data-ref="label-admin-password">Contraseña (Mínimo 8 caracteres) *</label>
-          </div>
-          <span class="field-hint" data-ref="hint-admin-password" style="display: none; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">Dejar en blanco para conservar la contraseña actual.</span>
-
-          <div class="admins-form-section" style="margin-top: 18px;">
-            <label class="admins-form-section__title">Roles y Contenedores PBAC *</label>
-            <div class="admins-roles-checkboxes" data-ref="admin-roles-container">
+                <div class="avatar-menu__section-header">
+                  <span class="drawer-section__title">Estado de Cuenta</span>
+                </div>
+                <div class="menu-panel__list" data-ref="filter-statuses-list">
+                  <button type="button" class="menu-item is-active" data-ref="btn-filter-status-all" data-status-filter="all">
+                    <span class="menu-item__text">Todos los estados</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-active" data-status-filter="active">
+                    <span class="menu-item__text">Activos</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="btn-filter-status-inactive" data-status-filter="inactive">
+                    <span class="menu-item__text">Inactivos</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="admins-checkbox-row" style="margin-top: 16px;">
-            <label class="admins-switch-label">
-              <input type="checkbox" data-ref="input-admin-active" checked />
-              <span class="admins-switch-text">Cuenta activa (Permitir acceso al panel de administración)</span>
-            </label>
-          </div>
-
-          <div class="modal__actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
-            <button type="button" class="component-button component-button--secondary" data-ref="btn-cancel-modal-admin">
-              <span>Cancelar</span>
+          <div class="settings-dropdown-wrapper" data-ref="section-dropdown-wrapper">
+            <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-toggle-section" data-tooltip="Cambiar sección" aria-label="Cambiar sección">
+              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#layers"></use></svg>
             </button>
-            <button type="submit" class="component-button component-button--primary" data-ref="btn-submit-admin">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#save"></use></svg>
-              <span data-ref="text-submit-admin">Guardar Administrador</span>
-            </button>
-          </div>
 
-          <div class="banner banner--danger is-hidden" data-ref="banner-admin-error" style="margin-top: 16px;">
-            <span data-ref="text-admin-error"></span>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal is-hidden" data-ref="modal-role-permissions">
-    <div class="modal__overlay" data-ref="modal-role-overlay"></div>
-    <div class="modal__dialog modal__dialog--lg" data-ref="modal-role-dialog">
-      <div class="modal__header">
-        <div>
-          <h2 class="modal__title" data-ref="modal-role-title">Asignar Permisos PBAC</h2>
-          <span class="admins-badge admins-badge--role" data-ref="modal-role-badge">ROL</span>
-        </div>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-role" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-      <div class="modal__body" data-ref="modal-role-body">
-        <form class="modal-form" data-ref="form-role-permissions">
-          <div class="admins-role-modal-toolbar">
-            <span class="admins-role-modal-summary" data-ref="text-permissions-count">0 permisos seleccionados</span>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="component-button component-button--h32 component-button--ghost" data-ref="btn-select-all-perms">
-                <span>Seleccionar todos</span>
-              </button>
-              <button type="button" class="component-button component-button--h32 component-button--ghost" data-ref="btn-deselect-all-perms">
-                <span>Deseleccionar</span>
-              </button>
+            <div class="dropdown-backdrop" data-ref="section-dropdown-backdrop">
+              <div class="menu-panel menu-panel--dropdown menu-panel--w-285 menu-panel--h-auto" data-ref="section-dropdown-menu">
+                <div class="avatar-menu__section-header">
+                  <span class="drawer-section__title">Secciones</span>
+                </div>
+                <div class="menu-panel__list" data-ref="section-menu-list">
+                  <button type="button" class="menu-item is-active" data-ref="tab-btn-admins" data-section="admins">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#people"></use></svg>
+                    <span class="menu-item__text">Directorio de Operadores</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="tab-btn-roles" data-section="roles">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#security"></use></svg>
+                    <span class="menu-item__text">Roles y Permisos PBAC</span>
+                  </button>
+                  <button type="button" class="menu-item" data-ref="tab-btn-sessions" data-section="sessions">
+                    <svg class="component-icon menu-item__icon" aria-hidden="true"><use href="/icons.svg#devices"></use></svg>
+                    <span class="menu-item__text">Sesiones Activas (Redis)</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="admins-permissions-groups" data-ref="permissions-groups-container">
-          </div>
-
-          <div class="modal__actions" style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
-            <button type="button" class="component-button component-button--secondary" data-ref="btn-cancel-modal-role">
-              <span>Cancelar</span>
-            </button>
-            <button type="submit" class="component-button component-button--primary" data-ref="btn-submit-role-permissions">
-              <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#security"></use></svg>
-              <span>Guardar Privilegios PBAC</span>
-            </button>
-          </div>
-
-          <div class="banner banner--danger is-hidden" data-ref="banner-role-error" style="margin-top: 16px;">
-            <span data-ref="text-role-error"></span>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal is-hidden" data-ref="modal-confirm-revoke">
-    <div class="modal__overlay" data-ref="modal-revoke-overlay"></div>
-    <div class="modal__dialog modal__dialog--sm" data-ref="modal-revoke-dialog">
-      <div class="modal__header">
-        <h2 class="modal__title">Revocar Sesión Activa</h2>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-revoke" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-      <div class="modal__body" data-ref="modal-revoke-body">
-        <p style="margin: 0 0 16px; font-size: 0.875rem; color: var(--text-secondary);">
-          ¿Estás seguro de que deseas revocar inmediatamente esta sesión en Redis? El operador será desconectado en su próxima petición HTTP.
-        </p>
-        <div class="admins-session-preview" data-ref="revoke-session-preview">
-        </div>
-
-        <div class="modal__actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
-          <button type="button" class="component-button component-button--secondary" data-ref="btn-cancel-modal-revoke">
-            <span>Cancelar</span>
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-refresh-admins" data-tooltip="Actualizar datos" aria-label="Actualizar datos">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#cached"></use></svg>
           </button>
-          <button type="button" class="component-button component-button--danger" data-ref="btn-submit-revoke">
-            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
-            <span>Revocar Sesión</span>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only component-button--black view-header__btn" data-ref="btn-create-admin" data-tooltip="Nuevo Administrador" aria-label="Nuevo Administrador">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#add"></use></svg>
           </button>
         </div>
 
-        <div class="banner banner--danger is-hidden" data-ref="banner-revoke-error" style="margin-top: 16px;">
-          <span data-ref="text-revoke-error"></span>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal is-hidden" data-ref="modal-confirm-delete">
-    <div class="modal__overlay" data-ref="modal-delete-overlay"></div>
-    <div class="modal__dialog modal__dialog--sm" data-ref="modal-delete-dialog">
-      <div class="modal__header">
-        <h2 class="modal__title">Eliminar Administrador</h2>
-        <button type="button" class="component-button component-button--icon-only component-button--ghost" data-ref="btn-close-modal-delete" aria-label="Cerrar modal">
-          <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
-        </button>
-      </div>
-      <div class="modal__body" data-ref="modal-delete-body">
-        <p style="margin: 0 0 16px; font-size: 0.875rem; color: var(--text-secondary);">
-          ¿Confirmas la eliminación permanente de este administrador? Sus sesiones activas en Redis serán revocadas de inmediato.
-        </p>
-        <div class="admins-session-preview" data-ref="delete-admin-preview">
-        </div>
-
-        <div class="modal__actions" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
-          <button type="button" class="component-button component-button--secondary" data-ref="btn-cancel-modal-delete">
-            <span>Cancelar</span>
+        <div class="view-header__actions view-header__actions--selected is-hidden" data-ref="admins-selected-actions">
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-deselect" data-tooltip="Cancelar selección" aria-label="Cancelar selección">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
           </button>
-          <button type="button" class="component-button component-button--danger" data-ref="btn-submit-delete">
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-edit" data-tooltip="Editar administrador" aria-label="Editar administrador">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#edit"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-toggle-status" data-tooltip="Activar / Desactivar cuenta" aria-label="Activar / Desactivar cuenta">
+            <svg class="component-icon" data-ref="icon-toggle-status" aria-hidden="true"><use href="/icons.svg#block"></use></svg>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn" data-ref="btn-action-delete" data-tooltip="Eliminar cuenta" aria-label="Eliminar cuenta">
             <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#delete"></use></svg>
-            <span>Eliminar Administrador</span>
+          </button>
+
+          <button type="button" class="component-button component-button--h40 component-button--icon-only view-header__btn is-hidden" data-ref="btn-action-revoke-session" data-tooltip="Revocar sesión en Redis" aria-label="Revocar sesión en Redis">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#logout"></use></svg>
           </button>
         </div>
+      </div>
 
-        <div class="banner banner--danger is-hidden" data-ref="banner-delete-error" style="margin-top: 16px;">
-          <span data-ref="text-delete-error"></span>
+      <div class="component-search-toolbar is-hidden" data-ref="search-toolbar">
+        <div class="component-search component-search--full" data-ref="search-box">
+          <div class="component-search__icon" data-ref="search-icon">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#search"></use></svg>
+          </div>
+          <div class="component-search__input-box" data-ref="search-input-box">
+            <input class="component-search__input" data-ref="input-search-admins" placeholder="Buscar por nombre o correo electrónico..." type="text" maxlength="100" autocomplete="off" />
+          </div>
+          <button type="button" class="component-button component-button--h34 component-button--icon-only is-hidden" data-ref="btn-clear-search" aria-label="Limpiar búsqueda">
+            <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#close"></use></svg>
+          </button>
         </div>
+      </div>
+    </div>
+
+    <div class="view-body admin-view-body admin-view-body--flush" data-ref="admins-content-container">
+      <div class="admins-content-area" data-ref="admins-content-area">
+        <section class="canvas-section canvas-section--full" data-ref="pane-admins">
+          <div class="winners-daily-wrapper" data-ref="admins-table-wrapper">
+            <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="admins-table-card">
+              <div class="winners-daily-table-scroll">
+                <table class="winners-daily-table" data-ref="admins-table">
+                  <thead>
+                    <tr>
+                      <th class="winners-th" scope="col">Administrador</th>
+                      <th class="winners-th" scope="col">Roles Asignados</th>
+                      <th class="winners-th" scope="col">Permisos Efectivos</th>
+                      <th class="winners-th" scope="col">Estado</th>
+                      <th class="winners-th" scope="col">Último Acceso</th>
+                      <th class="winners-th" scope="col">Fecha de Alta</th>
+                    </tr>
+                  </thead>
+                  <tbody class="winners-tbody" data-ref="admins-table-body">
+                    <tr class="winners-table__tr winners-tr--empty">
+                      <td class="winners-table__td winners-td--empty" colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        Cargando directorio de administradores...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="canvas-section canvas-section--full is-hidden" data-ref="pane-roles">
+          <div class="roles-container" data-ref="roles-container">
+            <div class="admins-notice" data-ref="roles-notice">
+              <div class="admins-notice__icon">
+                <svg class="component-icon" aria-hidden="true"><use href="/icons.svg#verified_user"></use></svg>
+              </div>
+              <div class="admins-notice__content">
+                <h3 class="admins-notice__title">Arquitectura de Seguridad Basada en Permisos (PBAC)</h3>
+                <p class="admins-notice__text">
+                  En cumplimiento estricto con las directivas de seguridad del sistema, el acceso del software no depende de nombres de rol fijos en el código. Los roles operan exclusivamente como agrupadores en base de datos. Modificar los permisos de un rol actualizará instantáneamente las facultades de todos los operadores que lo tengan asignado.
+                </p>
+              </div>
+            </div>
+
+            <div class="admins-roles-grid" data-ref="roles-grid"></div>
+          </div>
+        </section>
+
+        <section class="canvas-section canvas-section--full is-hidden" data-ref="pane-sessions">
+          <div class="winners-daily-wrapper" data-ref="sessions-table-wrapper">
+            <div class="winners-daily-table-card winners-daily-table-card--flush" data-ref="sessions-table-card">
+              <div class="winners-daily-table-scroll">
+                <table class="winners-daily-table" data-ref="sessions-table">
+                  <thead>
+                    <tr>
+                      <th class="winners-th" scope="col">Administrador</th>
+                      <th class="winners-th" scope="col">Dirección IP</th>
+                      <th class="winners-th" scope="col">Navegador y Sistema</th>
+                      <th class="winners-th" scope="col">Fecha de Inicio</th>
+                      <th class="winners-th" scope="col">Vigencia en Redis</th>
+                      <th class="winners-th" scope="col">Sesión Actual</th>
+                    </tr>
+                  </thead>
+                  <tbody class="winners-tbody" data-ref="sessions-table-body">
+                    <tr class="winners-table__tr winners-tr--empty">
+                      <td class="winners-table__td winners-td--empty" colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        Cargando sesiones concurrentes en Redis...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
